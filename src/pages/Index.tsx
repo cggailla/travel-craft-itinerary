@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { parseWithAI, hasOpenAIKey } from '@/services/openaiService';
 import { parseWithAIVisionFromFile } from '@/services/visionService';
+import { processDocument } from '@/services/newOcrService';
 import { OpenAIKeySetup } from '@/components/OpenAIKeySetup';
 import { ParsedDocument, TravelSegment } from '@/types/travel';
 import { cn } from '@/lib/utils';
