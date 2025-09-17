@@ -30,17 +30,10 @@ export async function extractTextFromImage(imageFile: File): Promise<string> {
 }
 
 export async function extractTextFromPDF(pdfFile: File): Promise<string> {
-  // For now, return a mock extraction
-  // In a real implementation, you would use pdf.js or similar
-  return `Mock extracted text from ${pdfFile.name}. 
-    
-BOARDING PASS
-Flight: AF1234
-From: Paris CDG (CDG)
-To: New York JFK (JFK)
-Date: 2024-03-15
-Time: 14:30
-Passenger: John Doe
-Seat: 12A
-Confirmation: ABC123`;
+  // For now, we need a real PDF parsing solution
+  // This is a placeholder that should be replaced with actual PDF.js or similar
+  console.log('PDF processing not yet implemented, using fallback');
+  
+  // Return a generic message for now - this should be replaced with real PDF parsing
+  return `Contenu PDF détecté: ${pdfFile.name}. Traitement PDF complet à implémenter.`;
 }
