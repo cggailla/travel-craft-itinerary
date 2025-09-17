@@ -17,7 +17,7 @@ const Index = () => {
   const [currentPhase, setCurrentPhase] = useState<'upload' | 'processing' | 'timeline' | 'validated'>('upload');
   const { toast } = useToast();
 
-  const handleFilesAdded = (files: File[]) => {
+  const handleFilesAdded = async (files: File[]) => {
     if (files.length === 0) return;
 
     const newDocuments: ParsedDocument[] = files.map(file => ({
@@ -31,22 +31,16 @@ const Index = () => {
 
     setDocuments(prev => [...prev, ...newDocuments]);
     setCurrentPhase('processing');
+    
+    // Démarrer automatiquement le traitement
+    await processDocuments(newDocuments);
   };
 
-  const startProcessing = async () => {
-    if (documents.length === 0) {
-      toast({
-        title: "Aucun document",
-        description: "Veuillez d'abord ajouter des documents à traiter.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const processDocuments = async (documentsToProcess: ParsedDocument[]) => {
     setIsProcessing(true);
     const newSegments: TravelSegment[] = [];
 
-    for (const doc of documents) {
+    for (const doc of documentsToProcess) {
       try {
         // Simulate file processing with mock data for now
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -121,6 +115,19 @@ const Index = () => {
       title: "Traitement terminé",
       description: `${newSegments.length} segment(s) de voyage détecté(s).`,
     });
+  };
+
+  const startProcessing = async () => {
+    if (documents.length === 0) {
+      toast({
+        title: "Aucun document",
+        description: "Veuillez d'abord ajouter des documents à traiter.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await processDocuments(documents);
   };
 
   const handleValidation = () => {
