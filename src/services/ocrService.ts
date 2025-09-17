@@ -30,10 +30,45 @@ export async function extractTextFromImage(imageFile: File): Promise<string> {
 }
 
 export async function extractTextFromPDF(pdfFile: File): Promise<string> {
-  // For now, we need a real PDF parsing solution
-  // This is a placeholder that should be replaced with actual PDF.js or similar
-  console.log('PDF processing not yet implemented, using fallback');
-  
-  // Return a generic message for now - this should be replaced with real PDF parsing
-  return `Contenu PDF détecté: ${pdfFile.name}. Traitement PDF complet à implémenter.`;
+  try {
+    const pdfjsLib: any = await import('pdfjs-dist');
+    if (pdfjsLib?.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      const strings = content.items.map((item: any) => item.str).join(' ');
+      fullText += `\n\n--- Page ${pageNum} ---\n${strings}`;
+    }
+
+    if (fullText.trim().length < 30) {
+      const ocrChunks: string[] = [];
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob: Blob = await new Promise((resolve) => canvas.toBlob(b => resolve(b as Blob), 'image/png'));
+        const imgFile = new File([blob], `${pdfFile.name}-page-${pageNum}.png`, { type: 'image/png' });
+        const text = await extractTextFromImage(imgFile);
+        ocrChunks.push(text);
+      }
+      fullText = ocrChunks.join('\n\n');
+    }
+
+    return fullText.trim();
+  } catch (error) {
+    console.error('OCR Error (PDF):', error);
+    throw new Error('Failed to extract text from PDF');
+  }
 }

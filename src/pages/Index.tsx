@@ -57,29 +57,7 @@ const Index = () => {
         
         let extractedText = '';
         
-        // Use real document content instead of mock data
-        if (doc.fileName.includes('Colosseum') || doc.fileName.includes('COL-1500-AB21')) {
-          // Real extracted content from the Colosseum voucher
-          extractedText = `Entrée Colisée
-
-# Activité
-Colisée & Forum Romain
-
-# Lieu
-Colosseo
-
-# Rendez-vous
-Piazza del Colosseo
-
-# Début
-16 juin 2025, 15h00
-
-# Durée
-2h30
-
-# Voucher
-COL-1500-AB21`;
-        } else if (doc.fileType.startsWith('image/')) {
+        if (doc.fileType.startsWith('image/')) {
           if ((doc as any).file) {
             try {
               extractedText = await extractTextFromImage((doc as any).file);
@@ -101,6 +79,8 @@ COL-1500-AB21`;
           } else {
             extractedText = `PDF parsing unavailable for ${doc.fileName}`;
           }
+        } else {
+          extractedText = `Type de fichier non supporté: ${doc.fileType}`;
         }
 
         // Use AI parsing instead of basic regex
