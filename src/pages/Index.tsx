@@ -6,7 +6,8 @@ import { TravelTimeline } from '@/components/TravelTimeline';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { extractTextFromImage, extractTextFromPDF } from '@/services/ocrService';
-import { parseDocumentText } from '@/services/travelParser';
+import { parseWithAI, hasOpenAIKey } from '@/services/openaiService';
+import { OpenAIKeySetup } from '@/components/OpenAIKeySetup';
 import { ParsedDocument, TravelSegment } from '@/types/travel';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +15,9 @@ const Index = () => {
   const [documents, setDocuments] = useState<ParsedDocument[]>([]);
   const [segments, setSegments] = useState<TravelSegment[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentPhase, setCurrentPhase] = useState<'upload' | 'processing' | 'timeline' | 'validated'>('upload');
+  const [currentPhase, setCurrentPhase] = useState<'setup' | 'upload' | 'processing' | 'timeline' | 'validated'>(
+    hasOpenAIKey() ? 'upload' : 'setup'
+  );
   const { toast } = useToast();
 
   const handleFilesAdded = async (files: File[]) => {
@@ -52,10 +55,23 @@ const Index = () => {
           extractedText = `BOARDING PASS\nFlight: ${doc.fileName.toUpperCase()}\nFrom: Paris CDG (CDG)\nTo: New York JFK (JFK)\nDate: ${new Date().toLocaleDateString()}\nTime: 14:30\nPassenger: John Doe\nSeat: 12A\nConfirmation: ABC123`;
         } else if (doc.fileType === 'application/pdf') {
           // For demo purposes, using mock data
-          extractedText = `HOTEL RESERVATION\nHotel: ${doc.fileName}\nCheck-in: ${new Date().toLocaleDateString()}\nCheck-out: ${new Date(Date.now() + 86400000).toLocaleDateString()}\nGuest: John Doe\nRoom: Deluxe Suite\nConfirmation: HTL456`;
+          extractedText = `CAR RENTAL VOUCHER\nCompany: ${doc.fileName}\nPickup: ${new Date().toLocaleDateString()}\nReturn: ${new Date(Date.now() + 86400000 * 3).toLocaleDateString()}\nDriver: John Doe\nVehicle: Compact Car\nConfirmation: CAR789`;
         }
 
-        const extractedInfo = parseDocumentText(extractedText, doc.fileName);
+        // Use AI parsing instead of basic regex
+        const aiResult = await parseWithAI(extractedText, doc.fileName);
+        
+        const extractedInfo = {
+          type: aiResult.type,
+          title: aiResult.title,
+          startDate: new Date(aiResult.startDate),
+          endDate: aiResult.endDate ? new Date(aiResult.endDate) : undefined,
+          provider: aiResult.provider,
+          reference: aiResult.reference,
+          address: aiResult.address,
+          description: aiResult.description,
+          confidence: aiResult.confidence
+        };
         
         const updatedDoc: ParsedDocument = {
           ...doc,
@@ -78,7 +94,7 @@ const Index = () => {
             reference: extractedInfo.reference,
             address: extractedInfo.address,
             description: extractedInfo.description,
-            rawData: { ocrText: extractedText, fileName: doc.fileName },
+            rawData: { ocrText: extractedText, fileName: doc.fileName, aiData: aiResult },
             confidence: extractedInfo.confidence || 0.5
           };
 
@@ -141,8 +157,16 @@ const Index = () => {
   const resetApp = () => {
     setDocuments([]);
     setSegments([]);
-    setCurrentPhase('upload');
+    setCurrentPhase(hasOpenAIKey() ? 'upload' : 'setup');
     setIsProcessing(false);
+  };
+
+  const handleKeySetup = () => {
+    setCurrentPhase('upload');
+    toast({
+      title: "Configuration terminée",
+      description: "Vous pouvez maintenant commencer à uploader vos documents.",
+    });
   };
 
   return (
@@ -214,6 +238,11 @@ const Index = () => {
 
         {/* Main Content */}
         <div className="max-w-6xl mx-auto space-y-8">
+          {/* Setup Phase */}
+          {currentPhase === 'setup' && (
+            <OpenAIKeySetup onKeySet={handleKeySetup} />
+          )}
+
           {/* Upload Phase */}
           {currentPhase === 'upload' && (
             <div className="grid grid-cols-1 gap-8">
