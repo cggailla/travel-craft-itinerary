@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { extractTextFromImage, extractTextFromPDF } from '@/services/ocrService';
 import { parseWithAI, hasOpenAIKey } from '@/services/openaiService';
+import { parseWithAIVisionFromFile } from '@/services/visionService';
 import { OpenAIKeySetup } from '@/components/OpenAIKeySetup';
 import { ParsedDocument, TravelSegment } from '@/types/travel';
 import { cn } from '@/lib/utils';
@@ -83,8 +84,13 @@ const Index = () => {
           extractedText = `Type de fichier non supporté: ${doc.fileType}`;
         }
 
-        // Use AI parsing instead of basic regex
-        const aiResult = await parseWithAI(extractedText, doc.fileName);
+        // Analyse via GPT: utiliser le texte si suffisamment riche, sinon Vision (OCR+parse côté GPT)
+        const hasGoodText = extractedText && extractedText.replace(/\s/g, '').length > 80 && !/Traitement PDF complet/.test(extractedText);
+        const useVision = !hasGoodText && (doc as any).file;
+
+        const aiResult = useVision
+          ? await parseWithAIVisionFromFile((doc as any).file as File, doc.fileName)
+          : await parseWithAI(extractedText, doc.fileName);
         
         // Create extracted info with date validation
         const extractedInfo = {
