@@ -5,7 +5,6 @@ import { ProcessingTracker } from '@/components/ProcessingTracker';
 import { TravelTimeline } from '@/components/TravelTimeline';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { extractTextFromImage, extractTextFromPDF } from '@/services/ocrService';
 import { parseWithAI, hasOpenAIKey } from '@/services/openaiService';
 import { parseWithAIVisionFromFile } from '@/services/visionService';
 import { OpenAIKeySetup } from '@/components/OpenAIKeySetup';

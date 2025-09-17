@@ -24,27 +24,33 @@ async function fileToDataURL(file: File): Promise<string> {
 
 async function renderPdfToImages(pdfFile: File, maxPages = 3): Promise<string[]> {
   const images: string[] = [];
-  const pdfjsLib: any = await import('pdfjs-dist');
-  if (pdfjsLib?.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdf.worker.min.mjs';
-  }
-  const arrayBuffer = await pdfFile.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-  const pdf = await loadingTask.promise;
+  try {
+    const pdfjsLib: any = await import('pdfjs-dist');
+    const workerSrc = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    if (pdfjsLib?.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.default;
+    }
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
 
-  const pageCount = Math.min(pdf.numPages, maxPages);
-  for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.5 });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    const dataUrl = canvas.toDataURL('image/png', 0.92);
-    images.push(dataUrl);
+    const pageCount = Math.min(pdf.numPages, maxPages);
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const dataUrl = canvas.toDataURL('image/png', 0.92);
+      images.push(dataUrl);
+    }
+    return images;
+  } catch (error) {
+    console.error('PDF rendering error:', error);
+    throw new Error(`Erreur lors du rendu PDF: ${error.message}`);
   }
-  return images;
 }
 
 export async function parseWithAIVisionFromFile(file: File, fileName: string): Promise<TravelDocumentData> {
@@ -61,16 +67,16 @@ export async function parseWithAIVisionFromFile(file: File, fileName: string): P
     throw new Error(`Type de fichier non supporté pour vision: ${file.type}`);
   }
 
-  const userParts: any[] = [
-    { type: 'input_text', text: `Analyse ce document (${fileName}). Réponds UNIQUEMENT avec un JSON valide conforme au schéma demandé.` }
+  const userContent: any[] = [
+    { type: 'text', text: `Analyse ce document (${fileName}). Réponds UNIQUEMENT avec un JSON valide conforme au schéma demandé.` }
   ];
   for (const url of imageDataUrls) {
-    userParts.push({ type: 'input_image', image_url: url });
+    userContent.push({ type: 'image_url', image_url: { url } });
   }
 
   const promptSchema = `Retourne UNIQUEMENT un objet JSON valide avec cette structure exacte:\n{\n  "type": "flight" | "hotel" | "activity" | "car" | "other",\n  "title": "Titre descriptif court",\n  "startDate": "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm",\n  "endDate": "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm" (optionnel),\n  "provider": "Nom de la compagnie/fournisseur",\n  "reference": "Numéro de confirmation/référence",\n  "address": "Adresse ou lieux (départ-arrivée pour vols)",\n  "description": "Description détaillée des informations extraites",\n  "confidence": 0.95,\n  "details": {}\n}\nRègles: type précis, dates ISO, réponds JSON uniquement.`;
 
-  userParts.push({ type: 'input_text', text: promptSchema });
+  userContent.push({ type: 'text', text: promptSchema });
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -82,7 +88,7 @@ export async function parseWithAIVisionFromFile(file: File, fileName: string): P
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: 'Tu es un expert en extraction d\'informations à partir d\'images de documents. Réponds UNIQUEMENT avec du JSON.' },
-        { role: 'user', content: userParts },
+        { role: 'user', content: userContent },
       ],
       temperature: 0.1,
       max_tokens: 1000,
