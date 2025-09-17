@@ -56,91 +56,63 @@ const Index = () => {
         // Simulate file processing with mock data for now
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // Bypass local OCR: always use GPT Vision on the original file (images or PDFs)
         let extractedText = '';
-        
-        if (doc.fileType.startsWith('image/')) {
-          if ((doc as any).file) {
-            try {
-              extractedText = await extractTextFromImage((doc as any).file);
-            } catch (error) {
-              console.error('Image OCR failed:', error);
-              extractedText = `Contenu image non disponible pour ${doc.fileName}`;
-            }
-          } else {
-            extractedText = `Image OCR unavailable for ${doc.fileName}`;
-          }
-        } else if (doc.fileType === 'application/pdf') {
-          if ((doc as any).file) {
-            try {
-              extractedText = await extractTextFromPDF((doc as any).file);
-            } catch (error) {
-              console.error('PDF OCR failed:', error);
-              extractedText = `Contenu PDF non disponible pour ${doc.fileName}`;
-            }
-          } else {
-            extractedText = `PDF parsing unavailable for ${doc.fileName}`;
-          }
-        } else {
-          extractedText = `Type de fichier non supporté: ${doc.fileType}`;
-        }
 
-        // Analyse via GPT: utiliser le texte si suffisamment riche, sinon Vision (OCR+parse côté GPT)
-        const hasGoodText = extractedText && extractedText.replace(/\s/g, '').length > 80 && !/Traitement PDF complet/.test(extractedText);
-        const useVision = !hasGoodText && (doc as any).file;
+        if ((doc as any).file && (doc.fileType.startsWith('image/') || doc.fileType === 'application/pdf')) {
+          const aiResult = await parseWithAIVisionFromFile((doc as any).file as File, doc.fileName);
 
-        const aiResult = useVision
-          ? await parseWithAIVisionFromFile((doc as any).file as File, doc.fileName)
-          : await parseWithAI(extractedText, doc.fileName);
-        
-        // Create extracted info with date validation
-        const extractedInfo = {
-          type: aiResult.type,
-          title: aiResult.title,
-          startDate: aiResult.startDate ? new Date(aiResult.startDate) : null,
-          endDate: aiResult.endDate ? new Date(aiResult.endDate) : undefined,
-          provider: aiResult.provider,
-          reference: aiResult.reference,
-          address: aiResult.address,
-          description: aiResult.description,
-          confidence: aiResult.confidence
-        };
-        
-        // Validate that we have a valid startDate
-        if (extractedInfo.startDate && isNaN(extractedInfo.startDate.getTime())) {
-          extractedInfo.startDate = null;
-        }
-        
-        if (extractedInfo.endDate && isNaN(extractedInfo.endDate.getTime())) {
-          extractedInfo.endDate = undefined;
-        }
-        
-        const updatedDoc: ParsedDocument = {
-          ...doc,
-          ocrText: extractedText,
-          extractedInfo,
-          processingStatus: 'completed'
-        };
-
-        setDocuments(prev => prev.map(d => d.id === doc.id ? updatedDoc : d));
-
-        // Create travel segment only if we have valid data and dates
-        if (extractedInfo.type && extractedInfo.startDate && extractedInfo.startDate instanceof Date && !isNaN(extractedInfo.startDate.getTime())) {
-          const segment: TravelSegment = {
-            id: crypto.randomUUID(),
-            type: extractedInfo.type,
-            title: extractedInfo.title || doc.fileName,
-            startDate: extractedInfo.startDate,
-            endDate: extractedInfo.endDate,
-            provider: extractedInfo.provider || 'Unknown',
-            reference: extractedInfo.reference,
-            address: extractedInfo.address,
-            description: extractedInfo.description,
-            rawData: { ocrText: extractedText, fileName: doc.fileName, aiData: aiResult },
-            confidence: extractedInfo.confidence || 0.5
+          // Create extracted info with date validation
+          const extractedInfo = {
+            type: aiResult.type,
+            title: aiResult.title,
+            startDate: aiResult.startDate ? new Date(aiResult.startDate) : null,
+            endDate: aiResult.endDate ? new Date(aiResult.endDate) : undefined,
+            provider: aiResult.provider,
+            reference: aiResult.reference,
+            address: aiResult.address,
+            description: aiResult.description,
+            confidence: aiResult.confidence
           };
 
-          newSegments.push(segment);
-          setSegments(prev => [...prev, segment]);
+          // Validate that we have a valid startDate
+          if (extractedInfo.startDate && isNaN(extractedInfo.startDate.getTime())) {
+            extractedInfo.startDate = null;
+          }
+          if (extractedInfo.endDate && isNaN(extractedInfo.endDate.getTime())) {
+            extractedInfo.endDate = undefined;
+          }
+
+          const updatedDoc: ParsedDocument = {
+            ...doc,
+            ocrText: extractedText,
+            extractedInfo,
+            processingStatus: 'completed'
+          };
+
+          setDocuments(prev => prev.map(d => d.id === doc.id ? updatedDoc : d));
+
+          // Create travel segment only if we have valid data and dates
+          if (extractedInfo.type && extractedInfo.startDate && extractedInfo.startDate instanceof Date && !isNaN(extractedInfo.startDate.getTime())) {
+            const segment: TravelSegment = {
+              id: crypto.randomUUID(),
+              type: extractedInfo.type,
+              title: extractedInfo.title || doc.fileName,
+              startDate: extractedInfo.startDate,
+              endDate: extractedInfo.endDate,
+              provider: extractedInfo.provider || 'Unknown',
+              reference: extractedInfo.reference,
+              address: extractedInfo.address,
+              description: extractedInfo.description,
+              rawData: { fileName: doc.fileName, aiData: aiResult },
+              confidence: extractedInfo.confidence || 0.5
+            };
+
+            newSegments.push(segment);
+            setSegments(prev => [...prev, segment]);
+          }
+        } else {
+          throw new Error(`Type de fichier non supporté: ${doc.fileType}`);
         }
 
         toast({
