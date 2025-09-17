@@ -2,39 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Travel Booklet Builder Design System - All colors MUST be HSL */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    /* Base colors - Travel theme */
+    --background: 210 40% 98%;
+    --foreground: 215 25% 15%;
+    
+    /* Cards and surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 215 25% 15%;
+    
+    /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 15%;
+    
+    /* Travel Blue Primary */
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 210 100% 45%;
+    
+    /* Success Green */
+    --secondary: 142 76% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 142 76% 32%;
+    
+    /* Muted backgrounds */
+    --muted: 210 40% 95%;
+    --muted-foreground: 215 16% 47%;
+    
+    /* Accent - Orange for highlights */
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 25 95% 48%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 210 100% 50%;
+    
+    /* Travel-specific colors */
+    --travel-sky: 200 100% 85%;
+    --travel-ocean: 195 100% 40%;
+    --travel-sand: 45 60% 80%;
+    --travel-forest: 142 76% 36%;
+    
+    /* Gradients */
+    --gradient-sky: linear-gradient(135deg, hsl(200 100% 85%), hsl(210 100% 50%));
+    --gradient-ocean: linear-gradient(135deg, hsl(195 100% 40%), hsl(210 100% 50%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 32%));
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px hsl(210 100% 50% / 0.1);
+    --shadow-medium: 0 8px 30px hsl(210 100% 50% / 0.15);
+    --shadow-strong: 0 20px 50px hsl(210 100% 50% / 0.25);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 
     --radius: 0.5rem;
 
@@ -56,33 +86,56 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Dark mode - Travel theme */
+    --background: 215 25% 8%;
+    --foreground: 210 40% 95%;
+    
+    /* Cards and surfaces */
+    --card: 215 25% 12%;
+    --card-foreground: 210 40% 95%;
+    
+    /* Popover */
+    --popover: 215 25% 12%;
+    --popover-foreground: 210 40% 95%;
+    
+    /* Travel Blue Primary - brighter for dark */
+    --primary: 210 100% 60%;
+    --primary-foreground: 215 25% 8%;
+    --primary-hover: 210 100% 65%;
+    
+    /* Success Green - adjusted for dark */
+    --secondary: 142 76% 45%;
+    --secondary-foreground: 215 25% 8%;
+    --secondary-hover: 142 76% 50%;
+    
+    /* Muted backgrounds */
+    --muted: 215 25% 16%;
+    --muted-foreground: 215 16% 65%;
+    
+    /* Accent - Orange for highlights */
+    --accent: 25 95% 60%;
+    --accent-foreground: 215 25% 8%;
+    --accent-hover: 25 95% 65%;
+    
+    /* Destructive */
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 215 25% 8%;
+    
+    /* Borders and inputs */
+    --border: 215 25% 20%;
+    --input: 215 25% 20%;
+    --ring: 210 100% 60%;
+    
+    /* Travel-specific colors - adjusted */
+    --travel-sky: 200 100% 70%;
+    --travel-ocean: 195 100% 55%;
+    --travel-sand: 45 60% 70%;
+    --travel-forest: 142 76% 45%;
+    
+    /* Gradients - darker versions */
+    --gradient-sky: linear-gradient(135deg, hsl(200 100% 40%), hsl(210 100% 60%));
+    --gradient-ocean: linear-gradient(135deg, hsl(195 100% 25%), hsl(210 100% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 25%), hsl(142 76% 45%));
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
