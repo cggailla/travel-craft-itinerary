@@ -31,7 +31,14 @@ export const TravelTimeline: React.FC<TravelTimelineProps> = ({
 
   // Group segments by day
   const timelineDays: TimelineDay[] = React.useMemo(() => {
-    const groupedSegments = segments.reduce((acc, segment) => {
+    // Filter out segments with invalid dates first
+    const validSegments = segments.filter(segment => 
+      segment.startDate && 
+      segment.startDate instanceof Date && 
+      !isNaN(segment.startDate.getTime())
+    );
+    
+    const groupedSegments = validSegments.reduce((acc, segment) => {
       const dateKey = format(segment.startDate, 'yyyy-MM-dd');
       if (!acc[dateKey]) {
         acc[dateKey] = {

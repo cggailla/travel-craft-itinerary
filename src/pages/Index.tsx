@@ -106,10 +106,11 @@ COL-1500-AB21`;
         // Use AI parsing instead of basic regex
         const aiResult = await parseWithAI(extractedText, doc.fileName);
         
+        // Create extracted info with date validation
         const extractedInfo = {
           type: aiResult.type,
           title: aiResult.title,
-          startDate: new Date(aiResult.startDate),
+          startDate: aiResult.startDate ? new Date(aiResult.startDate) : null,
           endDate: aiResult.endDate ? new Date(aiResult.endDate) : undefined,
           provider: aiResult.provider,
           reference: aiResult.reference,
@@ -117,6 +118,15 @@ COL-1500-AB21`;
           description: aiResult.description,
           confidence: aiResult.confidence
         };
+        
+        // Validate that we have a valid startDate
+        if (extractedInfo.startDate && isNaN(extractedInfo.startDate.getTime())) {
+          extractedInfo.startDate = null;
+        }
+        
+        if (extractedInfo.endDate && isNaN(extractedInfo.endDate.getTime())) {
+          extractedInfo.endDate = undefined;
+        }
         
         const updatedDoc: ParsedDocument = {
           ...doc,
@@ -127,8 +137,8 @@ COL-1500-AB21`;
 
         setDocuments(prev => prev.map(d => d.id === doc.id ? updatedDoc : d));
 
-        // Create travel segment
-        if (extractedInfo.type && extractedInfo.startDate) {
+        // Create travel segment only if we have valid data and dates
+        if (extractedInfo.type && extractedInfo.startDate && extractedInfo.startDate instanceof Date && !isNaN(extractedInfo.startDate.getTime())) {
           const segment: TravelSegment = {
             id: crypto.randomUUID(),
             type: extractedInfo.type,

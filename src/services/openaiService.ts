@@ -90,9 +90,21 @@ Règles importantes:
     try {
       const parsed = JSON.parse(content.trim());
       
-      // Validate required fields
-      if (!parsed.type || !parsed.title || !parsed.startDate) {
-        throw new Error('Champs requis manquants dans la réponse AI');
+      // Validate required fields and provide fallbacks
+      if (!parsed.type || !parsed.title) {
+        console.warn('AI parsing incomplete, using fallbacks');
+        return {
+          type: parsed.type || 'other',
+          title: parsed.title || 'Document de voyage',
+          startDate: null, // Will be filtered out later
+          endDate: null,
+          provider: parsed.provider || 'Non spécifié',
+          reference: parsed.reference || 'Non spécifié',
+          address: parsed.address || 'Non spécifié',
+          description: parsed.description || 'Informations non extraites',
+          confidence: 0.1,
+          details: parsed.details || {}
+        };
       }
 
       return parsed as TravelDocumentData;
