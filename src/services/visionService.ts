@@ -26,7 +26,7 @@ async function renderPdfToImages(pdfFile: File, maxPages = 3): Promise<string[]>
   const images: string[] = [];
   const pdfjsLib: any = await import('pdfjs-dist');
   if (pdfjsLib?.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
   }
   const arrayBuffer = await pdfFile.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });

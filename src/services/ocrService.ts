@@ -33,7 +33,8 @@ export async function extractTextFromPDF(pdfFile: File): Promise<string> {
   try {
     const pdfjsLib: any = await import('pdfjs-dist');
     if (pdfjsLib?.GlobalWorkerOptions) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js';
+      // Use ESM worker (mjs) to avoid dynamic import issues
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs';
     }
 
     const arrayBuffer = await pdfFile.arrayBuffer();
