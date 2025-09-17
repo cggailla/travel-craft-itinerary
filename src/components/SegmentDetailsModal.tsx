@@ -73,7 +73,7 @@ export const SegmentDetailsModal: React.FC<SegmentDetailsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] p-0">
+      <DialogContent className="max-w-3xl max-h-[85vh] p-0 overflow-y-auto overflow-x-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center gap-3 text-lg">
             {getSegmentIcon(segment.type)}
