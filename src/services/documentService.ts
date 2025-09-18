@@ -28,12 +28,55 @@ export interface TravelSegmentResponse {
 }
 
 /**
+ * Create a new trip
+ */
+export async function createTrip(): Promise<{ success: boolean; trip_id?: string; error?: string }> {
+  try {
+    // Use direct SQL query since trips table might not be in generated types
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/trips`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        title: 'Nouveau carnet de voyage',
+        status: 'draft'
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to create trip: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    const trip = Array.isArray(data) ? data[0] : data
+
+    return {
+      success: true,
+      trip_id: trip.id
+    }
+  } catch (error) {
+    console.error('Create trip error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create trip'
+    }
+  }
+}
+
+/**
  * Upload a document to the backend for processing
  */
-export async function uploadDocument(file: File): Promise<DocumentUploadResult> {
+export async function uploadDocument(file: File, tripId: string | null = null): Promise<DocumentUploadResult> {
   try {
     const formData = new FormData()
     formData.append('file', file)
+    if (tripId) {
+      formData.append('trip_id', tripId)
+    }
 
     // Use fetch directly for file uploads to avoid Supabase JS issues with FormData
     const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
@@ -121,12 +164,12 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
  * Get travel segments with optional filtering
  */
 export async function getTravelSegments(
-  userId?: string,
+  tripId?: string | null,
   status?: 'all' | 'validated' | 'unvalidated'
 ): Promise<TravelSegmentResponse> {
   try {
     const params = new URLSearchParams()
-    if (userId) params.append('user_id', userId)
+    if (tripId) params.append('trip_id', tripId)
     if (status) params.append('status', status)
 
     const url = `${SUPABASE_URL}/functions/v1/get-travel-segments${params.toString() ? `?${params.toString()}` : ''}`
@@ -157,14 +200,14 @@ export async function getTravelSegments(
 /**
  * Validate multiple travel segments
  */
-export async function validateSegments(segmentIds: string[]): Promise<{ success: boolean; error?: string }> {
+export async function validateSegments(segmentIds: string[], tripId: string | null = null): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ segment_ids: segmentIds })
+      body: JSON.stringify({ segment_ids: segmentIds, trip_id: tripId })
     })
 
     if (!response.ok) {

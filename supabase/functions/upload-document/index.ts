@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
 
     const formData = await req.formData()
     const file = formData.get('file') as File
+    const tripId = formData.get('trip_id') as string
     
     if (!file) {
       throw new Error('No file provided')
@@ -52,6 +53,7 @@ Deno.serve(async (req) => {
         file_type: file.type,
         file_size: file.size,
         storage_path: uploadData.path,
+        trip_id: tripId || null,
       })
       .select()
       .single()

@@ -202,7 +202,7 @@ ${ocrText}`;
 
     console.log('Job updated with AI results');
 
-    // Create travel segment
+    // Create travel segment (inherits trip_id from document)
     const { data: segment, error: segmentError } = await supabase
       .from('travel_segments')
       .insert({

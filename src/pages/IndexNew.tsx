@@ -15,6 +15,7 @@ import {
 import FileUploadNew from '@/components/FileUploadNew';
 import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
+import { createTrip } from '@/services/documentService';
 
 type AppPhase = 'upload' | 'processing' | 'timeline' | 'validated';
 
@@ -56,7 +57,25 @@ export default function IndexNew() {
   const [currentPhase, setCurrentPhase] = useState<AppPhase>('upload');
   const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [tripId, setTripId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Create a new trip when component mounts
+  useEffect(() => {
+    createNewTrip();
+  }, []);
+
+  const createNewTrip = async () => {
+    try {
+      const result = await createTrip();
+      if (result.success && result.trip_id) {
+        setTripId(result.trip_id);
+        console.log('New trip created:', result.trip_id);
+      }
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+    }
+  };
 
   const handleFilesProcessed = (documentIds: string[]) => {
     setProcessedDocuments(prev => [...prev, ...documentIds]);
@@ -81,6 +100,7 @@ export default function IndexNew() {
     setCurrentPhase('upload');
     setProcessedDocuments([]);
     setIsProcessing(false);
+    createNewTrip(); // Create new trip for new session
   };
 
   const getPhaseProgress = (): number => {
@@ -205,6 +225,7 @@ export default function IndexNew() {
                   <FileUploadNew
                     onFilesProcessed={handleFilesProcessed}
                     onProcessingUpdate={setIsProcessing}
+                    tripId={tripId}
                   />
                 </CardContent>
               </Card>
@@ -238,6 +259,7 @@ export default function IndexNew() {
               <TravelTimelineNew
                 documentIds={processedDocuments}
                 onValidated={handleValidated}
+                tripId={tripId}
               />
 
               {currentPhase === 'validated' && (

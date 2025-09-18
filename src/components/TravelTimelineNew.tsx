@@ -13,9 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface TravelTimelineNewProps {
   documentIds?: string[];
   onValidated?: () => void;
+  tripId: string | null;
 }
 
-export default function TravelTimelineNew({ documentIds, onValidated }: TravelTimelineNewProps) {
+export default function TravelTimelineNew({ documentIds, onValidated, tripId }: TravelTimelineNewProps) {
   const [timeline, setTimeline] = useState<{ date: string; segments: TravelSegment[] }[]>([]);
   const [segments, setSegments] = useState<TravelSegment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,13 +24,17 @@ export default function TravelTimelineNew({ documentIds, onValidated }: TravelTi
   const { toast } = useToast();
 
   useEffect(() => {
-    loadTravelSegments();
-  }, [documentIds]);
+    if (tripId) {
+      loadTravelSegments();
+    }
+  }, [tripId, documentIds]);
 
   const loadTravelSegments = async () => {
+    if (!tripId) return;
+    
     try {
       setLoading(true);
-      const response = await getTravelSegments();
+      const response = await getTravelSegments(tripId);
       
       if (response.success) {
         setSegments(response.segments);
@@ -63,7 +68,7 @@ export default function TravelTimelineNew({ documentIds, onValidated }: TravelTi
     try {
       setValidating(true);
       const segmentIds = unvalidatedSegments.map(s => s.id);
-      const result = await validateSegments(segmentIds);
+      const result = await validateSegments(segmentIds, tripId);
       
       if (result.success) {
         // Update local state

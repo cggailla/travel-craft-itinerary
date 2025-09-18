@@ -19,9 +19,10 @@ interface UploadedFile {
 interface FileUploadNewProps {
   onFilesProcessed: (documentIds: string[]) => void;
   onProcessingUpdate: (processing: boolean) => void;
+  tripId: string | null;
 }
 
-export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: FileUploadNewProps) {
+export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tripId }: FileUploadNewProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -45,7 +46,7 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
           idx === fileIndex ? { ...f, progress: 50 } : f
         ));
 
-        const result = await uploadDocument(newFiles[i].file);
+        const result = await uploadDocument(newFiles[i].file, tripId);
         
         if (result.success && result.document_id) {
           setUploadedFiles(prev => prev.map((f, idx) => 

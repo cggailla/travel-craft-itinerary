@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { segment_ids } = await req.json()
+    const { segment_ids, trip_id } = await req.json()
     
     if (!segment_ids || !Array.isArray(segment_ids)) {
       throw new Error('Segment IDs array is required')
@@ -40,6 +40,16 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Successfully validated ${updatedSegments?.length || 0} segments`)
+
+    // Update trip status to validated if provided
+    if (trip_id) {
+      await supabase
+        .from('trips')
+        .update({ status: 'validated' })
+        .eq('id', trip_id)
+      
+      console.log(`Trip ${trip_id} status updated to validated`)
+    }
 
     return new Response(
       JSON.stringify({
