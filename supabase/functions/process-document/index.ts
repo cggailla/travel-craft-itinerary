@@ -68,14 +68,13 @@ Deno.serve(async (req) => {
 
     console.log('Job status updated to processing');
 
-    // First, try to get OCR text if available
+    // Get Mistral OCR text first (required step)
     let ocrText = job.ocr_text || '';
     let ocrConfidence = job.ocr_confidence || 0.0;
-    let useHybridApproach = false;
 
-    // Check if we should run OCR first
-    if (!ocrText && document.file_type === 'application/pdf') {
-      console.log('Running OCR extraction first for PDF');
+    // Always run Mistral OCR extraction first if not available
+    if (!ocrText) {
+      console.log('Running Mistral OCR extraction first');
       try {
         const ocrResponse = await fetch(`${supabaseUrl}/functions/v1/extract-text`, {
           method: 'POST',
@@ -90,41 +89,25 @@ Deno.serve(async (req) => {
           const ocrResult = await ocrResponse.json();
           ocrText = ocrResult.ocr_text || '';
           ocrConfidence = ocrResult.ocr_confidence || 0.0;
-          console.log('OCR completed with confidence:', ocrConfidence);
+          console.log('Mistral OCR completed with confidence:', ocrConfidence);
+        } else {
+          throw new Error('Mistral OCR extraction failed');
         }
       } catch (ocrError) {
-        console.error('OCR failed, falling back to vision only:', ocrError);
+        console.error('Mistral OCR failed:', ocrError);
+        throw new Error('Cannot proceed without OCR text extraction');
       }
     }
 
-    // Determine processing strategy
-    if (ocrText && ocrConfidence > 0.5) {
-      useHybridApproach = true;
-      console.log('Using hybrid OCR + Vision approach');
-    } else {
-      console.log('Using vision-only approach');
+    if (!ocrText) {
+      throw new Error('No OCR text available for processing');
     }
 
-    // Download file from storage for vision processing
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('travel-documents')
-      .download(document.storage_path);
+    console.log('Using Mistral OCR markdown text for OpenAI processing');
 
-    if (downloadError || !fileData) {
-      throw new Error(`Failed to download file: ${downloadError?.message}`);
-    }
+    // Prepare OpenAI text completion prompt using Mistral OCR markdown
+    const systemPrompt = `You are analyzing structured markdown text extracted from a travel document using OCR. Extract the following information in JSON format:
 
-    console.log('File downloaded for processing');
-
-    // Convert file to base64 for OpenAI
-    const fileBuffer = await fileData.arrayBuffer();
-    const base64Data = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
-    const dataUrl = `data:${document.file_type};base64,${base64Data}`;
-
-    console.log('File converted to base64, calling OpenAI API');
-
-    // Prepare OpenAI prompt based on available data
-    let systemPrompt = `Analyze this travel document and extract the following information in JSON format:
 {
   "segment_type": "flight" | "hotel" | "activity" | "car" | "other",
   "title": "Brief title of the travel segment",
@@ -140,19 +123,14 @@ Deno.serve(async (req) => {
 Important:
 - Only return valid JSON, no explanatory text
 - Use ISO 8601 format for dates with timezone
-- Set confidence based on how clear the information is
-- If information is unclear, use null values`;
+- Set confidence based on how clear the information is in the markdown
+- If information is unclear, use null values
+- The markdown text is already structured with tables and formatting preserved
 
-    if (useHybridApproach) {
-      systemPrompt += `
+TRAVEL DOCUMENT MARKDOWN CONTENT:
+${ocrText}`;
 
-ADDITIONAL CONTEXT - OCR Text Extracted:
-${ocrText}
-
-Please use both the OCR text above AND the visual image to cross-validate and extract the most accurate information. The OCR confidence is ${ocrConfidence}. Use the image to verify and correct any OCR errors.`;
-    }
-
-    // Call OpenAI Vision API
+    // Call OpenAI Text Completion API (not Vision)
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -164,18 +142,7 @@ Please use both the OCR text above AND the visual image to cross-validate and ex
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: systemPrompt
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: dataUrl
-                }
-              }
-            ]
+            content: systemPrompt
           }
         ],
         max_tokens: 1000
@@ -184,41 +151,27 @@ Please use both the OCR text above AND the visual image to cross-validate and ex
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error('OpenAI API error:', openaiResponse.status, errorText);
-      
-      // Fallback: try to use OCR data only if available
-      if (ocrText && ocrConfidence > 0.3) {
-        console.log('OpenAI failed, attempting OCR-only fallback');
-        return await processWithOCROnly(supabase, document_id, job.id, ocrText, ocrConfidence);
-      }
-      
+      console.error('OpenAI Text Completion API error:', openaiResponse.status, errorText);
       throw new Error(`OpenAI API error: ${openaiResponse.status}`);
     }
 
     const openaiData = await openaiResponse.json();
     const extractedContent = openaiData.choices[0].message.content;
 
-    console.log('OpenAI response received');
+    console.log('OpenAI text completion response received');
 
     // Parse the JSON response
     let extractedData: TravelDocumentData;
     try {
       extractedData = JSON.parse(extractedContent);
       
-      // Boost confidence if we used hybrid approach
-      if (useHybridApproach && extractedData.confidence < 0.9) {
+      // Boost confidence since we're using high-quality Mistral OCR markdown
+      if (ocrConfidence > 0.7 && extractedData.confidence < 0.9) {
         extractedData.confidence = Math.min(0.95, extractedData.confidence + 0.1);
       }
       
     } catch (parseError) {
       console.error('Failed to parse OpenAI JSON response:', extractedContent);
-      
-      // Fallback: try to use OCR data only if available
-      if (ocrText && ocrConfidence > 0.3) {
-        console.log('JSON parsing failed, attempting OCR-only fallback');
-        return await processWithOCROnly(supabase, document_id, job.id, ocrText, ocrConfidence);
-      }
-      
       throw new Error('Invalid JSON response from OpenAI');
     }
 
@@ -273,7 +226,7 @@ Please use both the OCR text above AND the visual image to cross-validate and ex
       job_id: job.id,
       segment_id: segment.id,
       extracted_data: extractedData,
-      processing_method: useHybridApproach ? 'hybrid' : 'vision_only'
+      processing_method: 'mistral_ocr_openai_completion'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -312,66 +265,3 @@ Please use both the OCR text above AND the visual image to cross-validate and ex
     });
   }
 });
-
-// Fallback function for OCR-only processing
-async function processWithOCROnly(supabase: any, documentId: string, jobId: string, ocrText: string, ocrConfidence: number) {
-  console.log('Processing with OCR-only fallback');
-  
-  // Basic parsing logic for OCR text
-  const extractedData: TravelDocumentData = {
-    segment_type: 'other',
-    title: 'Document processed via OCR',
-    start_date: null,
-    end_date: null,
-    provider: null,
-    reference_number: null,
-    address: null,
-    description: ocrText.substring(0, 500) + (ocrText.length > 500 ? '...' : ''),
-    confidence: Math.max(0.3, ocrConfidence - 0.2)
-  };
-
-  // Simple pattern matching for common travel document types
-  const text = ocrText.toLowerCase();
-  if (text.includes('flight') || text.includes('airline') || text.includes('departure')) {
-    extractedData.segment_type = 'flight';
-    extractedData.title = 'Flight - OCR Processed';
-  } else if (text.includes('hotel') || text.includes('accommodation') || text.includes('check-in')) {
-    extractedData.segment_type = 'hotel';
-    extractedData.title = 'Hotel - OCR Processed';
-  }
-
-  // Update job and create segment
-  await supabase
-    .from('document_processing_jobs')
-    .update({
-      status: 'completed',
-      ai_extracted_data: extractedData,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', jobId);
-
-  const { data: segment } = await supabase
-    .from('travel_segments')
-    .insert({
-      document_id: documentId,
-      segment_type: extractedData.segment_type,
-      title: extractedData.title,
-      description: extractedData.description,
-      confidence: extractedData.confidence,
-      raw_data: extractedData,
-      validated: false
-    })
-    .select()
-    .single();
-
-  return new Response(JSON.stringify({
-    success: true,
-    document_id: documentId,
-    job_id: jobId,
-    segment_id: segment?.id,
-    extracted_data: extractedData,
-    processing_method: 'ocr_only_fallback'
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}

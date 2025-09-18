@@ -8,64 +8,71 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-// PDF parsing utility
-const parsePDF = async (pdfData: Uint8Array): Promise<{ text: string; confidence: number }> => {
+// Mistral OCR extraction utility
+const extractWithMistralOCR = async (fileData: Uint8Array, fileType: string): Promise<{ text: string; confidence: number }> => {
   try {
-    // Use PDF.js for parsing PDFs in Deno
-    const response = await fetch('https://esm.sh/pdf-parse@1.1.1', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: Array.from(pdfData) })
-    });
-    
-    if (!response.ok) {
-      throw new Error('PDF parsing failed');
+    const mistralApiKey = Deno.env.get('MISTRAL_API_KEY');
+    if (!mistralApiKey) {
+      throw new Error('MISTRAL_API_KEY not configured');
     }
-    
+
+    // Convert file data to base64
+    const base64Data = btoa(String.fromCharCode(...fileData));
+    const dataUrl = `data:${fileType};base64,${base64Data}`;
+
+    console.log('Calling Mistral OCR API with model: mistral-ocr-latest');
+
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mistralApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'mistral-ocr-latest',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Extract all text from this document and return it in structured markdown format. Preserve tables, lists, headings, and other formatting elements. Return only the markdown content, no explanations.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: dataUrl
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Mistral OCR API error:', response.status, errorText);
+      throw new Error(`Mistral OCR API error: ${response.status}`);
+    }
+
     const result = await response.json();
+    const extractedText = result.choices[0].message.content || '';
+    
+    // Calculate confidence based on response quality
+    const confidence = extractedText.length > 50 ? 0.9 : (extractedText.length > 10 ? 0.7 : 0.3);
+    
+    console.log(`Mistral OCR extraction completed, text length: ${extractedText.length}, confidence: ${confidence}`);
+    
     return {
-      text: result.text || '',
-      confidence: result.text ? 0.8 : 0.3
+      text: extractedText,
+      confidence: confidence
     };
   } catch (error) {
-    console.error('PDF parsing error:', error);
+    console.error('Mistral OCR extraction error:', error);
     return { text: '', confidence: 0.0 };
   }
-};
-
-// Convert text to structured markdown
-const convertToMarkdown = (text: string, fileType: string): string => {
-  if (!text.trim()) return '';
-  
-  let markdown = '';
-  
-  // Add basic structure based on content patterns
-  const lines = text.split('\n').filter(line => line.trim());
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines
-    if (!line) continue;
-    
-    // Detect headers (short lines in caps or with keywords)
-    if (line.length < 50 && (
-      line === line.toUpperCase() ||
-      /^(FLIGHT|HOTEL|BOOKING|CONFIRMATION|ITINERARY|PASSENGER)/i.test(line)
-    )) {
-      markdown += `## ${line}\n\n`;
-    }
-    // Detect key-value pairs
-    else if (/^[A-Z\s]+:\s*.+/i.test(line)) {
-      markdown += `**${line}**\n\n`;
-    }
-    // Regular content
-    else {
-      markdown += `${line}\n\n`;
-    }
-  }
-  
-  return markdown;
 };
 
 serve(async (req) => {
@@ -115,7 +122,7 @@ serve(async (req) => {
       })
       .eq('id', job.id);
 
-    console.log('OCR job status updated to processing');
+    console.log('Mistral OCR job status updated to processing');
 
     // Download file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -126,36 +133,30 @@ serve(async (req) => {
       throw new Error(`Failed to download file: ${downloadError?.message}`);
     }
 
-    console.log('File downloaded for OCR processing');
+    console.log('File downloaded for Mistral OCR processing');
 
     let extractedText = '';
     let confidence = 0.0;
 
-    // Process based on file type
+    // Process all file types (PDF and images) with Mistral OCR
     const fileType = document.file_type.toLowerCase();
     
-    if (fileType === 'application/pdf') {
-      console.log('Processing PDF with OCR');
-      const pdfData = new Uint8Array(await fileData.arrayBuffer());
-      const result = await parsePDF(pdfData);
+    if (fileType === 'application/pdf' || fileType.startsWith('image/')) {
+      console.log(`Processing ${fileType} with Mistral OCR`);
+      const fileBuffer = new Uint8Array(await fileData.arrayBuffer());
+      const result = await extractWithMistralOCR(fileBuffer, document.file_type);
       extractedText = result.text;
       confidence = result.confidence;
-    } else if (fileType.startsWith('image/')) {
-      console.log('Processing image with OCR - fallback to basic text extraction');
-      // For images, we'll rely more on OpenAI Vision API
-      // This is a placeholder for potential Tesseract integration
-      extractedText = 'OCR processing available for PDF files. Image processing via OpenAI Vision.';
-      confidence = 0.2;
     } else {
       console.log('Unsupported file type for OCR:', fileType);
       extractedText = 'Unsupported file type for OCR processing.';
       confidence = 0.1;
     }
 
-    // Convert to markdown if we have text
-    const markdownText = extractedText ? convertToMarkdown(extractedText, fileType) : '';
+    // Mistral OCR already returns structured markdown, no conversion needed
+    const markdownText = extractedText;
 
-    console.log('OCR extraction completed, confidence:', confidence);
+    console.log('Mistral OCR extraction completed, confidence:', confidence);
 
     // Update processing job with OCR results
     const { error: updateError } = await supabase
@@ -165,7 +166,7 @@ serve(async (req) => {
         ocr_confidence: confidence,
         status: extractedText ? 'completed' : 'failed',
         updated_at: new Date().toISOString(),
-        ...(extractedText ? {} : { error_message: 'No text could be extracted via OCR' })
+        ...(extractedText ? {} : { error_message: 'No text could be extracted via Mistral OCR' })
       })
       .eq('id', job.id);
 
@@ -174,7 +175,7 @@ serve(async (req) => {
       throw new Error(`Failed to update job: ${updateError.message}`);
     }
 
-    console.log('OCR results saved successfully');
+    console.log('Mistral OCR results saved successfully');
 
     return new Response(JSON.stringify({
       success: true,
