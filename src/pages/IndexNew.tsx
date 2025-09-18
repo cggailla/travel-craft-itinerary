@@ -58,11 +58,15 @@ const phases: Record<AppPhase, PhaseConfig> = {
 export default function IndexNew() {
   const [currentPhase, setCurrentPhase] = useState<AppPhase>('upload');
   const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const handleFilesProcessed = (documentIds: string[]) => {
+  const handleFilesProcessed = (documentIds: string[], tripId?: string) => {
     setProcessedDocuments(prev => [...prev, ...documentIds]);
+    if (tripId) {
+      setCurrentTripId(tripId);
+    }
     setCurrentPhase('timeline');
     
     toast({
@@ -83,6 +87,7 @@ export default function IndexNew() {
   const resetApp = () => {
     setCurrentPhase('upload');
     setProcessedDocuments([]);
+    setCurrentTripId(null);
     setIsProcessing(false);
   };
 
@@ -162,6 +167,7 @@ export default function IndexNew() {
           <TabsContent value="timeline">
             <TravelTimelineNew
               documentIds={processedDocuments}
+              tripId={currentTripId}
               onValidated={handleValidated}
             />
           </TabsContent>

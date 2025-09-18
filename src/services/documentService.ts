@@ -224,6 +224,35 @@ export async function validateTrip(tripId: string): Promise<{ success: boolean; 
 }
 
 /**
+ * Delete an incomplete trip
+ */
+export async function deleteTrip(tripId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/delete-trip`, {
+      method: 'POST',  
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ trip_id: tripId })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Trip deletion failed: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Delete trip error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Trip deletion failed'
+    }
+  }
+}
+
+/**
  * Validate multiple travel segments
  */
 export async function validateSegments(segmentIds: string[]): Promise<{ success: boolean; error?: string }> {

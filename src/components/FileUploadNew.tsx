@@ -1,10 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, Image, X, CheckCircle, AlertCircle } from 'lucide-react';
-import { uploadDocument, processDocument } from '@/services/documentService';
+import { Upload, FileText, Image, X, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { uploadDocument, processDocument, deleteTrip } from '@/services/documentService';
 import { useToast } from '@/hooks/use-toast';
 
 interface UploadedFile {
@@ -17,7 +18,7 @@ interface UploadedFile {
 }
 
 interface FileUploadNewProps {
-  onFilesProcessed: (documentIds: string[]) => void;
+  onFilesProcessed: (documentIds: string[], tripId?: string) => void;
   onProcessingUpdate: (processing: boolean) => void;
 }
 
@@ -26,6 +27,25 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Cleanup incomplete trip on component unmount
+  useEffect(() => {
+    return () => {
+      if (currentTripId && uploadedFiles.length > 0 && !uploadedFiles.some(f => f.status === 'completed')) {
+        // Cleanup incomplete trip in background
+        deleteTrip(currentTripId).catch(console.error);
+      }
+    };
+  }, [currentTripId, uploadedFiles]);
+
+  const startNewTrip = () => {
+    setUploadedFiles([]);
+    setCurrentTripId(null);
+    toast({
+      title: "Nouveau voyage",
+      description: "Prêt à créer un nouveau carnet de voyage",
+    });
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
@@ -149,7 +169,7 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
         .filter(f => f.status === 'completed' && f.documentId)
         .map(f => f.documentId!);
       
-      onFilesProcessed(completedDocuments);
+      onFilesProcessed(completedDocuments, currentTripId);
       
       toast({
         title: "Traitement terminé",
@@ -166,7 +186,19 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+    // If there's an active trip that hasn't been validated, delete it
+    if (currentTripId) {
+      try {
+        await deleteTrip(currentTripId);
+        toast({
+          title: "Voyage annulé",
+          description: "Le voyage en cours a été supprimé",
+        });
+      } catch (error) {
+        console.error('Error deleting incomplete trip:', error);
+      }
+    }
     setUploadedFiles([]);
     setCurrentTripId(null);
   };
@@ -225,9 +257,16 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-foreground">
-                Fichiers uploadés ({uploadedFiles.length})
-              </h3>
+              <div className="flex items-center space-x-2">
+                <h3 className="font-semibold text-foreground">
+                  Fichiers uploadés ({uploadedFiles.length})
+                </h3>
+                {currentTripId && (
+                  <Badge variant="outline" className="text-xs">
+                    Voyage: {currentTripId.slice(-8)}
+                  </Badge>
+                )}
+              </div>
               <div className="space-x-2">
                 {readyToProcess && (
                   <Button 
@@ -238,6 +277,10 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
                     {isProcessing ? 'Traitement...' : 'Commencer le traitement'}
                   </Button>
                 )}
+                <Button variant="outline" onClick={startNewTrip} size="sm">
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Nouveau voyage
+                </Button>
                 <Button variant="outline" onClick={clearAll} size="sm">
                   Tout effacer
                 </Button>
