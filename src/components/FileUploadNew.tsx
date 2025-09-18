@@ -267,23 +267,33 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
                   </Badge>
                 )}
               </div>
-              <div className="space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {readyToProcess && (
                   <Button 
                     onClick={startProcessing} 
                     disabled={isProcessing}
                     className="bg-primary hover:bg-primary-hover"
                   >
-                    {isProcessing ? 'Traitement...' : 'Commencer le traitement'}
+                    {isProcessing ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Traitement...
+                      </>
+                    ) : (
+                      'Commencer le traitement'
+                    )}
                   </Button>
                 )}
-                <Button variant="outline" onClick={startNewTrip} size="sm">
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Nouveau voyage
-                </Button>
-                <Button variant="outline" onClick={clearAll} size="sm">
-                  Tout effacer
-                </Button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <Button variant="outline" onClick={startNewTrip} size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Nouveau voyage
+                  </Button>
+                  <Button variant="outline" onClick={clearAll} size="sm">
+                    <X className="h-4 w-4 mr-2" />
+                    Tout effacer
+                  </Button>
+                </div>
               </div>
             </div>
 
