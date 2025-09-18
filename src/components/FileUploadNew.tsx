@@ -227,7 +227,6 @@ export default function FileUploadNew({
                 <h3 className="font-semibold text-foreground">
                   Fichiers uploadés ({uploadedFiles.length})
                 </h3>
-                {currentTripId}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {readyToProcess && <Button onClick={startProcessing} disabled={isProcessing} className="bg-primary hover:bg-primary-hover">
