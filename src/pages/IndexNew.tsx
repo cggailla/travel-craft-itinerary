@@ -126,52 +126,108 @@ export default function IndexNew() {
           </p>
         </header>
 
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload Documents
-            </TabsTrigger>
-            <TabsTrigger value="trips" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Manage Trips
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Travel Timeline
-            </TabsTrigger>
-          </TabsList>
+        {/* Progress Indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            {Object.entries(phases).map(([phaseKey, config]) => (
+              <div key={phaseKey} className="flex items-center space-x-2">
+                <div
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    isPhaseActive(phaseKey as AppPhase)
+                      ? `${config.color} text-white`
+                      : isPhaseCompleted(phaseKey as AppPhase)
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {config.icon}
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium">{config.title}</p>
+                  <p className="text-xs text-muted-foreground">{config.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Progress value={getPhaseProgress()} className="w-full" />
+        </div>
 
-          <TabsContent value="upload">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Upload className="h-5 w-5" />
-                  <span>Upload Travel Documents</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FileUploadNew
-                  onFilesProcessed={handleFilesProcessed}
-                  onProcessingUpdate={setIsProcessing}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Phase Content */}
+        {currentPhase === 'upload' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Upload className="h-5 w-5" />
+                <span>Upload de documents</span>
+                {isProcessing && <RefreshCw className="h-4 w-4 animate-spin" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FileUploadNew
+                onFilesProcessed={handleFilesProcessed}
+                onProcessingUpdate={setIsProcessing}
+              />
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="trips">
-            <TripManager />
-          </TabsContent>
+        {currentPhase === 'processing' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Cpu className="h-5 w-5" />
+                <span>Traitement en cours</span>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
+                  <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+                </div>
+                <p className="mt-4 text-muted-foreground">
+                  Analyse des documents en cours...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="timeline">
-            <TravelTimelineNew
-              documentIds={processedDocuments}
-              tripId={currentTripId}
-              onValidated={handleValidated}
-            />
-          </TabsContent>
-        </Tabs>
+        {(currentPhase === 'timeline' || currentPhase === 'validated') && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                {currentPhase === 'validated' ? (
+                  <CheckCircle className="h-5 w-5 text-secondary" />
+                ) : (
+                  <Calendar className="h-5 w-5" />
+                )}
+                <span>
+                  {currentPhase === 'validated' ? 'Carnet validé' : 'Chronologie de voyage'}
+                </span>
+                {currentPhase === 'validated' && (
+                  <Badge variant="secondary">Validé</Badge>
+                )}
+              </CardTitle>
+              {currentPhase !== 'validated' && (
+                <div className="flex space-x-2">
+                  <Button variant="outline" onClick={resetApp} size="sm">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Nouveau carnet
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <TravelTimelineNew
+                documentIds={processedDocuments}
+                tripId={currentTripId}
+                onValidated={handleValidated}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Footer */}
         <footer className="mt-16 text-center text-sm text-muted-foreground">
