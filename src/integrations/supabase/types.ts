@@ -14,7 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      document_processing_jobs: {
+        Row: {
+          ai_extracted_data: Json | null
+          created_at: string
+          document_id: string
+          error_message: string | null
+          id: string
+          ocr_confidence: number | null
+          ocr_text: string | null
+          processing_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_extracted_data?: Json | null
+          created_at?: string
+          document_id: string
+          error_message?: string | null
+          id?: string
+          ocr_confidence?: number | null
+          ocr_text?: string | null
+          processing_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_extracted_data?: Json | null
+          created_at?: string
+          document_id?: string
+          error_message?: string | null
+          id?: string
+          ocr_confidence?: number | null
+          ocr_text?: string | null
+          processing_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_processing_jobs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          storage_path: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size: number
+          file_type: string
+          id?: string
+          storage_path: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          storage_path?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      travel_segments: {
+        Row: {
+          address: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          document_id: string
+          end_date: string | null
+          id: string
+          provider: string | null
+          raw_data: Json | null
+          reference_number: string | null
+          segment_type: string
+          start_date: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+          validated: boolean
+        }
+        Insert: {
+          address?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          document_id: string
+          end_date?: string | null
+          id?: string
+          provider?: string | null
+          raw_data?: Json | null
+          reference_number?: string | null
+          segment_type: string
+          start_date?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+          validated?: boolean
+        }
+        Update: {
+          address?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          document_id?: string
+          end_date?: string | null
+          id?: string
+          provider?: string | null
+          raw_data?: Json | null
+          reference_number?: string | null
+          segment_type?: string
+          start_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+          validated?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_segments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
