@@ -38,10 +38,6 @@ export async function uploadDocument(file: File): Promise<DocumentUploadResult> 
     // Use fetch directly for file uploads to avoid Supabase JS issues with FormData
     const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
-      },
       body: formData
     })
 
@@ -69,8 +65,6 @@ export async function processDocument(documentId: string): Promise<ProcessingRes
     const response = await fetch(`${SUPABASE_URL}/functions/v1/process-document`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ document_id: documentId })
@@ -108,11 +102,6 @@ export async function getTravelSegments(
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-      }
     })
 
     if (!response.ok) {
@@ -142,8 +131,6 @@ export async function validateSegments(segmentIds: string[]): Promise<{ success:
     const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ segment_ids: segmentIds })
