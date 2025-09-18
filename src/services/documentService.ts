@@ -57,6 +57,37 @@ export async function uploadDocument(file: File): Promise<DocumentUploadResult> 
   }
 }
 
+// Extract text via OCR
+export const extractText = async (documentId: string): Promise<{ success: boolean; error?: string; ocrText?: string; confidence?: number }> => {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ document_id: documentId })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to extract text')
+    }
+
+    const data = await response.json()
+    return {
+      success: data.success,
+      ocrText: data.ocr_text,
+      confidence: data.ocr_confidence
+    }
+  } catch (error) {
+    console.error('Error extracting text:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
+}
+
 /**
  * Process a document using OCR and AI
  */
