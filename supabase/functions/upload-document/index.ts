@@ -21,13 +21,33 @@ Deno.serve(async (req) => {
 
     const formData = await req.formData()
     const file = formData.get('file') as File
-    const tripId = formData.get('trip_id') as string
+    let tripId = formData.get('trip_id') as string
     
     if (!file) {
       throw new Error('No file provided')
     }
 
     console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`)
+    console.log(`Received trip_id: ${tripId}`)
+
+    // If no trip_id provided, get the most recent trip
+    if (!tripId) {
+      console.log('No trip_id provided, getting most recent trip...')
+      const { data: recentTrip, error: tripError } = await supabase
+        .from('trips')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (tripError) {
+        console.error('Error getting recent trip:', tripError)
+        throw new Error('No trip_id provided and could not find recent trip')
+      }
+
+      tripId = recentTrip.id
+      console.log(`Using most recent trip_id: ${tripId}`)
+    }
 
     // Generate unique storage path
     const timestamp = new Date().getTime()
@@ -45,7 +65,7 @@ Deno.serve(async (req) => {
 
     console.log('File uploaded successfully:', uploadData.path)
 
-    // Create document record in database
+    // Create document record in database with trip_id
     const { data: documentData, error: documentError } = await supabase
       .from('documents')
       .insert({
@@ -53,7 +73,7 @@ Deno.serve(async (req) => {
         file_type: file.type,
         file_size: file.size,
         storage_path: uploadData.path,
-        trip_id: tripId || null,
+        trip_id: tripId,
       })
       .select()
       .single()
