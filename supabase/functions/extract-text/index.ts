@@ -16,54 +16,82 @@ const extractWithMistralOCR = async (fileData: Uint8Array, fileType: string): Pr
       throw new Error('MISTRAL_API_KEY not configured');
     }
 
-    // Convert file data to base64
-    const base64Data = btoa(String.fromCharCode(...fileData));
-    const dataUrl = `data:${fileType};base64,${base64Data}`;
+    console.log('Starting Mistral OCR process - Step 1: Upload file');
 
-    console.log('Calling Mistral OCR API with model: mistral-ocr-latest');
+    // Step 1: Upload file to get file_id
+    const formData = new FormData();
+    const blob = new Blob([fileData], { type: fileType });
+    formData.append('file', blob, 'document');
 
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    const uploadResponse = await fetch('https://api.mistral.ai/v1/files', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mistralApiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('Mistral file upload error:', uploadResponse.status, errorText);
+      throw new Error(`Mistral file upload error: ${uploadResponse.status}`);
+    }
+
+    const uploadResult = await uploadResponse.json();
+    const fileId = uploadResult.id;
+    console.log('File uploaded successfully, file_id:', fileId);
+
+    // Step 2: Call OCR API with file_id
+    console.log('Step 2: Calling Mistral OCR API');
+
+    const ocrResponse = await fetch('https://api.mistral.ai/v1/ocr', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral-ocr-latest',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Extract all text from this document and return it in structured markdown format. Preserve tables, lists, headings, and other formatting elements. Return only the markdown content, no explanations.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: dataUrl
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4000
+        model: 'pixtral-large-latest',
+        document: {
+          type: 'file',
+          file_id: fileId
+        },
+        include_image_base64: false
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Mistral OCR API error:', response.status, errorText);
-      throw new Error(`Mistral OCR API error: ${response.status}`);
+    if (!ocrResponse.ok) {
+      const errorText = await ocrResponse.text();
+      console.error('Mistral OCR API error:', ocrResponse.status, errorText);
+      throw new Error(`Mistral OCR API error: ${ocrResponse.status}`);
     }
 
-    const result = await response.json();
-    const extractedText = result.choices[0].message.content || '';
+    const ocrResult = await ocrResponse.json();
+    console.log('Mistral OCR API response received');
+
+    // Extract markdown from all pages
+    let extractedText = '';
+    if (ocrResult.pages && ocrResult.pages.length > 0) {
+      extractedText = ocrResult.pages.map((page: any) => page.markdown || '').join('\n\n');
+    }
     
     // Calculate confidence based on response quality
     const confidence = extractedText.length > 50 ? 0.9 : (extractedText.length > 10 ? 0.7 : 0.3);
     
     console.log(`Mistral OCR extraction completed, text length: ${extractedText.length}, confidence: ${confidence}`);
+    
+    // Clean up: delete the uploaded file
+    try {
+      await fetch(`https://api.mistral.ai/v1/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${mistralApiKey}`,
+        },
+      });
+      console.log('Uploaded file cleaned up');
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup uploaded file:', cleanupError);
+    }
     
     return {
       text: extractedText,
