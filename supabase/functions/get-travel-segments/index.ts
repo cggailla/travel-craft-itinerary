@@ -22,8 +22,9 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const user_id = url.searchParams.get('user_id')
     const status = url.searchParams.get('status') // 'all', 'validated', 'unvalidated'
+    const trip_id = url.searchParams.get('trip_id')
 
-    console.log(`Fetching travel segments for user: ${user_id}, status: ${status}`)
+    console.log(`Fetching travel segments for user: ${user_id}, status: ${status}, trip: ${trip_id}`)
 
     let query = supabase
       .from('travel_segments')
@@ -41,6 +42,11 @@ Deno.serve(async (req) => {
     // Filter by user if provided
     if (user_id) {
       query = query.eq('user_id', user_id)
+    }
+
+    // Filter by trip if provided
+    if (trip_id) {
+      query = query.eq('documents.trip_id', trip_id)
     }
 
     // Filter by validation status if provided

@@ -24,6 +24,7 @@ interface FileUploadNewProps {
 export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: FileUploadNewProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -45,9 +46,14 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
           idx === fileIndex ? { ...f, progress: 50 } : f
         ));
 
-        const result = await uploadDocument(newFiles[i].file);
+        const result = await uploadDocument(newFiles[i].file, currentTripId);
         
         if (result.success && result.document_id) {
+          // Store trip ID if this is the first file
+          if (!currentTripId && result.trip_id) {
+            setCurrentTripId(result.trip_id);
+          }
+          
           setUploadedFiles(prev => prev.map((f, idx) => 
             idx === fileIndex ? { 
               ...f, 
@@ -162,6 +168,7 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate }: 
 
   const clearAll = () => {
     setUploadedFiles([]);
+    setCurrentTripId(null);
   };
 
   const getFileIcon = (file: File) => {

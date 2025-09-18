@@ -69,6 +69,7 @@ export type Database = {
           file_type: string
           id: string
           storage_path: string
+          trip_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -79,6 +80,7 @@ export type Database = {
           file_type: string
           id?: string
           storage_path: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -89,10 +91,19 @@ export type Database = {
           file_type?: string
           id?: string
           storage_path?: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       travel_segments: {
         Row: {
@@ -158,6 +169,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trips: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
