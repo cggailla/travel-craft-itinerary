@@ -34,10 +34,6 @@ Deno.serve(async (req) => {
           file_name,
           file_type,
           created_at
-        ),
-        document_processing_jobs!document_processing_jobs_document_id_fkey (
-          status,
-          error_message
         )
       `)
       .order('start_date', { ascending: true, nullsFirst: false })

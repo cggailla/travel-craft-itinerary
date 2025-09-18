@@ -24,16 +24,19 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Parse body ONCE and keep it for the entire handler (including catch)
+  let bodyJson: { document_id?: string } = {};
   try {
     console.log('Process document function called');
+    bodyJson = await req.json().catch(() => ({}));
+    const document_id = bodyJson?.document_id;
+    if (!document_id) throw new Error('Missing document_id');
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const { document_id } = await req.json();
     console.log('Processing document:', document_id);
 
     // Get document and job info
@@ -145,7 +148,8 @@ ${ocrText}`;
             content: systemPrompt
           }
         ],
-        max_tokens: 1000
+        max_tokens: 1000,
+        response_format: { type: 'json_object' }
       }),
     });
 
@@ -160,10 +164,16 @@ ${ocrText}`;
 
     console.log('OpenAI text completion response received');
 
-    // Parse the JSON response
+    // Parse the JSON response (with fallback for code fences)
     let extractedData: TravelDocumentData;
     try {
-      extractedData = JSON.parse(extractedContent);
+      let jsonContent = extractedContent;
+      // Strip code fences if present
+      const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1];
+      }
+      extractedData = JSON.parse(jsonContent);
       
       // Boost confidence since we're using high-quality Mistral OCR markdown
       if (ocrConfidence > 0.7 && extractedData.confidence < 0.9) {
@@ -236,8 +246,7 @@ ${ocrText}`;
     
     // Try to update job status to failed
     try {
-      const requestBody = await req.clone().json();
-      const { document_id } = requestBody;
+      const document_id = bodyJson?.document_id;
       if (document_id) {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
