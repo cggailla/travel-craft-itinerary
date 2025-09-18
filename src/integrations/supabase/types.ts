@@ -69,6 +69,7 @@ export type Database = {
           file_type: string
           id: string
           storage_path: string
+          trip_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -79,6 +80,7 @@ export type Database = {
           file_type: string
           id?: string
           storage_path: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -89,10 +91,19 @@ export type Database = {
           file_type?: string
           id?: string
           storage_path?: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       travel_segments: {
         Row: {
@@ -109,6 +120,7 @@ export type Database = {
           segment_type: string
           start_date: string | null
           title: string
+          trip_id: string | null
           updated_at: string
           user_id: string | null
           validated: boolean
@@ -127,6 +139,7 @@ export type Database = {
           segment_type: string
           start_date?: string | null
           title: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
           validated?: boolean
@@ -145,11 +158,19 @@ export type Database = {
           segment_type?: string
           start_date?: string | null
           title?: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string | null
           validated?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_travel_segments_trip_id"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "travel_segments_document_id_fkey"
             columns: ["document_id"]
@@ -159,12 +180,42 @@ export type Database = {
           },
         ]
       }
+      trips: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_abandoned_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
