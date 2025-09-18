@@ -12,11 +12,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface TravelTimelineNewProps {
   documentIds?: string[];
-  tripId?: string;
   onValidated?: () => void;
 }
 
-export default function TravelTimelineNew({ documentIds, tripId, onValidated }: TravelTimelineNewProps) {
+export default function TravelTimelineNew({ documentIds, onValidated }: TravelTimelineNewProps) {
   const [timeline, setTimeline] = useState<{ date: string; segments: TravelSegment[] }[]>([]);
   const [segments, setSegments] = useState<TravelSegment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,21 +23,17 @@ export default function TravelTimelineNew({ documentIds, tripId, onValidated }: 
   const { toast } = useToast();
 
   useEffect(() => {
-    if (tripId) {
-      loadTravelSegments(tripId);
-    }
-  }, [documentIds, tripId]);
+    loadTravelSegments();
+  }, [documentIds]);
 
-  const loadTravelSegments = async (tripId?: string) => {
+  const loadTravelSegments = async () => {
     try {
       setLoading(true);
-      const response = await getTravelSegments(undefined, 'all', tripId);
+      const response = await getTravelSegments();
       
       if (response.success) {
-        setSegments(response.segments.filter(s => !tripId || s.documents?.trip_id === tripId));
-        setTimeline(response.timeline.filter(day => 
-          day.segments.some(s => !tripId || s.documents?.trip_id === tripId)
-        ));
+        setSegments(response.segments);
+        setTimeline(response.timeline);
       } else {
         throw new Error(response.error);
       }

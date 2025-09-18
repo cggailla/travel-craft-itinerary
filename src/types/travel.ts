@@ -1,24 +1,5 @@
 export type SegmentType = 'flight' | 'hotel' | 'activity' | 'car' | 'other';
 
-export interface Trip {
-  id: string;
-  user_id?: string;
-  title?: string;
-  status: 'draft' | 'processing' | 'validated' | 'completed';
-  created_at: string;
-  updated_at: string;
-  documents?: {
-    id: string;
-    file_name: string;
-    file_type: string;
-    created_at: string;
-    document_processing_jobs?: {
-      status: string;
-      error_message?: string;
-    }[];
-  }[];
-}
-
 // Database-aligned types
 export interface TravelSegment {
   id: string;
@@ -53,7 +34,6 @@ export interface TravelSegment {
 export interface Document {
   id: string;
   user_id?: string;
-  trip_id?: string;
   file_name: string;
   file_type: string;
   file_size: number;

@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
 
     const formData = await req.formData()
     const file = formData.get('file') as File
-    const tripId = formData.get('trip_id') as string
     
     if (!file) {
       throw new Error('No file provided')
@@ -45,26 +44,6 @@ Deno.serve(async (req) => {
 
     console.log('File uploaded successfully:', uploadData.path)
 
-    // Create or get current trip
-    let currentTripId = tripId;
-    if (!currentTripId) {
-      // Create new trip if none provided
-      const { data: trip, error: tripError } = await supabase
-        .from('trips')
-        .insert({
-          status: 'draft',
-          title: `Trip ${new Date().toLocaleDateString()}`
-        })
-        .select()
-        .single();
-
-      if (tripError) {
-        throw new Error(`Failed to create trip: ${tripError.message}`);
-      }
-      currentTripId = trip.id;
-      console.log('Created new trip:', currentTripId);
-    }
-
     // Create document record in database
     const { data: documentData, error: documentError } = await supabase
       .from('documents')
@@ -73,7 +52,6 @@ Deno.serve(async (req) => {
         file_type: file.type,
         file_size: file.size,
         storage_path: uploadData.path,
-        trip_id: currentTripId,
       })
       .select()
       .single()
@@ -108,7 +86,6 @@ Deno.serve(async (req) => {
         success: true,
         document_id: documentData.id,
         job_id: jobData.id,
-        trip_id: currentTripId,
         message: 'File uploaded successfully and queued for processing'
       }),
       {
