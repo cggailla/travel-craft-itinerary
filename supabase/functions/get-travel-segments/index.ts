@@ -1,0 +1,113 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+Deno.serve(async (req) => {
+  console.log('Get travel segments function called')
+  
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const url = new URL(req.url)
+    const user_id = url.searchParams.get('user_id')
+    const status = url.searchParams.get('status') // 'all', 'validated', 'unvalidated'
+
+    console.log(`Fetching travel segments for user: ${user_id}, status: ${status}`)
+
+    let query = supabase
+      .from('travel_segments')
+      .select(`
+        *,
+        documents!travel_segments_document_id_fkey (
+          id,
+          file_name,
+          file_type,
+          created_at
+        ),
+        document_processing_jobs!document_processing_jobs_document_id_fkey (
+          status,
+          error_message
+        )
+      `)
+      .order('start_date', { ascending: true, nullsFirst: false })
+
+    // Filter by user if provided
+    if (user_id) {
+      query = query.eq('user_id', user_id)
+    }
+
+    // Filter by validation status if provided
+    if (status === 'validated') {
+      query = query.eq('validated', true)
+    } else if (status === 'unvalidated') {
+      query = query.eq('validated', false)
+    }
+
+    const { data: segments, error } = await query
+
+    if (error) {
+      console.error('Database error:', error)
+      throw new Error(`Failed to fetch travel segments: ${error.message}`)
+    }
+
+    console.log(`Found ${segments?.length || 0} travel segments`)
+
+    // Group segments by date for timeline view
+    const groupedByDate: { [key: string]: any[] } = {}
+    
+    segments?.forEach(segment => {
+      if (segment.start_date) {
+        const dateKey = new Date(segment.start_date).toISOString().split('T')[0]
+        if (!groupedByDate[dateKey]) {
+          groupedByDate[dateKey] = []
+        }
+        groupedByDate[dateKey].push(segment)
+      }
+    })
+
+    // Convert to timeline format
+    const timeline = Object.keys(groupedByDate)
+      .sort()
+      .map(date => ({
+        date,
+        segments: groupedByDate[date]
+      }))
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        segments: segments || [],
+        timeline,
+        total_count: segments?.length || 0,
+        message: 'Travel segments retrieved successfully'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    )
+
+  } catch (error) {
+    console.error('Get travel segments function error:', error)
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    )
+  }
+})

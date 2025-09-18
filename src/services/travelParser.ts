@@ -57,11 +57,11 @@ export function parseDocumentText(text: string, fileName: string): Partial<Trave
   }
 
   return {
-    type,
+    segment_type: type,
     title,
-    startDate,
+    start_date: startDate.toISOString(),
     provider: providers[0] || 'Unknown Provider',
-    reference: references[0],
+    reference_number: references[0],
     description: text.slice(0, 200) + (text.length > 200 ? '...' : ''),
     confidence: calculateConfidence(type, dates, references, providers)
   };

@@ -1,1 +1,13 @@
 project_id = "jjlhsikgczigvtdzfroa"
+
+[functions.upload-document]
+verify_jwt = false
+
+[functions.process-document]
+verify_jwt = false
+
+[functions.get-travel-segments]
+verify_jwt = false
+
+[functions.validate-segments]
+verify_jwt = false

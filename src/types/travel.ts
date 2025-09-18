@@ -1,19 +1,61 @@
 export type SegmentType = 'flight' | 'hotel' | 'activity' | 'car' | 'other';
 
+// Database-aligned types
 export interface TravelSegment {
   id: string;
-  type: SegmentType;
+  document_id: string;
+  user_id?: string;
+  segment_type: SegmentType;
   title: string;
-  startDate: Date;
-  endDate?: Date;
-  provider: string;
-  reference?: string;
+  start_date?: string; // ISO string from database
+  end_date?: string; // ISO string from database
+  provider?: string;
+  reference_number?: string;
   address?: string;
   description?: string;
-  rawData: any;
   confidence: number;
+  raw_data?: any;
+  validated: boolean;
+  created_at: string;
+  updated_at: string;
+  // Related data
+  documents?: {
+    id: string;
+    file_name: string;
+    file_type: string;
+    created_at: string;
+  };
+  document_processing_jobs?: {
+    status: string;
+    error_message?: string;
+  }[];
 }
 
+export interface Document {
+  id: string;
+  user_id?: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProcessingJob {
+  id: string;
+  document_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_type: 'ocr_only' | 'ai_only' | 'ocr_and_ai';
+  ocr_text?: string;
+  ocr_confidence?: number;
+  ai_extracted_data?: any;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Legacy types for compatibility
 export interface TravelTrip {
   id: string;
   title: string;
