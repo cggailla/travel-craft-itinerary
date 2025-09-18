@@ -1,5 +1,9 @@
 import { supabase } from '@/integrations/supabase/client'
 
+// Supabase configuration
+const SUPABASE_URL = "https://jjlhsikgczigvtdzfroa.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqbGhzaWtnY3ppZ3Z0ZHpmcm9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxODQ3ODIsImV4cCI6MjA3Mzc2MDc4Mn0.RFZ7mWCxgJpy-tJt5HudvjcHnX3Hoa2HEIcqvV8uHvo"
+
 export interface DocumentUploadResult {
   success: boolean
   document_id?: string
@@ -31,14 +35,22 @@ export async function uploadDocument(file: File): Promise<DocumentUploadResult> 
     const formData = new FormData()
     formData.append('file', file)
 
-    const { data, error } = await supabase.functions.invoke('upload-document', {
+    // Use fetch directly for file uploads to avoid Supabase JS issues with FormData
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
       body: formData
     })
 
-    if (error) {
-      throw new Error(error.message)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`)
     }
 
+    const data = await response.json()
     return data as DocumentUploadResult
   } catch (error) {
     console.error('Upload error:', error)
@@ -54,14 +66,22 @@ export async function uploadDocument(file: File): Promise<DocumentUploadResult> 
  */
 export async function processDocument(documentId: string): Promise<ProcessingResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('process-document', {
-      body: { document_id: documentId }
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/process-document`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ document_id: documentId })
     })
 
-    if (error) {
-      throw new Error(error.message)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Processing failed: ${response.status} - ${errorText}`)
     }
 
+    const data = await response.json()
     return data as ProcessingResult
   } catch (error) {
     console.error('Process error:', error)
@@ -84,15 +104,23 @@ export async function getTravelSegments(
     if (userId) params.append('user_id', userId)
     if (status) params.append('status', status)
 
-    const { data, error } = await supabase.functions.invoke(
-      `get-travel-segments?${params.toString()}`,
-      { method: 'GET' }
-    )
+    const url = `${SUPABASE_URL}/functions/v1/get-travel-segments${params.toString() ? `?${params.toString()}` : ''}`
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      }
+    })
 
-    if (error) {
-      throw new Error(error.message)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to fetch segments: ${response.status} - ${errorText}`)
     }
 
+    const data = await response.json()
     return data as TravelSegmentResponse
   } catch (error) {
     console.error('Get segments error:', error)
@@ -111,14 +139,22 @@ export async function getTravelSegments(
  */
 export async function validateSegments(segmentIds: string[]): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('validate-segments', {
-      body: { segment_ids: segmentIds }
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ segment_ids: segmentIds })
     })
 
-    if (error) {
-      throw new Error(error.message)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Validation failed: ${response.status} - ${errorText}`)
     }
 
+    const data = await response.json()
     return data
   } catch (error) {
     console.error('Validate segments error:', error)
