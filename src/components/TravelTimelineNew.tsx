@@ -37,7 +37,7 @@ export default function TravelTimelineNew({
   const loadTravelSegments = async (tripId?: string) => {
     try {
       setLoading(true);
-      const response = await getTravelSegments(undefined, 'all', tripId);
+      const response = await getTravelSegments(tripId, 'all');
       if (response.success) {
         setSegments(response.segments.filter(s => !tripId || s.documents?.trip_id === tripId));
         setTimeline(response.timeline.filter(day => day.segments.some(s => !tripId || s.documents?.trip_id === tripId)));
