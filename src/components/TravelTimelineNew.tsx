@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, MapPin, Clock, Plane, Hotel, Car, Activity, FileText, CheckCircle } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -26,6 +27,7 @@ export default function TravelTimelineNew({
   const [segments, setSegments] = useState<TravelSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
+  const [selectedSegment, setSelectedSegment] = useState<TravelSegment | null>(null);
   const {
     toast
   } = useToast();
@@ -176,13 +178,15 @@ export default function TravelTimelineNew({
   }
   const unvalidatedCount = segments.filter(s => !s.validated).length;
   const validatedCount = segments.filter(s => s.validated).length;
-  return <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>Chronologie du voyage</span>
-          </CardTitle>
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Chronologie du voyage</span>
+            </CardTitle>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <CheckCircle className="h-4 w-4 text-secondary" />
@@ -221,7 +225,12 @@ export default function TravelTimelineNew({
                           
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-foreground">{segment.title}</h4>
+                              <h4 
+                                className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setSelectedSegment(segment)}
+                              >
+                                {segment.title}
+                              </h4>
                               <div className="flex items-center space-x-2">
                                 {segment.start_date && <Badge variant="outline" className="text-xs">
                                     <Clock className="h-3 w-3 mr-1" />
@@ -268,5 +277,190 @@ export default function TravelTimelineNew({
             </div>)}
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+
+    {/* Segment Detail Dialog */}
+    <Dialog open={!!selectedSegment} onOpenChange={() => setSelectedSegment(null)}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            {selectedSegment && getSegmentIcon(selectedSegment.segment_type)}
+            <span>{selectedSegment?.title}</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        {selectedSegment && (
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-foreground border-b pb-2">Informations générales</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <div className={`p-1 rounded ${getSegmentColor(selectedSegment.segment_type)}`}>
+                      {getSegmentIcon(selectedSegment.segment_type)}
+                    </div>
+                    <span className="capitalize">{selectedSegment.segment_type}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <span className="text-sm text-muted-foreground">Statut</span>
+                  <div className="mt-1">
+                    <Badge variant={selectedSegment.validated ? "default" : "outline"} 
+                           className={selectedSegment.validated ? "bg-secondary text-secondary-foreground" : ""}>
+                      {selectedSegment.validated ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Validé
+                        </>
+                      ) : 'En attente'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dates and Times */}
+            {(selectedSegment.start_date || selectedSegment.end_date) && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-foreground border-b pb-2">Dates et heures</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedSegment.start_date && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Date/heure de début</span>
+                      <div className="mt-1 space-y-1">
+                        <div className="font-medium">{formatDate(selectedSegment.start_date)}</div>
+                        <div className="text-sm text-muted-foreground flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatTime(selectedSegment.start_date)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedSegment.end_date && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Date/heure de fin</span>
+                      <div className="mt-1 space-y-1">
+                        <div className="font-medium">{formatDate(selectedSegment.end_date)}</div>
+                        <div className="text-sm text-muted-foreground flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatTime(selectedSegment.end_date)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Location and Provider */}
+            {(selectedSegment.address || selectedSegment.provider) && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-foreground border-b pb-2">Lieu et prestataire</h4>
+                
+                <div className="space-y-3">
+                  {selectedSegment.provider && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Prestataire</span>
+                      <div className="mt-1 font-medium">{selectedSegment.provider}</div>
+                    </div>
+                  )}
+                  
+                  {selectedSegment.address && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Adresse</span>
+                      <div className="mt-1 flex items-start space-x-2">
+                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <span>{selectedSegment.address}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Reference and Description */}
+            {(selectedSegment.reference_number || selectedSegment.description) && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-foreground border-b pb-2">Détails</h4>
+                
+                <div className="space-y-3">
+                  {selectedSegment.reference_number && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Numéro de référence</span>
+                      <div className="mt-1 font-mono text-sm bg-muted px-2 py-1 rounded">
+                        {selectedSegment.reference_number}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedSegment.description && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Description</span>
+                      <div className="mt-1 text-sm bg-muted p-3 rounded">
+                        {selectedSegment.description}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Technical Information */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-foreground border-b pb-2">Informations techniques</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Niveau de confiance</span>
+                  <div className="mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      {Math.round((selectedSegment.confidence || 0) * 100)}%
+                    </Badge>
+                  </div>
+                </div>
+                
+                {selectedSegment.documents && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Document source</span>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {selectedSegment.documents.file_name}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                <div>
+                  <span>Créé le</span>
+                  <div className="mt-1">{format(parseISO(selectedSegment.created_at), 'dd/MM/yyyy HH:mm')}</div>
+                </div>
+                
+                <div>
+                  <span>Modifié le</span>
+                  <div className="mt-1">{format(parseISO(selectedSegment.updated_at), 'dd/MM/yyyy HH:mm')}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Raw Data (if available) */}
+            {selectedSegment.raw_data && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-foreground border-b pb-2">Données brutes</h4>
+                <div className="bg-muted p-3 rounded text-xs font-mono overflow-x-auto">
+                  <pre>{JSON.stringify(selectedSegment.raw_data, null, 2)}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
+  );
 }
