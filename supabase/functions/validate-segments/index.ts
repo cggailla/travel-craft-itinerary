@@ -30,9 +30,12 @@ Deno.serve(async (req) => {
     // Update segments as validated
     const { data: updatedSegments, error } = await supabase
       .from('travel_segments')
-      .update({ validated: true })
+      .update({ 
+        validated: true,
+        updated_at: new Date().toISOString()
+      })
       .in('id', segment_ids)
-      .select()
+      .select('id, trip_id')
 
     if (error) {
       console.error('Database error:', error)
@@ -41,21 +44,39 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully validated ${updatedSegments?.length || 0} segments`)
 
-    // Update trip status to validated if provided
-    if (trip_id) {
-      await supabase
+    // Update trip status - use trip_id from segments if not provided
+    const tripIdToUpdate = trip_id || updatedSegments?.[0]?.trip_id;
+    
+    if (tripIdToUpdate) {
+      const { error: tripError } = await supabase
         .from('trips')
-        .update({ status: 'validated' })
-        .eq('id', trip_id)
-      
-      console.log(`Trip ${trip_id} status updated to validated`)
+        .update({ 
+          status: 'validated',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tripIdToUpdate)
+
+      if (tripError) {
+        console.error('Failed to update trip status:', tripError)
+        // Don't throw error for trip update failure
+      } else {
+        console.log(`Trip ${tripIdToUpdate} status updated to validated`)
+        
+        // Trigger cleanup after trip validation
+        try {
+          await supabase.rpc('cleanup_abandoned_data')
+          console.log('Cleanup triggered after trip validation')
+        } catch (cleanupError) {
+          console.error('Cleanup failed:', cleanupError)
+          // Don't fail the main operation if cleanup fails
+        }
+      }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         validated_count: updatedSegments?.length || 0,
-        segments: updatedSegments,
         message: 'Segments validated successfully'
       }),
       {

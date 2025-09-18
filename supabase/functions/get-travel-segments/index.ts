@@ -39,9 +39,9 @@ Deno.serve(async (req) => {
       `)
       .order('start_date', { ascending: true, nullsFirst: false })
 
-    // Filter by trip if provided
+    // Filter by trip if provided - now using travel_segments.trip_id directly
     if (trip_id) {
-      query = query.eq('documents.trip_id', trip_id)
+      query = query.eq('trip_id', trip_id)
     }
 
     // Filter by validation status if provided

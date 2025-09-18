@@ -202,12 +202,13 @@ ${ocrText}`;
 
     console.log('Job updated with AI results');
 
-    // Create travel segment (inherits trip_id from document)
+    // Create travel segment with trip_id from document
     const { data: segment, error: segmentError } = await supabase
       .from('travel_segments')
       .insert({
         document_id: document_id,
         user_id: document.user_id,
+        trip_id: document.trip_id, // Assign trip_id directly
         segment_type: extractedData.segment_type,
         title: extractedData.title,
         start_date: extractedData.start_date,
@@ -222,6 +223,17 @@ ${ocrText}`;
       })
       .select()
       .single();
+
+    // Update trip status to processing when first segment is created
+    if (document.trip_id) {
+      await supabase
+        .from('trips')
+        .update({ 
+          status: 'processing',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', document.trip_id);
+    }
 
     if (segmentError) {
       console.error('Failed to create travel segment:', segmentError);

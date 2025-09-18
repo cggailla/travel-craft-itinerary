@@ -17,7 +17,7 @@ import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
 import { createTrip } from '@/services/documentService';
 
-type AppPhase = 'upload' | 'processing' | 'timeline' | 'validated';
+type AppPhase = 'create-trip' | 'upload' | 'processing' | 'timeline' | 'validated';
 
 interface PhaseConfig {
   title: string;
@@ -27,6 +27,12 @@ interface PhaseConfig {
 }
 
 const phases: Record<AppPhase, PhaseConfig> = {
+  'create-trip': {
+    title: 'Nouveau voyage',
+    description: 'Créer votre carnet de voyage',
+    icon: <Settings className="h-5 w-5" />,
+    color: 'bg-muted'
+  },
   upload: {
     title: 'Upload de documents',
     description: 'Glissez-déposez vos documents de voyage',
@@ -54,26 +60,38 @@ const phases: Record<AppPhase, PhaseConfig> = {
 };
 
 export default function IndexNew() {
-  const [currentPhase, setCurrentPhase] = useState<AppPhase>('upload');
+  const [currentPhase, setCurrentPhase] = useState<AppPhase>('create-trip');
   const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [tripId, setTripId] = useState<string | null>(null);
+  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const { toast } = useToast();
 
-  // Create a new trip when component mounts
-  useEffect(() => {
-    createNewTrip();
-  }, []);
-
   const createNewTrip = async () => {
+    setIsCreatingTrip(true);
     try {
       const result = await createTrip();
       if (result.success && result.trip_id) {
         setTripId(result.trip_id);
+        setCurrentPhase('upload');
         console.log('New trip created:', result.trip_id);
+        
+        toast({
+          title: "Voyage créé",
+          description: "Vous pouvez maintenant uploader vos documents",
+        });
+      } else {
+        throw new Error(result.error || 'Failed to create trip');
       }
     } catch (error) {
       console.error('Failed to create trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingTrip(false);
     }
   };
 
@@ -97,20 +115,20 @@ export default function IndexNew() {
   };
 
   const resetApp = () => {
-    setCurrentPhase('upload');
+    setCurrentPhase('create-trip');
     setProcessedDocuments([]);
     setIsProcessing(false);
-    createNewTrip(); // Create new trip for new session
+    setTripId(null);
   };
 
   const getPhaseProgress = (): number => {
-    const phaseOrder: AppPhase[] = ['upload', 'processing', 'timeline', 'validated'];
+    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
     const currentIndex = phaseOrder.indexOf(currentPhase);
     return ((currentIndex + 1) / phaseOrder.length) * 100;
   };
 
   const isPhaseCompleted = (phase: AppPhase): boolean => {
-    const phaseOrder: AppPhase[] = ['upload', 'processing', 'timeline', 'validated'];
+    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
     const currentIndex = phaseOrder.indexOf(currentPhase);
     const phaseIndex = phaseOrder.indexOf(phase);
     return phaseIndex < currentIndex || (phase === currentPhase && currentPhase === 'validated');
@@ -212,6 +230,47 @@ export default function IndexNew() {
 
         {/* Phase Content */}
         <div className="space-y-8">
+          {currentPhase === 'create-trip' && (
+            <div className="space-y-6">
+              <Card className="border-2 border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <span>Créer un nouveau voyage</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center py-8">
+                  <div className="space-y-4">
+                    <p className="text-lg text-muted-foreground">
+                      Commencez par créer votre carnet de voyage
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Tous vos documents seront organisés dans ce carnet
+                    </p>
+                    <Button 
+                      onClick={createNewTrip} 
+                      disabled={isCreatingTrip}
+                      size="lg"
+                      className="mt-6"
+                    >
+                      {isCreatingTrip ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Création en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Créer un nouveau voyage
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {currentPhase === 'upload' && (
             <div className="space-y-6">
               <Card>
