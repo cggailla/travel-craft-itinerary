@@ -193,12 +193,24 @@ ${ocrText}`;
       }
       const parsedData = JSON.parse(jsonContent);
       
-      // Ensure we have an array
+      // Handle different response formats from OpenAI
       if (Array.isArray(parsedData)) {
+        // Direct array format: [{...}, {...}]
         extractedSegments = parsedData;
-      } else {
-        // If single object returned, wrap in array
+      } else if (parsedData.travel_segments && Array.isArray(parsedData.travel_segments)) {
+        // Wrapped format: {"travel_segments": [{...}, {...}]}
+        extractedSegments = parsedData.travel_segments;
+      } else if (typeof parsedData === 'object' && parsedData.segment_type) {
+        // Single segment format: {...}
         extractedSegments = [parsedData];
+      } else {
+        // Look for any array property in the response
+        const arrayProps = Object.values(parsedData).filter(Array.isArray);
+        if (arrayProps.length > 0) {
+          extractedSegments = arrayProps[0] as TravelDocumentData[];
+        } else {
+          throw new Error('No valid segments array found in response');
+        }
       }
       
       // Validate each segment and boost confidence
@@ -212,6 +224,8 @@ ${ocrText}`;
       if (extractedSegments.length === 0) {
         throw new Error('No segments extracted from document');
       }
+      
+      console.log(`Successfully parsed ${extractedSegments.length} travel segments from OpenAI response`);
       
     } catch (parseError) {
       console.error('Failed to parse OpenAI JSON response:', extractedContent);
