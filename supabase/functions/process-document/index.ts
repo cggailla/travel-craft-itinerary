@@ -109,21 +109,39 @@ Deno.serve(async (req) => {
     console.log('Using Mistral OCR markdown text for OpenAI processing');
 
     // Prepare OpenAI text completion prompt using Mistral OCR markdown
-    const systemPrompt = `You are analyzing structured markdown text extracted from a travel document using OCR. Extract the following information in JSON format:
+    const systemPrompt = `You are analyzing structured markdown text extracted from a travel document using OCR. 
 
-{
-  "segment_type": "flight" | "hotel" | "activity" | "car" | "other",
-  "title": "Brief title of the travel segment",
-  "start_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null",
-  "end_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null", 
-  "provider": "Company/provider name or null",
-  "reference_number": "Booking reference/confirmation number or null",
-  "address": "Location/address or null",
-  "description": "Additional details or null",
-  "confidence": 0.0 to 1.0
-}
+IMPORTANT: A single document can contain MULTIPLE travel segments. For example:
+- A hotel booking confirmation with reservations for 3 different hotels
+- A flight itinerary with multiple connecting flights
+- A travel package with hotel + activities + transfers
+- A multi-city trip confirmation
+
+Extract ALL travel segments found in the document. Return a JSON array where each element represents one travel segment:
+
+[
+  {
+    "segment_type": "flight" | "hotel" | "activity" | "car" | "other",
+    "title": "Brief title of the travel segment",
+    "start_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null",
+    "end_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null", 
+    "provider": "Company/provider name or null",
+    "reference_number": "Booking reference/confirmation number or null",
+    "address": "Location/address or null",
+    "description": "Additional details or null",
+    "confidence": 0.0 to 1.0
+  }
+]
+
+Segmentation Rules:
+- Each hotel reservation = separate segment (even if same booking reference)
+- Each flight leg = separate segment (even if connecting flights)
+- Each activity/tour = separate segment
+- Each car rental period = separate segment
+- If only one travel item is found, still return an array with one element
 
 Important:
+- ALWAYS return a JSON array, even for single segments: [{}]
 - Only return valid JSON, no explanatory text
 - Use ISO 8601 format for dates with timezone
 - Set confidence based on how clear the information is in the markdown
@@ -165,7 +183,7 @@ ${ocrText}`;
     console.log('OpenAI text completion response received');
 
     // Parse the JSON response (with fallback for code fences)
-    let extractedData: TravelDocumentData;
+    let extractedSegments: TravelDocumentData[];
     try {
       let jsonContent = extractedContent;
       // Strip code fences if present
@@ -173,11 +191,26 @@ ${ocrText}`;
       if (jsonMatch) {
         jsonContent = jsonMatch[1];
       }
-      extractedData = JSON.parse(jsonContent);
+      const parsedData = JSON.parse(jsonContent);
       
-      // Boost confidence since we're using high-quality Mistral OCR markdown
-      if (ocrConfidence > 0.7 && extractedData.confidence < 0.9) {
-        extractedData.confidence = Math.min(0.95, extractedData.confidence + 0.1);
+      // Ensure we have an array
+      if (Array.isArray(parsedData)) {
+        extractedSegments = parsedData;
+      } else {
+        // If single object returned, wrap in array
+        extractedSegments = [parsedData];
+      }
+      
+      // Validate each segment and boost confidence
+      extractedSegments = extractedSegments.map(segment => {
+        if (ocrConfidence > 0.7 && segment.confidence < 0.9) {
+          segment.confidence = Math.min(0.95, segment.confidence + 0.1);
+        }
+        return segment;
+      });
+      
+      if (extractedSegments.length === 0) {
+        throw new Error('No segments extracted from document');
       }
       
     } catch (parseError) {
@@ -190,7 +223,7 @@ ${ocrText}`;
       .from('document_processing_jobs')
       .update({
         status: 'completed',
-        ai_extracted_data: extractedData,
+        ai_extracted_data: extractedSegments,
         updated_at: new Date().toISOString()
       })
       .eq('id', job.id);
@@ -202,29 +235,30 @@ ${ocrText}`;
 
     console.log('Job updated with AI results');
 
-    // Create travel segment with trip_id from document
-    const { data: segment, error: segmentError } = await supabase
-      .from('travel_segments')
-      .insert({
-        document_id: document_id,
-        user_id: document.user_id,
-        trip_id: document.trip_id, // Assign trip_id directly
-        segment_type: extractedData.segment_type,
-        title: extractedData.title,
-        start_date: extractedData.start_date,
-        end_date: extractedData.end_date,
-        provider: extractedData.provider,
-        reference_number: extractedData.reference_number,
-        address: extractedData.address,
-        description: extractedData.description,
-        confidence: extractedData.confidence,
-        raw_data: extractedData,
-        validated: false
-      })
-      .select()
-      .single();
+    // Create all travel segments with trip_id from document
+    const segmentInserts = extractedSegments.map(segment => ({
+      document_id: document_id,
+      user_id: document.user_id,
+      trip_id: document.trip_id, // Assign trip_id directly
+      segment_type: segment.segment_type,
+      title: segment.title,
+      start_date: segment.start_date,
+      end_date: segment.end_date,
+      provider: segment.provider,
+      reference_number: segment.reference_number,
+      address: segment.address,
+      description: segment.description,
+      confidence: segment.confidence,
+      raw_data: segment,
+      validated: false
+    }));
 
-    // Update trip status to processing when first segment is created
+    const { data: createdSegments, error: segmentError } = await supabase
+      .from('travel_segments')
+      .insert(segmentInserts)
+      .select();
+
+    // Update trip status to processing when segments are created
     if (document.trip_id) {
       await supabase
         .from('trips')
@@ -235,19 +269,20 @@ ${ocrText}`;
         .eq('id', document.trip_id);
     }
 
-    if (segmentError) {
-      console.error('Failed to create travel segment:', segmentError);
-      throw new Error(`Failed to create travel segment: ${segmentError.message}`);
+    if (segmentError || !createdSegments) {
+      console.error('Failed to create travel segments:', segmentError);
+      throw new Error(`Failed to create travel segments: ${segmentError?.message}`);
     }
 
-    console.log('Travel segment created successfully');
+    console.log(`${createdSegments.length} travel segments created successfully`);
 
     return new Response(JSON.stringify({
       success: true,
       document_id,
       job_id: job.id,
-      segment_id: segment.id,
-      extracted_data: extractedData,
+      segments_created: createdSegments.length,
+      segment_ids: createdSegments.map(s => s.id),
+      extracted_segments: extractedSegments,
       processing_method: 'mistral_ocr_openai_completion'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
