@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
     }).eq('id', job.id);
 
     // 2) Télécharge le fichier depuis Supabase Storage
-    const bucket = 'travel-documents'; // Utilise le bon nom de bucket
-    const path = document.storage_path;
+    // Adapte ces champs à ton schéma (exemples: document.storage_bucket, document.storage_path)
+    const bucket = document.storage_bucket || 'documents';
+    const path = document.storage_path; // ex: 'user_123/abc.pdf'
     if (!path) throw new Error('Document missing storage_path');
 
     const { data: fileData, error: fileErr } = await supabase.storage
@@ -54,8 +55,8 @@ Deno.serve(async (req) => {
 
     const arrayBuf = await fileData.arrayBuffer();
     const base64File = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-    const filename = document.file_name || 'document.pdf';
-    const mime = document.file_type || 'application/pdf';
+    const filename = document.original_filename || 'document.pdf';
+    const mime = document.mime_type || 'application/pdf';
 
     // 3) Prépare le prompt (reprend ta spec JSON)
     const systemPrompt = `You are an expert travel document analyzer.
@@ -98,7 +99,7 @@ Return ONLY the following JSON object (no explanations, no extra text):
 ========== FIELD DEFINITIONS ==========
 
 **segment_type**:  
-Classify the type from this set: \`flight\`, \`hotel\`, \`activity\`, \`car\`, \`train\`, \`boat\`, \`pass\`, \`transfer\`, \`other\`.
+Classify the type from this set: `flight`, `hotel`, `activity`, `car`, `train`, `boat`, `pass`, `transfer`, `other`.
 
 **title**:  
 Always write a clear title for the traveler. Examples:
@@ -111,7 +112,7 @@ Always write a clear title for the traveler. Examples:
 **start_date / end_date**:  
 - Use ISO format (YYYY-MM-DD) when available
 - If only one date is available (e.g. a flight), use it for both
-- Leave as \`\`null\`\` if truly missing
+- Leave as ``null`` if truly missing
 
 **provider**:  
 Use company name, hotel name, airline, transport company, or null if not found
@@ -203,8 +204,7 @@ Gather all **extra details not already structured**, especially:
       contentText = oa.output[0].content[0].text.value;
     } else {
       // Dernier fallback: cherche un champ text dans l’arbre
-      console.error('Unexpected OpenAI response structure:', Object.keys(oa));
-      throw new Error('Unexpected response structure from OpenAI API');
+      contentText = JSON.stringify(oa);
     }
 
     // 6) Parse JSON (ton parseur robuste)
