@@ -1,4 +1,4 @@
-export type SegmentType = 'flight' | 'hotel' | 'activity' | 'car' | 'other';
+export type SegmentType = 'flight' | 'hotel' | 'activity' | 'car' | 'train' | 'boat' | 'pass' | 'transfer' | 'other';
 
 // Database-aligned types
 export interface TravelSegment {

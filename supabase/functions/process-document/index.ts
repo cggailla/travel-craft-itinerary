@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 interface TravelDocumentData {
-  segment_type: 'flight' | 'hotel' | 'activity' | 'car' | 'other'
+  segment_type: 'flight' | 'hotel' | 'activity' | 'car' | 'train' | 'boat' | 'pass' | 'transfer' | 'other'
   title: string
   start_date: string | null
   end_date?: string | null
