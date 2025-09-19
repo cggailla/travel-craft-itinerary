@@ -49,9 +49,19 @@ Deno.serve(async (req) => {
       console.log(`Using most recent trip_id: ${tripId}`)
     }
 
+    // Sanitize filename for storage (remove spaces, special chars)
+    const sanitizeFilename = (filename: string) => {
+      return filename
+        .replace(/\s+/g, '_')           // Replace spaces with underscores
+        .replace(/['"]/g, '')           // Remove quotes and apostrophes
+        .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace other special chars with underscores
+        .replace(/_+/g, '_')            // Replace multiple underscores with single
+    }
+
     // Generate unique storage path
     const timestamp = new Date().getTime()
-    const storagePath = `${timestamp}-${file.name}`
+    const sanitizedFilename = sanitizeFilename(file.name)
+    const storagePath = `${timestamp}-${sanitizedFilename}`
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
