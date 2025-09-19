@@ -43,9 +43,8 @@ Deno.serve(async (req) => {
     }).eq('id', job.id);
 
     // 2) Télécharge le fichier depuis Supabase Storage
-    // Adapte ces champs à ton schéma (exemples: document.storage_bucket, document.storage_path)
-    const bucket = document.storage_bucket || 'documents';
-    const path = document.storage_path; // ex: 'user_123/abc.pdf'
+    const bucket = 'travel-documents'; // Utilise le bon nom de bucket
+    const path = document.storage_path;
     if (!path) throw new Error('Document missing storage_path');
 
     const { data: fileData, error: fileErr } = await supabase.storage
@@ -55,8 +54,8 @@ Deno.serve(async (req) => {
 
     const arrayBuf = await fileData.arrayBuffer();
     const base64File = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-    const filename = document.original_filename || 'document.pdf';
-    const mime = document.mime_type || 'application/pdf';
+    const filename = document.file_name || 'document.pdf';
+    const mime = document.file_type || 'application/pdf';
 
     // 3) Prépare le prompt (reprend ta spec JSON)
     const systemPrompt = `You are an expert travel document analyzer.
