@@ -147,12 +147,12 @@ NO other keys, NO explanations, ONLY the JSON object above.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano-2025-08-07',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 3500,
+        max_completion_tokens: 3500,
         response_format: { type: 'json_object' }
       }),
     });
