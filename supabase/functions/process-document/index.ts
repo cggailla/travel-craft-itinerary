@@ -139,78 +139,24 @@ NO other keys, NO explanations, ONLY the JSON object above.`;
 
     const userPrompt = `Analyze this travel document and extract all travel segments:\n\n${ocrText}`;
 
-    // Call OpenAI Text Completion API with proper system/user separation
-    let openaiResponse;
-    let modelUsed = 'gpt-5-nano-2025-08-07';
-    
-    console.log(`Attempting OpenAI call with model: ${modelUsed}`);
-    
-    try {
-      openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelUsed,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_completion_tokens: 2000,
-          response_format: { type: 'json_object' }
-        }),
-      });
-
-      // If GPT-5-nano fails, fallback to gpt-4o-mini
-      if (!openaiResponse.ok) {
-        const errorText = await openaiResponse.text();
-        console.error(`${modelUsed} failed:`, openaiResponse.status, errorText);
-        
-        modelUsed = 'gpt-4o-mini';
-        console.log(`Falling back to ${modelUsed}`);
-        
-        openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: modelUsed,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            max_tokens: 3500, // Use max_tokens for legacy models
-            response_format: { type: 'json_object' }
-          }),
-        });
-      }
-    } catch (fetchError) {
-      console.error('Fetch error with GPT-5-nano, trying fallback:', fetchError);
-      
-      modelUsed = 'gpt-4o-mini';
-      console.log(`Falling back to ${modelUsed} due to fetch error`);
-      
-      openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelUsed,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          max_tokens: 3500,
-          response_format: { type: 'json_object' }
-        }),
-      });
-    }
+    // Call OpenAI Text Completion API with gpt-4o
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4000,
+        temperature: 0.1,
+        response_format: { type: 'json_object' }
+      }),
+    });
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -221,7 +167,7 @@ NO other keys, NO explanations, ONLY the JSON object above.`;
     const openaiData = await openaiResponse.json();
     const extractedContent = openaiData.choices[0].message.content;
 
-    console.log(`OpenAI text completion response received from ${modelUsed}`);
+    console.log(`OpenAI text completion response received from gpt-4o`);
     console.log(`Raw OpenAI response: ${JSON.stringify(openaiData)}`);
     console.log(`Extracted content length: ${extractedContent?.length || 0}`);
     console.log(`Extracted content preview: ${extractedContent?.substring(0, 200) || 'NULL/EMPTY'}`);
