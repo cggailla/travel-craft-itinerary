@@ -2,8 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, Image, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Image, X, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { uploadDocument, processDocument } from '@/services/documentService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -258,7 +257,12 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tr
 
                   <div className="flex items-center space-x-2 w-32">
                     {uploadedFile.status === 'uploading' || uploadedFile.status === 'processing' ? (
-                      <Progress value={uploadedFile.progress} className="flex-1" />
+                      <div className="flex items-center space-x-2">
+                        <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-xs text-muted-foreground">
+                          {uploadedFile.status === 'uploading' ? 'Upload...' : 'Traitement...'}
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex items-center space-x-1">
                         {getStatusIcon(uploadedFile.status)}

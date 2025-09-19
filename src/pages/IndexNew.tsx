@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+
 import { 
   Upload, 
   Cpu, 
@@ -220,27 +220,6 @@ export default function IndexNew() {
             </div>
           )}
 
-          {(currentPhase === 'processing' || isProcessing) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Cpu className="h-5 w-5 animate-spin" />
-                  <span>Traitement en cours...</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
-                    <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
-                  </div>
-                  <p className="text-muted-foreground mt-4">
-                    Extraction des informations de voyage en cours...
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {(currentPhase === 'timeline' || currentPhase === 'validated') && (
             <div className="space-y-6">
