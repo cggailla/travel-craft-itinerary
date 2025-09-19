@@ -108,50 +108,38 @@ Deno.serve(async (req) => {
 
     console.log('Using Mistral OCR markdown text for OpenAI processing');
 
-    // Prepare OpenAI text completion prompt using Mistral OCR markdown
-    const systemPrompt = `You are analyzing structured markdown text extracted from a travel document using OCR. 
+    // Prepare OpenAI system and user messages (separate for better compliance)
+    const systemPrompt = `You are a travel document analyzer. Extract all travel segments from OCR-processed documents.
 
-IMPORTANT: A single document can contain MULTIPLE travel segments. For example:
-- A hotel booking confirmation with reservations for 3 different hotels
-- A flight itinerary with multiple connecting flights
-- A travel package with hotel + activities + transfers
-- A multi-city trip confirmation
+CRITICAL RULES:
+- Multiple segments per document are common (hotels, flights, activities)
+- Each hotel reservation = separate segment
+- Each flight leg = separate segment  
+- Keep descriptions ≤140 chars, titles brief, addresses as IATA/city codes when possible
+- Extract maximum 30 segments to avoid truncation
 
-Extract ALL travel segments found in the document. Return a JSON array where each element represents one travel segment:
+Return ONLY this JSON object format:
+{
+  "travel_segments": [
+    {
+      "segment_type": "flight|hotel|activity|car|other",
+      "title": "Brief title",
+      "start_date": "ISO date or null",
+      "end_date": "ISO date or null", 
+      "provider": "Provider name or null",
+      "reference_number": "Reference or null",
+      "address": "Location or null",
+      "description": "Brief details or null",
+      "confidence": 0.0
+    }
+  ]
+}
 
-[
-  {
-    "segment_type": "flight" | "hotel" | "activity" | "car" | "other",
-    "title": "Brief title of the travel segment",
-    "start_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null",
-    "end_date": "ISO date string (YYYY-MM-DDTHH:mm:ss.sssZ) or null", 
-    "provider": "Company/provider name or null",
-    "reference_number": "Booking reference/confirmation number or null",
-    "address": "Location/address or null",
-    "description": "Additional details or null",
-    "confidence": 0.0 to 1.0
-  }
-]
+NO other keys, NO explanations, ONLY the JSON object above.`;
 
-Segmentation Rules:
-- Each hotel reservation = separate segment (even if same booking reference)
-- Each flight leg = separate segment (even if connecting flights)
-- Each activity/tour = separate segment
-- Each car rental period = separate segment
-- If only one travel item is found, still return an array with one element
+    const userPrompt = `Analyze this travel document and extract all travel segments:\n\n${ocrText}`;
 
-Important:
-- ALWAYS return a JSON array, even for single segments: [{}]
-- Only return valid JSON, no explanatory text
-- Use ISO 8601 format for dates with timezone
-- Set confidence based on how clear the information is in the markdown
-- If information is unclear, use null values
-- The markdown text is already structured with tables and formatting preserved
-
-TRAVEL DOCUMENT MARKDOWN CONTENT:
-${ocrText}`;
-
-    // Call OpenAI Text Completion API (not Vision)
+    // Call OpenAI Text Completion API with proper system/user separation
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -161,12 +149,10 @@ ${ocrText}`;
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'user',
-            content: systemPrompt
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
-        max_tokens: 1000,
+        max_tokens: 3500,
         response_format: { type: 'json_object' }
       }),
     });
@@ -182,54 +168,152 @@ ${ocrText}`;
 
     console.log('OpenAI text completion response received');
 
-    // Parse the JSON response (with fallback for code fences)
+    // Parse JSON with robust error handling and repair functionality
     let extractedSegments: TravelDocumentData[];
-    try {
-      let jsonContent = extractedContent;
+    
+    function parseJsonSafely(content: string): TravelDocumentData[] {
+      console.log(`OpenAI response length: ${content.length} chars`);
+      
       // Strip code fences if present
+      let jsonContent = content;
       const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
         jsonContent = jsonMatch[1];
+        console.log('Stripped code fences from response');
       }
-      const parsedData = JSON.parse(jsonContent);
       
-      // Handle different response formats from OpenAI
-      if (Array.isArray(parsedData)) {
-        // Direct array format: [{...}, {...}]
-        extractedSegments = parsedData;
-      } else if (parsedData.travel_segments && Array.isArray(parsedData.travel_segments)) {
-        // Wrapped format: {"travel_segments": [{...}, {...}]}
-        extractedSegments = parsedData.travel_segments;
-      } else if (typeof parsedData === 'object' && parsedData.segment_type) {
-        // Single segment format: {...}
-        extractedSegments = [parsedData];
-      } else {
-        // Look for any array property in the response
-        const arrayProps = Object.values(parsedData).filter(Array.isArray);
-        if (arrayProps.length > 0) {
-          extractedSegments = arrayProps[0] as TravelDocumentData[];
-        } else {
-          throw new Error('No valid segments array found in response');
+      // Try direct parsing first
+      try {
+        const parsedData = JSON.parse(jsonContent);
+        
+        // Extract segments from expected format {"travel_segments": [...]}
+        if (parsedData.travel_segments && Array.isArray(parsedData.travel_segments)) {
+          console.log(`Found ${parsedData.travel_segments.length} segments in travel_segments array`);
+          return parsedData.travel_segments;
+        }
+        
+        // Fallback for unexpected formats
+        if (Array.isArray(parsedData)) {
+          console.log(`Found ${parsedData.length} segments in direct array format`);
+          return parsedData;
+        }
+        
+        if (typeof parsedData === 'object' && parsedData.segment_type) {
+          console.log('Found single segment object, wrapping in array');
+          return [parsedData];
+        }
+        
+        throw new Error('No travel_segments array found in parsed response');
+        
+      } catch (parseError) {
+        console.log('Direct JSON parsing failed, attempting repair...', parseError.message.substring(0, 100));
+        
+        // JSON repair for truncated responses
+        try {
+          // Find travel_segments array start
+          const segmentsMatch = jsonContent.match(/"travel_segments"\s*:\s*\[/);
+          if (!segmentsMatch) {
+            throw new Error('No travel_segments array found in content');
+          }
+          
+          const segmentsStart = segmentsMatch.index! + segmentsMatch[0].length;
+          let arrayContent = jsonContent.substring(segmentsStart);
+          
+          // Find complete objects by balancing braces
+          const objects: any[] = [];
+          let depth = 0;
+          let objectStart = -1;
+          let inString = false;
+          let escapeNext = false;
+          
+          for (let i = 0; i < arrayContent.length; i++) {
+            const char = arrayContent[i];
+            
+            if (escapeNext) {
+              escapeNext = false;
+              continue;
+            }
+            
+            if (char === '\\') {
+              escapeNext = true;
+              continue;
+            }
+            
+            if (char === '"' && !escapeNext) {
+              inString = !inString;
+              continue;
+            }
+            
+            if (inString) continue;
+            
+            if (char === '{') {
+              if (depth === 0) objectStart = i;
+              depth++;
+            } else if (char === '}') {
+              depth--;
+              if (depth === 0 && objectStart >= 0) {
+                // Complete object found
+                const objStr = arrayContent.substring(objectStart, i + 1);
+                try {
+                  const obj = JSON.parse(objStr);
+                  objects.push(obj);
+                } catch {
+                  // Skip malformed object
+                }
+                objectStart = -1;
+              }
+            }
+            
+            // Stop if we hit array end or run out of complete objects
+            if (char === ']' && depth === 0) break;
+          }
+          
+          if (objects.length > 0) {
+            console.log(`JSON repair successful: recovered ${objects.length} complete segments`);
+            return objects;
+          }
+          
+          throw new Error('JSON repair failed: no complete objects found');
+          
+        } catch (repairError) {
+          console.error('JSON repair failed:', repairError.message);
+          
+          // Log diagnostic info
+          const lastChars = jsonContent.slice(-200);
+          console.error(`Response ending (last 200 chars): ${lastChars}`);
+          
+          throw new Error(`JSON_PARSE_FAILED: ${parseError.message} | Repair failed: ${repairError.message} | Length: ${content.length}`);
         }
       }
+    }
+    
+    try {
+      extractedSegments = parseJsonSafely(extractedContent);
       
-      // Validate each segment and boost confidence
+      // Validate and enhance segments
       extractedSegments = extractedSegments.map(segment => {
+        // Apply defaults for missing fields
+        segment.confidence = segment.confidence || 0.0;
+        segment.segment_type = segment.segment_type || 'other';
+        segment.title = segment.title || 'Untitled Segment';
+        
+        // Boost confidence based on OCR quality
         if (ocrConfidence > 0.7 && segment.confidence < 0.9) {
           segment.confidence = Math.min(0.95, segment.confidence + 0.1);
         }
+        
         return segment;
       });
       
       if (extractedSegments.length === 0) {
-        throw new Error('No segments extracted from document');
+        throw new Error('No valid segments extracted from document');
       }
       
-      console.log(`Successfully parsed ${extractedSegments.length} travel segments from OpenAI response`);
+      console.log(`Successfully extracted ${extractedSegments.length} travel segments`);
       
     } catch (parseError) {
-      console.error('Failed to parse OpenAI JSON response:', extractedContent);
-      throw new Error('Invalid JSON response from OpenAI');
+      console.error('OpenAI response parsing failed completely:', parseError.message);
+      throw new Error(`JSON parsing failed: ${parseError.message}`);
     }
 
     // Update processing job with results
