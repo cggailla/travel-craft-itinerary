@@ -154,7 +154,7 @@ Gather all **extra details not already structured**, especially:
 
     // 4) Appel OpenAI Responses API avec fichier attaché
     // ⚠️ Utilise gpt-4o pour l’OCR/vision. gpt-5-nano ne supporte pas input_file.
-    const openaiRes = await fetch('https://api.openai.com/v1/responses', {
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openaiApiKey}`,
@@ -162,21 +162,24 @@ Gather all **extra details not already structured**, especially:
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        // Si tu veux tenter la contrainte JSON stricte sur 4o, dé-commente la ligne ci-dessous
-        // response_format: { type: 'json' },
-        input: [
+        max_tokens: 4000,
+        messages: [
           {
             role: 'system',
-            content: [{ type: 'input_text', text: systemPrompt }]
+            content: systemPrompt
           },
           {
             role: 'user',
             content: [
               {
-                type: 'input_file',
-                filename,
-                mime_type: mime,
-                data: `data:${mime};base64,${base64File}`
+                type: 'text',
+                text: 'Analyse ce document et extrais tous les segments de voyage selon les instructions.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mime};base64,${base64File}`
+                }
               }
             ]
           }
@@ -186,25 +189,22 @@ Gather all **extra details not already structured**, especially:
 
     if (!openaiRes.ok) {
       const errTxt = await openaiRes.text();
-      throw new Error(`OpenAI Responses API error ${openaiRes.status}: ${errTxt}`);
+      throw new Error(`OpenAI API error ${openaiRes.status}: ${errTxt}`);
     }
 
     const oa = await openaiRes.json();
 
-    // 5) Récupère le texte de sortie (Responses API)
-    // Selon les versions du SDK/HTTP, la sortie peut être dans:
-    // - oa.output_text (champ pratique quand dispo)
-    // - ou oa.output[0].content[0].text.value
+    // 5) Récupère le texte de sortie (API standard)
     let contentText = '';
-    if (oa.output_text) {
-      contentText = oa.output_text;
+    if (oa.choices && oa.choices[0] && oa.choices[0].message && oa.choices[0].message.content) {
+      contentText = oa.choices[0].message.content;
     } else if (Array.isArray(oa.output) && oa.output[0]?.content?.[0]?.type === 'output_text') {
       contentText = oa.output[0].content[0].text;
     } else if (Array.isArray(oa.output) && oa.output[0]?.content?.[0]?.text?.value) {
       contentText = oa.output[0].content[0].text.value;
     } else {
       // Dernier fallback: cherche un champ text dans l’arbre
-      contentText = JSON.stringify(oa);
+      throw new Error('No content found in OpenAI response');
     }
 
     // 6) Parse JSON (ton parseur robuste)
