@@ -60,27 +60,17 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${segments?.length || 0} travel segments`)
 
-    // Separate dated and undated segments
-    const datedSegments: any[] = []
-    const undatedSegments: any[] = []
+    // Group segments by date for timeline view
+    const groupedByDate: { [key: string]: any[] } = {}
     
     segments?.forEach(segment => {
       if (segment.start_date) {
-        datedSegments.push(segment)
-      } else {
-        undatedSegments.push(segment)
+        const dateKey = new Date(segment.start_date).toISOString().split('T')[0]
+        if (!groupedByDate[dateKey]) {
+          groupedByDate[dateKey] = []
+        }
+        groupedByDate[dateKey].push(segment)
       }
-    })
-
-    // Group dated segments by date for timeline view
-    const groupedByDate: { [key: string]: any[] } = {}
-    
-    datedSegments.forEach(segment => {
-      const dateKey = new Date(segment.start_date).toISOString().split('T')[0]
-      if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = []
-      }
-      groupedByDate[dateKey].push(segment)
     })
 
     // Convert to timeline format
@@ -96,9 +86,6 @@ Deno.serve(async (req) => {
         success: true,
         segments: segments || [],
         timeline,
-        undated_segments: undatedSegments,
-        dated_count: datedSegments.length,
-        undated_count: undatedSegments.length,
         total_count: segments?.length || 0,
         message: 'Travel segments retrieved successfully'
       }),
