@@ -25,6 +25,7 @@ export default function TravelTimelineNew({
     segments: TravelSegment[];
   }[]>([]);
   const [segments, setSegments] = useState<TravelSegment[]>([]);
+  const [undatedSegments, setUndatedSegments] = useState<TravelSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
   const [selectedSegment, setSelectedSegment] = useState<TravelSegment | null>(null);
@@ -43,6 +44,7 @@ export default function TravelTimelineNew({
       if (response.success) {
         setSegments(response.segments.filter(s => !tripId || s.documents?.trip_id === tripId));
         setTimeline(response.timeline.filter(day => day.segments.some(s => !tripId || s.documents?.trip_id === tripId)));
+        setUndatedSegments((response.undated_segments || []).filter(s => !tripId || s.documents?.trip_id === tripId));
       } else {
         throw new Error(response.error);
       }
@@ -202,6 +204,7 @@ export default function TravelTimelineNew({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          {/* Timeline for dated segments */}
           {timeline.map((day, dayIndex) => <div key={dayIndex} className="relative">
               {dayIndex > 0}
               
@@ -275,6 +278,85 @@ export default function TravelTimelineNew({
                   </Card>)}
               </div>
             </div>)}
+
+          {/* Undated segments section */}
+          {undatedSegments.length > 0 && (
+            <div className="relative">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium">
+                  ?
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Éléments sans date
+                </h3>
+                <Badge variant="outline" className="text-xs">
+                  {undatedSegments.length} élément{undatedSegments.length > 1 ? 's' : ''}
+                </Badge>
+              </div>
+
+              <div className="ml-12 space-y-3">
+                {undatedSegments.map((segment) => (
+                  <Card key={segment.id} className="relative border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <div className={`p-2 rounded-lg ${getSegmentColor(segment.segment_type)}`}>
+                            {getSegmentIcon(segment.segment_type)}
+                          </div>
+                          
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 
+                                className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setSelectedSegment(segment)}
+                              >
+                                {segment.title}
+                              </h4>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs bg-orange-50 border-orange-200 text-orange-700">
+                                  Sans date
+                                </Badge>
+                                {segment.validated && <Badge variant="default" className="bg-secondary text-secondary-foreground">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Validé
+                                  </Badge>}
+                              </div>
+                            </div>
+
+                            {segment.provider && <p className="text-sm text-muted-foreground">
+                                {segment.provider}
+                              </p>}
+
+                            {segment.address && <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span>{segment.address}</span>
+                              </div>}
+
+                            {segment.reference_number && <p className="text-sm font-mono text-muted-foreground">
+                                Réf: {segment.reference_number}
+                              </p>}
+
+                            {segment.description && <p className="text-sm text-muted-foreground line-clamp-2">
+                                {segment.description}
+                              </p>}
+
+                            <div className="flex items-center justify-between pt-2">
+                              <Badge variant="outline" className="text-xs">
+                                Confiance: {Math.round((segment.confidence || 0) * 100)}%
+                              </Badge>
+                              {segment.documents && <p className="text-xs text-muted-foreground">
+                                  Source: {segment.documents.file_name}
+                                </p>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
