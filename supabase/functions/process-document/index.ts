@@ -203,7 +203,8 @@ Gather all **extra details not already structured**, especially:
       contentText = oa.output[0].content[0].text.value;
     } else {
       // Dernier fallback: cherche un champ text dans l’arbre
-      contentText = JSON.stringify(oa);
+      console.error('Unexpected OpenAI response structure:', Object.keys(oa));
+      throw new Error('Unexpected response structure from OpenAI API');
     }
 
     // 6) Parse JSON (ton parseur robuste)
