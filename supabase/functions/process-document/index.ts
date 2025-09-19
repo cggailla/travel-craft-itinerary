@@ -3,112 +3,62 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-interface TravelDocumentData {
-  segment_type: 'flight' | 'hotel' | 'activity' | 'car' | 'train' | 'boat' | 'pass' | 'transfer' | 'other'
-  title: string
-  start_date: string | null
-  end_date?: string | null
-  provider?: string
-  reference_number?: string
-  address?: string
-  description?: string
-  confidence: number
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  // Parse body ONCE and keep it for the entire handler (including catch)
-  let bodyJson: { document_id?: string } = {};
+  let bodyJson: any = {};
   try {
-    console.log('Process document function called');
     bodyJson = await req.json().catch(() => ({}));
     const document_id = bodyJson?.document_id;
     if (!document_id) throw new Error('Missing document_id');
-    
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
-    
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Processing document:', document_id);
 
-    // Get document and job info
+    // 1) Récupère le document (on suppose qu’il a storage_bucket + storage_path ou un file_url)
     const { data: document, error: docError } = await supabase
       .from('documents')
       .select('*')
       .eq('id', document_id)
       .single();
+    if (docError || !document) throw new Error(`Document not found: ${docError?.message}`);
 
-    if (docError || !document) {
-      throw new Error(`Document not found: ${docError?.message}`);
-    }
-
+    // Récupère la job
     const { data: job, error: jobError } = await supabase
       .from('document_processing_jobs')
       .select('*')
       .eq('document_id', document_id)
       .single();
+    if (jobError || !job) throw new Error(`Processing job not found: ${jobError?.message}`);
 
-    if (jobError || !job) {
-      throw new Error(`Processing job not found: ${jobError?.message}`);
-    }
+    // Passe le job en "processing"
+    await supabase.from('document_processing_jobs').update({
+      status: 'processing',
+      updated_at: new Date().toISOString()
+    }).eq('id', job.id);
 
-    // Update job status to processing
-    await supabase
-      .from('document_processing_jobs')
-      .update({ 
-        status: 'processing',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', job.id);
+    // 2) Télécharge le fichier depuis Supabase Storage
+    // Adapte ces champs à ton schéma (exemples: document.storage_bucket, document.storage_path)
+    const bucket = document.storage_bucket || 'documents';
+    const path = document.storage_path; // ex: 'user_123/abc.pdf'
+    if (!path) throw new Error('Document missing storage_path');
 
-    console.log('Job status updated to processing');
+    const { data: fileData, error: fileErr } = await supabase.storage
+      .from(bucket)
+      .download(path);
+    if (fileErr || !fileData) throw new Error(`Cannot download file: ${fileErr?.message}`);
 
-    // Get Mistral OCR text first (required step)
-    let ocrText = job.ocr_text || '';
-    let ocrConfidence = job.ocr_confidence || 0.0;
+    const arrayBuf = await fileData.arrayBuffer();
+    const base64File = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+    const filename = document.original_filename || 'document.pdf';
+    const mime = document.mime_type || 'application/pdf';
 
-    // Always run Mistral OCR extraction first if not available
-    if (!ocrText) {
-      console.log('Running Mistral OCR extraction first');
-      try {
-        const ocrResponse = await fetch(`${supabaseUrl}/functions/v1/extract-text`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ document_id })
-        });
-
-        if (ocrResponse.ok) {
-          const ocrResult = await ocrResponse.json();
-          ocrText = ocrResult.ocr_text || '';
-          ocrConfidence = ocrResult.ocr_confidence || 0.0;
-          console.log('Mistral OCR completed with confidence:', ocrConfidence);
-        } else {
-          throw new Error('Mistral OCR extraction failed');
-        }
-      } catch (ocrError) {
-        console.error('Mistral OCR failed:', ocrError);
-        throw new Error('Cannot proceed without OCR text extraction');
-      }
-    }
-
-    if (!ocrText) {
-      throw new Error('No OCR text available for processing');
-    }
-
-    console.log('Using Mistral OCR markdown text for OpenAI processing');
-
-    // Prepare OpenAI system and user messages (separate for better compliance)
+    // 3) Prépare le prompt (reprend ta spec JSON)
     const systemPrompt = `You are an expert travel document analyzer.
 
 Your goal is to extract ALL segments from a travel document (voucher, confirmation, invoice, PDF, email, e-ticket, etc.) and return a structured list of trip segments to be used in a customer-facing **travel booklet** ("carnet de voyage"). 
@@ -202,252 +152,128 @@ Gather all **extra details not already structured**, especially:
 - Return maximum 30 segments per document
 - DO NOT RETURN ANYTHING OTHER THAN THE JSON`
 
-    const userPrompt = `Analyze this travel document and extract all travel segments:\n\n${ocrText}`;
-
-    // Call OpenAI Text Completion API with gpt-4o
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // 4) Appel OpenAI Responses API avec fichier attaché
+    // ⚠️ Utilise gpt-4o pour l’OCR/vision. gpt-5-nano ne supporte pas input_file.
+    const openaiRes = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 4000,
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-      }),
+        // Si tu veux tenter la contrainte JSON stricte sur 4o, dé-commente la ligne ci-dessous
+        // response_format: { type: 'json' },
+        input: [
+          {
+            role: 'system',
+            content: [{ type: 'input_text', text: systemPrompt }]
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_file',
+                filename,
+                mime_type: mime,
+                data: `data:${mime};base64,${base64File}`
+              }
+            ]
+          }
+        ]
+      })
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI Text Completion API error:', openaiResponse.status, errorText);
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+    if (!openaiRes.ok) {
+      const errTxt = await openaiRes.text();
+      throw new Error(`OpenAI Responses API error ${openaiRes.status}: ${errTxt}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    const extractedContent = openaiData.choices[0].message.content;
+    const oa = await openaiRes.json();
 
-    console.log(`OpenAI text completion response received from gpt-4o`);
-    console.log(`Raw OpenAI response: ${JSON.stringify(openaiData)}`);
-    console.log(`Extracted content length: ${extractedContent?.length || 0}`);
-    console.log(`Extracted content preview: ${extractedContent?.substring(0, 200) || 'NULL/EMPTY'}`);
-
-    // Check if content is empty
-    if (!extractedContent || extractedContent.trim().length === 0) {
-      console.error('OpenAI returned empty content');
-      throw new Error('OpenAI returned empty response content');
+    // 5) Récupère le texte de sortie (Responses API)
+    // Selon les versions du SDK/HTTP, la sortie peut être dans:
+    // - oa.output_text (champ pratique quand dispo)
+    // - ou oa.output[0].content[0].text.value
+    let contentText = '';
+    if (oa.output_text) {
+      contentText = oa.output_text;
+    } else if (Array.isArray(oa.output) && oa.output[0]?.content?.[0]?.type === 'output_text') {
+      contentText = oa.output[0].content[0].text;
+    } else if (Array.isArray(oa.output) && oa.output[0]?.content?.[0]?.text?.value) {
+      contentText = oa.output[0].content[0].text.value;
+    } else {
+      // Dernier fallback: cherche un champ text dans l’arbre
+      contentText = JSON.stringify(oa);
     }
 
-    // Parse JSON with robust error handling and repair functionality
-    let extractedSegments: TravelDocumentData[];
-    
-    function parseJsonSafely(content: string): TravelDocumentData[] {
-      console.log(`OpenAI response length: ${content.length} chars`);
-      
-      // Strip code fences if present
-      let jsonContent = content;
-      const jsonMatch = jsonContent.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonContent = jsonMatch[1];
-        console.log('Stripped code fences from response');
-      }
-      
-      // Try direct parsing first
+    // 6) Parse JSON (ton parseur robuste)
+    function safeParse(content: string) {
+      // enlève des fences au cas où
+      const m = content.match(/```json\s*([\s\S]*?)\s*```/i);
+      const raw = m ? m[1] : content;
+      let parsed: any;
       try {
-        const parsedData = JSON.parse(jsonContent);
-        
-        // Extract segments from expected format {"travel_segments": [...]}
-        if (parsedData.travel_segments && Array.isArray(parsedData.travel_segments)) {
-          console.log(`Found ${parsedData.travel_segments.length} segments in travel_segments array`);
-          return parsedData.travel_segments;
-        }
-        
-        // Fallback for unexpected formats
-        if (Array.isArray(parsedData)) {
-          console.log(`Found ${parsedData.length} segments in direct array format`);
-          return parsedData;
-        }
-        
-        if (typeof parsedData === 'object' && parsedData.segment_type) {
-          console.log('Found single segment object, wrapping in array');
-          return [parsedData];
-        }
-        
-        throw new Error('No travel_segments array found in parsed response');
-        
-      } catch (parseError) {
-        console.log('Direct JSON parsing failed, attempting repair...', parseError.message.substring(0, 100));
-        
-        // JSON repair for truncated responses
-        try {
-          // Find travel_segments array start
-          const segmentsMatch = jsonContent.match(/"travel_segments"\s*:\s*\[/);
-          if (!segmentsMatch) {
-            throw new Error('No travel_segments array found in content');
-          }
-          
-          const segmentsStart = segmentsMatch.index! + segmentsMatch[0].length;
-          let arrayContent = jsonContent.substring(segmentsStart);
-          
-          // Find complete objects by balancing braces
-          const objects: any[] = [];
-          let depth = 0;
-          let objectStart = -1;
-          let inString = false;
-          let escapeNext = false;
-          
-          for (let i = 0; i < arrayContent.length; i++) {
-            const char = arrayContent[i];
-            
-            if (escapeNext) {
-              escapeNext = false;
-              continue;
-            }
-            
-            if (char === '\\') {
-              escapeNext = true;
-              continue;
-            }
-            
-            if (char === '"' && !escapeNext) {
-              inString = !inString;
-              continue;
-            }
-            
-            if (inString) continue;
-            
-            if (char === '{') {
-              if (depth === 0) objectStart = i;
-              depth++;
-            } else if (char === '}') {
-              depth--;
-              if (depth === 0 && objectStart >= 0) {
-                // Complete object found
-                const objStr = arrayContent.substring(objectStart, i + 1);
-                try {
-                  const obj = JSON.parse(objStr);
-                  objects.push(obj);
-                } catch {
-                  // Skip malformed object
-                }
-                objectStart = -1;
-              }
-            }
-            
-            // Stop if we hit array end or run out of complete objects
-            if (char === ']' && depth === 0) break;
-          }
-          
-          if (objects.length > 0) {
-            console.log(`JSON repair successful: recovered ${objects.length} complete segments`);
-            return objects;
-          }
-          
-          throw new Error('JSON repair failed: no complete objects found');
-          
-        } catch (repairError) {
-          console.error('JSON repair failed:', repairError.message);
-          
-          // Log diagnostic info
-          const lastChars = jsonContent.slice(-200);
-          console.error(`Response ending (last 200 chars): ${lastChars}`);
-          
-          throw new Error(`JSON_PARSE_FAILED: ${parseError.message} | Repair failed: ${repairError.message} | Length: ${content.length}`);
-        }
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new Error('JSON parse failed from OpenAI output');
       }
-    }
-    
-    try {
-      extractedSegments = parseJsonSafely(extractedContent);
-      
-      // Validate and enhance segments
-      extractedSegments = extractedSegments.map(segment => {
-        // Apply defaults for missing fields
-        segment.confidence = segment.confidence || 0.0;
-        segment.segment_type = segment.segment_type || 'other';
-        segment.title = segment.title || 'Untitled Segment';
-        
-        // Boost confidence based on OCR quality
-        if (ocrConfidence > 0.7 && segment.confidence < 0.9) {
-          segment.confidence = Math.min(0.95, segment.confidence + 0.1);
-        }
-        
-        return segment;
-      });
-      
-      if (extractedSegments.length === 0) {
-        throw new Error('No valid segments extracted from document');
-      }
-      
-      console.log(`Successfully extracted ${extractedSegments.length} travel segments`);
-      
-    } catch (parseError) {
-      console.error('OpenAI response parsing failed completely:', parseError.message);
-      throw new Error(`JSON parsing failed: ${parseError.message}`);
+      if (Array.isArray(parsed?.travel_segments)) return parsed.travel_segments;
+      if (Array.isArray(parsed)) return parsed;
+      throw new Error('No travel_segments array in model output');
     }
 
-    // Update processing job with results
-    const { error: updateError } = await supabase
-      .from('document_processing_jobs')
-      .update({
-        status: 'completed',
-        ai_extracted_data: extractedSegments,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', job.id);
+    const extractedSegments = safeParse(contentText).slice(0, 30).map((s: any) => ({
+      segment_type: s.segment_type ?? 'other',
+      title: s.title ?? 'Untitled Segment',
+      start_date: s.start_date ?? null,
+      end_date: s.end_date ?? null,
+      provider: s.provider ?? null,
+      reference_number: s.reference_number ?? null,
+      address: s.address ?? null,
+      description: s.commentaire ?? null, // si tu veux rester avec "commentaire", adapte le champ cible
+      confidence: typeof s.confidence === 'number' ? s.confidence : 0.0,
+      raw: s
+    }));
 
-    if (updateError) {
-      console.error('Failed to update job:', updateError);
-      throw new Error(`Failed to update job: ${updateError.message}`);
-    }
+    if (!extractedSegments.length) throw new Error('No valid segments extracted');
 
-    console.log('Job updated with AI results');
-
-    // Create all travel segments with trip_id from document
-    const segmentInserts = extractedSegments.map(segment => ({
-      document_id: document_id,
+    // 7) Sauvegarde des segments + job “completed”
+    const inserts = extractedSegments.map((s: any) => ({
+      document_id,
       user_id: document.user_id,
-      trip_id: document.trip_id, // Assign trip_id directly
-      segment_type: segment.segment_type,
-      title: segment.title,
-      start_date: segment.start_date,
-      end_date: segment.end_date,
-      provider: segment.provider,
-      reference_number: segment.reference_number,
-      address: segment.address,
-      description: segment.description,
-      confidence: segment.confidence,
-      raw_data: segment,
+      trip_id: document.trip_id,
+      segment_type: s.segment_type,
+      title: s.title,
+      start_date: s.start_date,
+      end_date: s.end_date,
+      provider: s.provider,
+      reference_number: s.reference_number,
+      address: s.address,
+      description: s.description,
+      confidence: s.confidence,
+      raw_data: s.raw,
       validated: false
     }));
 
-    const { data: createdSegments, error: segmentError } = await supabase
+    const { data: createdSegments, error: segErr } = await supabase
       .from('travel_segments')
-      .insert(segmentInserts)
+      .insert(inserts)
       .select();
+    if (segErr) throw new Error(`Failed to create travel segments: ${segErr.message}`);
 
-    // Update trip status to processing when segments are created
     if (document.trip_id) {
-      await supabase
-        .from('trips')
-        .update({ 
-          status: 'processing',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', document.trip_id);
+      await supabase.from('trips').update({
+        status: 'processing',
+        updated_at: new Date().toISOString()
+      }).eq('id', document.trip_id);
     }
 
-    if (segmentError || !createdSegments) {
-      console.error('Failed to create travel segments:', segmentError);
-      throw new Error(`Failed to create travel segments: ${segmentError?.message}`);
-    }
-
-    console.log(`${createdSegments.length} travel segments created successfully`);
+    await supabase.from('document_processing_jobs').update({
+      status: 'completed',
+      ai_extracted_data: extractedSegments,
+      updated_at: new Date().toISOString()
+    }).eq('id', job.id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -456,41 +282,25 @@ Gather all **extra details not already structured**, especially:
       segments_created: createdSegments.length,
       segment_ids: createdSegments.map(s => s.id),
       extracted_segments: extractedSegments,
-      processing_method: 'mistral_ocr_openai_completion'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+      processing_method: 'openai_responses_file_ocr_gpt4o'
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-  } catch (error) {
-    console.error('Process document function error:', error);
-    
-    // Try to update job status to failed
+  } catch (error: any) {
     try {
       const document_id = bodyJson?.document_id;
       if (document_id) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        
-        await supabase
-          .from('document_processing_jobs')
-          .update({ 
-            status: 'failed',
-            error_message: error.message,
-            updated_at: new Date().toISOString()
-          })
-          .eq('document_id', document_id);
+        const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+        await supabase.from('document_processing_jobs').update({
+          status: 'failed',
+          error_message: error?.message || String(error),
+          updated_at: new Date().toISOString()
+        }).eq('document_id', document_id);
       }
-    } catch (updateError) {
-      console.error('Failed to update job status:', updateError);
-    }
-
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
-    }), {
+    } catch {}
+    return new Response(JSON.stringify({ success: false, error: error?.message || String(error) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
+
