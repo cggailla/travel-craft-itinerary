@@ -71,44 +71,44 @@ Deno.serve(async (req) => {
 
     console.log('Job status updated to processing');
 
-    // Get Mistral OCR text first (required step)
-    let ocrText = job.ocr_text || '';
-    let ocrConfidence = job.ocr_confidence || 0.0;
+    /******************************************************************
+     * 🔄 CHANGEMENT #1 : on supprime l’étape Mistral OCR et on lit
+     * directement le fichier depuis Supabase Storage pour l’envoyer
+     * à l’API OpenAI (Responses API) via input_file (data URL base64).
+     ******************************************************************/
 
-    // Always run Mistral OCR extraction first if not available
-    if (!ocrText) {
-      console.log('Running Mistral OCR extraction first');
-      try {
-        const ocrResponse = await fetch(`${supabaseUrl}/functions/v1/extract-text`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ document_id })
-        });
+    // Récupération du binaire du document depuis le Storage
+    // On essaie des champs courants sans modifier ton schéma ailleurs.
+    const storageBucket: string =
+      document.storage_bucket || document.bucket || 'documents';
+    const storagePath: string =
+      document.storage_path || document.path || document.file_path || document.relative_path;
 
-        if (ocrResponse.ok) {
-          const ocrResult = await ocrResponse.json();
-          ocrText = ocrResult.ocr_text || '';
-          ocrConfidence = ocrResult.ocr_confidence || 0.0;
-          console.log('Mistral OCR completed with confidence:', ocrConfidence);
-        } else {
-          throw new Error('Mistral OCR extraction failed');
-        }
-      } catch (ocrError) {
-        console.error('Mistral OCR failed:', ocrError);
-        throw new Error('Cannot proceed without OCR text extraction');
-      }
+    if (!storagePath) {
+      throw new Error('Missing storage_path/path on document to download the file');
     }
 
-    if (!ocrText) {
-      throw new Error('No OCR text available for processing');
+    console.log('Downloading from storage:', { storageBucket, storagePath });
+    const downloadRes = await supabase.storage.from(storageBucket).download(storagePath);
+    if (downloadRes.error) {
+      throw new Error(`Storage download failed: ${downloadRes.error.message}`);
     }
+    const fileBlob = downloadRes.data!;
+    const arrayBuffer = await fileBlob.arrayBuffer();
 
-    console.log('Using Mistral OCR markdown text for OpenAI processing');
+    // Encodage base64
+    const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-    // Prepare OpenAI system and user messages (separate for better compliance)
+    // Meta simples (sans toucher à d’autres colonnes)
+    const mimeType: string = document.mime_type || 'application/pdf';
+    const fileName: string = document.original_filename || 'document.pdf';
+
+    // On n’utilise plus l’OCR => fixe à 0 pour garder le code en aval inchangé
+    const ocrConfidence = 0.0;
+
+    console.log('Using OpenAI Responses API with direct file attachment');
+
+    // Prépare le prompt (identique à ton actuel)
     const systemPrompt = `You are an expert travel document analyzer.
 
 Your goal is to extract ALL segments from a travel document (voucher, confirmation, invoice, PDF, email, e-ticket, etc.) and return a structured list of trip segments to be used in a customer-facing **travel booklet** ("carnet de voyage"). 
@@ -129,7 +129,7 @@ Return ONLY the following JSON object (no explanations, no extra text):
       "provider": "Company or service name, or null",
       "reference_number": "Booking/ticket number, or null",
       "address": "City name, airport code, hotel name, meeting point, or null",
-      "commentaire": "All extra details not covered by other fields (≤ 500 chars)",
+      "description": "All extra details not covered by other fields (≤ 500 chars)",
       "confidence": 0.0
     }
   ]
@@ -176,7 +176,7 @@ Use IATA airport codes, station names, hotel names, or city names. Examples:
 - “Shibuya Excel Hotel Tokyu”
 - “RAI” for Praia Airport
 
-**commentaire**:  
+**description**:  
 Gather all **extra details not already structured**, especially:
 - Room types / board (FB, BB, etc.)
 - Check-in / check-out hours
@@ -200,61 +200,67 @@ Gather all **extra details not already structured**, especially:
 - Titles and comments must be clean, readable and client-facing
 - You must include **multiple segments per document if relevant**
 - Return maximum 30 segments per document
-- DO NOT RETURN ANYTHING OTHER THAN THE JSON`
+- DO NOT RETURN ANYTHING OTHER THAN THE JSON`;
 
-    const userPrompt = `Analyze this travel document and extract all travel segments:\n\n${ocrText}`;
-
-    // Call OpenAI Text Completion API with gpt-4o
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    /******************************************************************
+     * 🔄 CHANGEMENT #2 : appel OpenAI Responses API (pas Chat)
+     ******************************************************************/
+    const responsesRes = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+        model: 'gpt-4o', // modèle vision-compatible
+        input: [
+          {
+            role: 'system',
+            content: [
+              { type: 'input_text', text: systemPrompt }
+            ]
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_file',
+                filename: fileName,
+                file_data: `data:${mimeType};base64,${base64Data}`
+              }
+            ]
+          }
         ],
-        max_tokens: 4000,
+        response_format: { type: 'json_object' },
         temperature: 0.1,
-        response_format: { type: 'json_object' }
-      }),
+        // Responses API attend "max_output_tokens" (et non max_tokens)
+        max_output_tokens: 4000
+      })
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('OpenAI Text Completion API error:', openaiResponse.status, errorText);
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+    if (!responsesRes.ok) {
+      const errorText = await responsesRes.text();
+      console.error('OpenAI Responses API error:', responsesRes.status, errorText);
+      throw new Error(`OpenAI API error: ${responsesRes.status}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    console.log('OpenAI response structure check:', {
-      hasChoices: !!openaiData.choices,
-      choicesLength: openaiData.choices?.length,
-      hasMessage: !!(openaiData.choices?.[0]?.message),
-      hasContent: !!(openaiData.choices?.[0]?.message?.content)
-    });
-    
-    const extractedContent = openaiData.choices?.[0]?.message?.content;
+    const openaiData = await responsesRes.json();
 
-    console.log(`OpenAI text completion response received from gpt-4o`);
-    console.log(`OpenAI response metadata:`, {
-      model: openaiData.model,
-      usage: openaiData.usage,
-      choices_count: openaiData.choices?.length
-    });
-    console.log(`Extracted content length: ${extractedContent?.length || 0}`);
-    console.log(`Extracted content preview: ${extractedContent?.substring(0, 200) || 'NULL/EMPTY'}`);
+    // Le Responses API renvoie classiquement `output_text`.
+    const extractedContent: string =
+      openaiData.output_text ??
+      openaiData.choices?.[0]?.message?.content ?? // fallback si jamais
+      '';
 
-    // Check if content is empty
+    console.log(`OpenAI responses output length: ${extractedContent.length || 0}`);
+    console.log(`Output preview: ${extractedContent.substring(0, 200) || 'NULL/EMPTY'}`);
+
     if (!extractedContent || extractedContent.trim().length === 0) {
       console.error('OpenAI returned empty content');
       throw new Error('OpenAI returned empty response content');
     }
 
-    // Parse JSON with robust error handling and repair functionality
+    // Parse JSON with robust error handling and repair functionality (inchangé)
     let extractedSegments: TravelDocumentData[];
     
     function parseJsonSafely(content: string): TravelDocumentData[] {
@@ -292,7 +298,7 @@ Gather all **extra details not already structured**, especially:
         throw new Error('No travel_segments array found in parsed response');
         
       } catch (parseError) {
-        console.log('Direct JSON parsing failed, attempting repair...', parseError.message.substring(0, 100));
+        console.log('Direct JSON parsing failed, attempting repair...', (parseError as Error).message.substring(0, 100));
         
         // JSON repair for truncated responses
         try {
@@ -361,14 +367,14 @@ Gather all **extra details not already structured**, especially:
           
           throw new Error('JSON repair failed: no complete objects found');
           
-        } catch (repairError) {
+        } catch (repairError: any) {
           console.error('JSON repair failed:', repairError.message);
           
           // Log diagnostic info
           const lastChars = jsonContent.slice(-200);
           console.error(`Response ending (last 200 chars): ${lastChars}`);
           
-          throw new Error(`JSON_PARSE_FAILED: ${parseError.message} | Repair failed: ${repairError.message} | Length: ${content.length}`);
+          throw new Error(`JSON_PARSE_FAILED: ${(parseError as Error).message} | Repair failed: ${repairError.message} | Length: ${content.length}`);
         }
       }
     }
@@ -376,18 +382,14 @@ Gather all **extra details not already structured**, especially:
     try {
       extractedSegments = parseJsonSafely(extractedContent);
       
-      // Validate and enhance segments
+      // Validate and enhance segments (on garde le même traitement ; ocrConfidence=0)
       extractedSegments = extractedSegments.map(segment => {
-        // Apply defaults for missing fields
         segment.confidence = segment.confidence || 0.0;
         segment.segment_type = segment.segment_type || 'other';
         segment.title = segment.title || 'Untitled Segment';
-        
-        // Boost confidence based on OCR quality
         if (ocrConfidence > 0.7 && segment.confidence < 0.9) {
           segment.confidence = Math.min(0.95, segment.confidence + 0.1);
         }
-        
         return segment;
       });
       
@@ -397,7 +399,7 @@ Gather all **extra details not already structured**, especially:
       
       console.log(`Successfully extracted ${extractedSegments.length} travel segments`);
       
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error('OpenAI response parsing failed completely:', parseError.message);
       throw new Error(`JSON parsing failed: ${parseError.message}`);
     }
@@ -467,12 +469,12 @@ Gather all **extra details not already structured**, especially:
       segments_created: createdSegments.length,
       segment_ids: createdSegments.map(s => s.id),
       extracted_segments: extractedSegments,
-      processing_method: 'mistral_ocr_openai_completion'
+      processing_method: 'openai_responses_file_input'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Process document function error:', error);
     
     // Try to update job status to failed
