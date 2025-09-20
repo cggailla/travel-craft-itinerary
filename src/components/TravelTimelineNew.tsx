@@ -25,6 +25,7 @@ export default function TravelTimelineNew({
     segments: TravelSegment[];
   }[]>([]);
   const [segments, setSegments] = useState<TravelSegment[]>([]);
+  const [undatedSegments, setUndatedSegments] = useState<TravelSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
   const [selectedSegment, setSelectedSegment] = useState<TravelSegment | null>(null);
@@ -43,6 +44,7 @@ export default function TravelTimelineNew({
       if (response.success) {
         setSegments(response.segments.filter(s => !tripId || s.documents?.trip_id === tripId));
         setTimeline(response.timeline.filter(day => day.segments.some(s => !tripId || s.documents?.trip_id === tripId)));
+        setUndatedSegments((response.undated_segments || []).filter(s => !tripId || s.documents?.trip_id === tripId));
       } else {
         throw new Error(response.error);
       }
@@ -202,12 +204,88 @@ export default function TravelTimelineNew({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
+          {/* Segments sans date */}
+          {undatedSegments.length > 0 && (
+            <div className="relative">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Informations générales ({undatedSegments.length})
+                </h3>
+              </div>
+
+              <div className="ml-12 space-y-3">
+                {undatedSegments.map((segment) => (
+                  <Card key={segment.id} className="relative border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <div className={`p-2 rounded-lg ${getSegmentColor(segment.segment_type)}`}>
+                            {getSegmentIcon(segment.segment_type)}
+                          </div>
+                          
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 
+                                className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setSelectedSegment(segment)}
+                              >
+                                {segment.title}
+                              </h4>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs text-muted-foreground">
+                                  Sans date
+                                </Badge>
+                                {segment.validated && <Badge variant="default" className="bg-secondary text-secondary-foreground">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Validé
+                                  </Badge>}
+                              </div>
+                            </div>
+
+                            {segment.provider && <p className="text-sm text-muted-foreground">
+                                {segment.provider}
+                              </p>}
+
+                            {segment.address && <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span>{segment.address}</span>
+                              </div>}
+
+                            {segment.reference_number && <p className="text-sm font-mono text-muted-foreground">
+                                Réf: {segment.reference_number}
+                              </p>}
+
+                            {segment.description && <p className="text-sm text-muted-foreground line-clamp-2">
+                                {segment.description}
+                              </p>}
+
+                            <div className="flex items-center justify-between pt-2">
+                              <Badge variant="outline" className="text-xs">
+                                Confiance: {Math.round((segment.confidence || 0) * 100)}%
+                              </Badge>
+                              {segment.documents && <p className="text-xs text-muted-foreground">
+                                  Source: {segment.documents.file_name}
+                                </p>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {timeline.map((day, dayIndex) => <div key={dayIndex} className="relative">
-              {dayIndex > 0}
+              {(dayIndex > 0 || undatedSegments.length > 0)}
               
               <div className="flex items-center space-x-4 mb-4">
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                  {dayIndex + 1}
+                  {undatedSegments.length > 0 ? dayIndex + 1 : dayIndex + 1}
                 </div>
                 <h3 className="text-lg font-semibold text-foreground">
                   {formatDate(day.date)}

@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
 
     // Group segments by date for timeline view
     const groupedByDate: { [key: string]: any[] } = {}
+    const undatedSegments: any[] = []
     
     segments?.forEach(segment => {
       if (segment.start_date) {
@@ -70,6 +71,8 @@ Deno.serve(async (req) => {
           groupedByDate[dateKey] = []
         }
         groupedByDate[dateKey].push(segment)
+      } else {
+        undatedSegments.push(segment)
       }
     })
 
@@ -86,6 +89,7 @@ Deno.serve(async (req) => {
         success: true,
         segments: segments || [],
         timeline,
+        undated_segments: undatedSegments,
         total_count: segments?.length || 0,
         message: 'Travel segments retrieved successfully'
       }),

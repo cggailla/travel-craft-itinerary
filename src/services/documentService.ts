@@ -23,6 +23,7 @@ export interface TravelSegmentResponse {
   success: boolean
   segments: any[]
   timeline: { date: string; segments: any[] }[]
+  undated_segments?: any[]
   total_count: number
   error?: string
 }
