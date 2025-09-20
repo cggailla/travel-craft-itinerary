@@ -281,6 +281,7 @@ Gather all **extra details not already structured**, especially:
               {
                 type: 'file',
                 file: {
+                  filename: `${fileName}`,
                   file_data: `data:${mimeType};base64,${base64Data}`
                 }
               }
