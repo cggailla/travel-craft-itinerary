@@ -256,9 +256,9 @@ Gather all **extra details not already structured**, especially:
 - DO NOT RETURN ANYTHING OTHER THAN THE JSON`;
 
     /******************************************************************
-     * 🔄 CHANGEMENT #2 : appel OpenAI Responses API (pas Chat)
+     * 🔄 CHANGEMENT #2 : appel OpenAI Chat Completions API avec vision
      ******************************************************************/
-    const responsesRes = await fetch('https://api.openai.com/v1/responses', {
+    const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -266,44 +266,44 @@ Gather all **extra details not already structured**, especially:
       },
       body: JSON.stringify({
         model: 'gpt-4o', // modèle vision-compatible
-        input: [
+        messages: [
           {
             role: 'system',
-            content: [
-              { type: 'input_text', text: systemPrompt }
-            ]
+            content: systemPrompt
           },
           {
             role: 'user',
             content: [
               {
-                type: 'input_file',
-                filename: fileName,
-                file_data: `data:${mimeType};base64,${base64Data}`
+                type: 'text',
+                text: `Analyze this document and extract travel segments according to the instructions.`
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Data}`
+                }
               }
             ]
           }
         ],
         response_format: { type: 'json_object' },
         temperature: 0.1,
-        // Responses API attend "max_output_tokens" (et non max_tokens)
-        max_output_tokens: 4000
+        max_tokens: 4000
       })
     });
 
-    if (!responsesRes.ok) {
-      const errorText = await responsesRes.text();
-      console.error('OpenAI Responses API error:', responsesRes.status, errorText);
-      throw new Error(`OpenAI API error: ${responsesRes.status}`);
+    if (!chatRes.ok) {
+      const errorText = await chatRes.text();
+      console.error('OpenAI Chat API error:', chatRes.status, errorText);
+      throw new Error(`OpenAI API error: ${chatRes.status}`);
     }
 
-    const openaiData = await responsesRes.json();
+    const openaiData = await chatRes.json();
 
-    // Le Responses API renvoie classiquement `output_text`.
+    // Le Chat Completions API renvoie classiquement dans choices[0].message.content
     const extractedContent: string =
-      openaiData.output_text ??
-      openaiData.choices?.[0]?.message?.content ?? // fallback si jamais
-      '';
+      openaiData.choices?.[0]?.message?.content ?? '';
 
     console.log(`OpenAI responses output length: ${extractedContent.length || 0}`);
     console.log(`Output preview: ${extractedContent.substring(0, 200) || 'NULL/EMPTY'}`);
@@ -522,7 +522,7 @@ Gather all **extra details not already structured**, especially:
       segments_created: createdSegments.length,
       segment_ids: createdSegments.map(s => s.id),
       extracted_segments: extractedSegments,
-      processing_method: 'openai_responses_file_input'
+      processing_method: 'openai_chat_completions_vision'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
