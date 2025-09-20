@@ -79,29 +79,74 @@ Deno.serve(async (req) => {
 
     // Récupération du binaire du document depuis le Storage
     // On essaie des champs courants sans modifier ton schéma ailleurs.
+    // --- DOWNLOAD from Supabase Storage (robuste & verbosé) ---
     const storageBucket: string =
       document.storage_bucket || document.bucket || 'documents';
-    const storagePath: string =
-      document.storage_path || document.path || document.file_path || document.relative_path;
-
-    if (!storagePath) {
-      throw new Error('Missing storage_path/path on document to download the file');
+    
+    let rawPath: string =
+      document.storage_path ||
+      document.path ||
+      document.file_path ||
+      document.relative_path ||
+      document.object_path ||
+      document.key ||
+      '';
+    
+    if (!rawPath) {
+      throw new Error('No storage path field found on document (expected one of storage_path/path/file_path/relative_path/object_path/key).');
     }
-
-    console.log('Downloading from storage:', { storageBucket, storagePath });
-    const downloadRes = await supabase.storage.from(storageBucket).download(storagePath);
-    if (downloadRes.error) {
-      throw new Error(`Storage download failed: ${downloadRes.error.message}`);
+    
+    // Normalise: retire les "/" de début et "public/" si présent
+    let storagePath = String(rawPath)
+      .replace(/^public\//, '')
+      .replace(/^\/+/, '');
+    
+    console.log('Downloading from storage (pre-download):', { bucket: storageBucket, rawPath, storagePath });
+    
+    const bucketClient = supabase.storage.from(storageBucket);
+    
+    // 1) Essai direct .download()
+    let fileBlob: Blob | null = null;
+    let downloadErr: any = null;
+    
+    try {
+      const downloadRes = await bucketClient.download(storagePath);
+      if (downloadRes.error) {
+        downloadErr = downloadRes.error;
+      } else {
+        fileBlob = downloadRes.data!;
+      }
+    } catch (e) {
+      downloadErr = e;
     }
-    const fileBlob = downloadRes.data!;
+    
+    if (!fileBlob) {
+      console.warn('Direct download failed, will try signed URL fallback. Error was:', downloadErr ?? '(no error object)');
+    
+      // 2) Fallback: Signed URL courte + fetch HTTP
+      try {
+        const { data: signed, error: signErr } = await bucketClient.createSignedUrl(storagePath, 60);
+        if (signErr || !signed?.signedUrl) {
+          throw new Error(`Signed URL creation failed: ${signErr?.message || 'unknown error'}`);
+        }
+        const httpRes = await fetch(signed.signedUrl);
+        if (!httpRes.ok) {
+          throw new Error(`Signed URL fetch failed with status ${httpRes.status}`);
+        }
+        fileBlob = await httpRes.blob();
+        console.log('Signed URL fetch succeeded for', { bucket: storageBucket, storagePath });
+      } catch (e) {
+        console.error('Signed URL fallback failed:', e);
+        throw new Error(`Storage download failed for bucket="${storageBucket}" path="${storagePath}". Original error: ${downloadErr?.message || JSON.stringify(downloadErr) || 'unknown'} | Fallback: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+      }
+    }
+    
     const arrayBuffer = await fileBlob.arrayBuffer();
-
-    // Encodage base64
     const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-
-    // Meta simples (sans toucher à d’autres colonnes)
-    const mimeType: string = document.mime_type || 'application/pdf';
+    
+    const mimeType: string = document.mime_type || fileBlob.type || 'application/pdf';
     const fileName: string = document.original_filename || 'document.pdf';
+
 
     // On n’utilise plus l’OCR => fixe à 0 pour garder le code en aval inchangé
     const ocrConfidence = 0.0;
