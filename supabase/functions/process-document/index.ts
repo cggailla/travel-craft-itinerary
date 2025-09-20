@@ -141,12 +141,20 @@ Deno.serve(async (req) => {
       }
     }
     
-    const arrayBuffer = await fileBlob.arrayBuffer();
-    const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    
-    const mimeType: string = document.mime_type || fileBlob.type || 'application/pdf';
-    const fileName: string = document.original_filename || 'document.pdf';
+    // Convert Blob to base64 safely (avoid large argument spreads)
+    const base64Data = await (async () => {
+      const bytes = new Uint8Array(await fileBlob.arrayBuffer());
+      const chunkSize = 0x8000; // 32KB chunks to prevent call stack overflow
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+      }
+      return btoa(binary);
+    })();
 
+    const mimeType: string = (document as any).mime_type || fileBlob.type || 'application/pdf';
+    const fileName: string = (document as any).original_filename || (document as any).file_name || 'document.pdf';
 
     // On n’utilise plus l’OCR => fixe à 0 pour garder le code en aval inchangé
     const ocrConfidence = 0.0;
