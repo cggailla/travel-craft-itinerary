@@ -161,15 +161,35 @@ Deno.serve(async (req) => {
 
     console.log('Using OpenAI Responses API with direct file attachment');
 
-    // Prépare le prompt (identique à ton actuel)
-    const systemPrompt = `You are an expert travel document analyzer.
+console.log('Using OpenAI Responses API with direct file attachment (two-step pipeline)');
 
-Your goal is to extract ALL segments from a travel document (voucher, confirmation, invoice, PDF, email, e-ticket, etc.) and return a structured list of trip segments to be used in a customer-facing **travel booklet** ("carnet de voyage"). 
+// ---------- Prompt 1 (ANALYSE) — inchangé ----------
+const analysisPrompt = `You are a document structure analyst.
 
-You must capture **every travel-related element**: flights, hotels, trains, boats, activities, excursions, transfers, rentals, city passes, etc. Extract each service as an **independent segment**, even when part of a package.
+Read the RAW DOCUMENT TEXT below and output a short analysis describing the document’s structure and layout. 
+Do NOT extract data and do NOT generate JSON. 
+Your output must be concise and only guide the next parsing step.
+
+Focus on:
+- DOCUMENT TYPE: Identify the kind (itinerary day-by-day, hotel voucher, invoice line-items, e-ticket, city pass, transfer voucher, mixed).
+- STRUCTURE: How the information is organized (e.g., daily blocks with DAY X, table rows, check-in/out blocks, ticket header + timetable).
+- GRANULARITY RULE: Describe exactly how the parser MUST create segments. 
+  • Example: “Create one segment per hotel stay block.”  
+  • Example: “Create one segment PER DAY. In this case, start_date and end_date MUST always be the same single day.”  
+- ORDERING: Whether to keep chronological order or document order.
+- SPECIAL ELEMENTS: Global notes outside main blocks (allergies, contacts, policies, conditions) that must be added as an "other" segment.
+- KEY SERVICE TYPES: List which segment types are expected (flight, hotel, train, transfer, boat, activity, pass, other).
+
+Be brief, factual, and actionable. 
+This analysis will be used as the System prompt of the next step parser.
+
+=== RAW DOCUMENT TEXT ===
+<PASTE THE FULL EXTRACTED TEXT HERE>`;
+
+// ---------- Prompt 2 (PARSING) — inchangé dans le contenu ----------
+const parsingPrompt = `
 
 ========== STRUCTURE TO RETURN ==========
-
 Return ONLY the following JSON object (no explanations, no extra text):
 
 {
@@ -189,129 +209,162 @@ Return ONLY the following JSON object (no explanations, no extra text):
 }
 
 ========== SEGMENT RULES ==========
-
-- Each **hotel stay block** = 1 segment (even if same hotel reappears)
-- Each **flight leg** = 1 segment
-- Each **transfer** = 1 segment (airport > hotel, pier > lodge, etc.)
-- Each **activity/excursion/tour** = 1 segment
-- Each **city pass or digital pass** = 1 segment
-- Each **train, boat, bus** = 1 segment
+- Each hotel stay block = 1 segment (even if same hotel reappears)
+- Each flight leg = 1 segment
+- Each transfer = 1 segment (airport > hotel, pier > lodge, etc.)
+- Each activity/excursion/tour = 1 segment
+- Each city pass or digital pass = 1 segment
+- Each train, boat, bus = 1 segment
 - If a voucher confirms several services (e.g. hotel + transfer), SPLIT into multiple segments
 - Max 30 segments per document
 
 ========== FIELD DEFINITIONS ==========
+segment_type:
+- One of: flight, hotel, activity, car, train, boat, pass, transfer, other.
 
-**segment_type**:  
-Classify the type from this set: flight, hotel, activity, car, train, boat, pass, transfer, other.
+title:
+- Clear client-facing title (e.g., “Vol de Genève à Bamako”, “Séjour à l’hôtel Serena Kilaguni”, “Transfert privé en voiture de l’aéroport de Nairobi à l’hôtel”, “Excursion à Chã das Caldeiras avec guide francophone”, “Train de Washington à Philadelphie”).
+- Avoid abbreviations in the title; keep them in description if useful.
 
-**title**:  
-Always write a clear title for the traveler. Examples:
-- “Vol de Genève à Bamako”
-- “Séjour à l’hôtel Serena Kilaguni”
-- “Transfert privé en voiture de l’aéroport de Nairobi à l’hôtel”
-- “Excursion à Chã das Caldeiras avec guide francophone”
-- “Train de Washington à Philadelphie”
+start_date / end_date:
+- Use ISO (YYYY-MM-DD) when available.
+- If only one date is available (e.g., a flight), use it for both.
+- If the SYSTEM analysis specifies "day by day granularity", you MUST create one segment per day and set start_date and end_date to the same single day.
+- Leave as null if truly missing.
 
-**start_date / end_date**:  
-- Use ISO format (YYYY-MM-DD) when available
-- If only one date is available (e.g. a flight), use it for both
-- Leave as \`null\` if truly missing
+provider:
+- Airline, hotel, transport company, tour operator, or null.
 
-**provider**:  
-Use company name, hotel name, airline, transport company, or null if not found
+reference_number:
+- Ticket number, reservation number, voucher ID, etc., or null.
 
-**reference_number**:  
-Ticket number, reservation number, voucher ID, etc., or null if absent
+address:
+- IATA airport codes, station names, hotel names, meeting points, or city names.
 
-**address**:  
-Use IATA airport codes, station names, hotel names, or city names. Examples:
-- “Nairobi - Wilson Airport”
-- “Shibuya Excel Hotel Tokyu”
-- “RAI” for Praia Airport
+description:
+- Put any extra detail not captured elsewhere: room type & board (BB/HB/FB), check-in/out times, phone numbers or contacts, meal plans, allergies, specific instructions, taxes not included, boat schedules/boarding instructions/GPS, hotel floor/smoking info, baggage policies, seat classes, train numbers.
 
-**description**:  
-Gather all **extra details not already structured**, especially:
-- Room types / board (FB, BB, etc.)
-- Check-in / check-out hours
-- Phone numbers or contacts (e.g. “Contact: Mike +254...”)
-- Meal plans
-- Notes on allergies, specific instructions, taxes not included
-- Boat schedules, boarding instructions, GPS, etc.
-- Hotel floor / smoking info
-- Baggage policies, seat classes, train numbers
-
-**confidence**:  
-- 1.0 = very structured data (clearly stated)
-- 0.8 = inferred but very likely
-- 0.5 or less = unclear, unstructured, possibly wrong
+confidence:
+- 1.0 = explicitly provided/clear; 0.8 = inferred but very likely; 0.5 or less = unclear/ambiguous.
 
 ========== BEHAVIORAL RULES ==========
+- FOLLOW the System directives from the previous analysis exactly (granularity, ordering, special rules).
+- Parse with maximum granularity appropriate to the document type.
+- If unsure, set fields to null or low confidence.
+- Always include an “other” segment with title like “Informations générales” (dates null) if there are global notes/contacts/policies/allergies outside specific services.
+- Return ONLY the JSON.
 
-- Parse all content with maximum granularity
-- No hallucinations
-- If unsure of info: set \`null\` or low confidence
-- Titles and comments must be clean, readable and client-facing
-- You must include **multiple segments per document if relevant**
-- Return maximum 30 segments per document
-- DO NOT RETURN ANYTHING OTHER THAN THE JSON`;
+=== RAW DOCUMENT TEXT ===
+<PASTE THE FULL EXTRACTED TEXT HERE>`;
 
-    /******************************************************************
-     * 🔄 CHANGEMENT #2 : appel OpenAI Chat Completions API avec vision
-     ******************************************************************/
-    const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini', // modèle vision-compatible
-        messages: [
+// ============ APPEL 1 : Analyse (layout/structure) ============
+const analysisRes = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${openaiApiKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: analysisPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze ONLY the document structure/layout as instructed. Do NOT parse data. Output the short analysis block.' },
           {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this document and extract travel segments according to the instructions.`
-              },
-              {
-                type: 'file',
-                file: {
-                  filename: `${fileName}`,
-                  file_data: `data:${mimeType};base64,${base64Data}`
-                }
-              }
-            ]
+            type: 'file',
+            file: {
+              filename: `${fileName}`,
+              file_data: `data:${mimeType};base64,${base64Data}`,
+            }
           }
-        ],
-        temperature: 0.1,
-        max_tokens: 4000
-      })
-    });
+        ]
+      }
+    ],
+    temperature: 0.1,
+    max_tokens: 2000
+  })
+});
 
-    if (!chatRes.ok) {
-      const errorText = await chatRes.text();
-      console.error('OpenAI Chat API error:', chatRes.status, errorText);
-      throw new Error(`OpenAI API error: ${chatRes.status}`);
-    }
+if (!analysisRes.ok) {
+  const errorText = await analysisRes.text();
+  console.error('OpenAI Chat API error (analysis):', analysisRes.status, errorText);
+  throw new Error(`OpenAI API error (analysis): ${analysisRes.status}`);
+}
 
-    const openaiData = await chatRes.json();
+const analysisData = await analysisRes.json();
+const systemDirectives: string = analysisData.choices?.[0]?.message?.content ?? '';
 
-    // Le Chat Completions API renvoie classiquement dans choices[0].message.content
-    const extractedContent: string =
-      openaiData.choices?.[0]?.message?.content ?? '';
+if (!systemDirectives || !systemDirectives.trim()) {
+  console.error('Empty analysis directives from Prompt 1');
+  throw new Error('OpenAI returned empty analysis directives');
+}
 
-    console.log(`OpenAI responses output length: ${extractedContent.length || 0}`);
-    console.log(`Output preview: ${extractedContent.substring(0, 200) || 'NULL/EMPTY'}`);
+console.log('--- System directives from analysis (Prompt 1) ---');
+console.log(systemDirectives);
 
-    if (!extractedContent || extractedContent.trim().length === 0) {
-      console.error('OpenAI returned empty content');
-      throw new Error('OpenAI returned empty response content');
-    }
+// ⚠️ Concatène les directives *à l’intérieur* du prompt parser (section demandée)
+const parsingPromptWithDirectives =
+`You are an expert travel document analyzer. Your goal is to extract ALL segments from a specific travel document (voucher, confirmation, invoice, PDF, email, e-ticket, etc.) and return a structured list of trip segments to be used in a customer-facing travel booklet ("carnet de voyage"). You must capture every travel-related element: flights, hotels, trains, boats, activities, excursions, transfers, rentals, city passes, etc. Extract each service as an independent segment, even when part of a package.
+
+A previous analysis has been made. You MUST strictly follow the SYSTEM directives provided (above) to adapt the parsing granularity, ordering, and special rules for THIS document.
+
+==========SYSTEM DIRECTIVES==========
+${systemDirectives}
+`; + parsingPrompt
+
+
+// ============ APPEL 2 : Parsing JSON final ============
+const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${openaiApiKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'gpt-4o',
+    messages: [
+      // Un seul System message qui contient TON prompt parsing + la section SYSTEM DIRECTIVES
+      { role: 'system', content: parsingPromptWithDirectives },
+      // Le document à parser (avec filename)
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze this document and extract travel segments according to the instructions.' },
+          {
+            type: 'file',
+            file: {
+              filename: `${fileName}`,
+              file_data: `data:${mimeType};base64,${base64Data}`,
+            }
+          }
+        ]
+      }
+    ],
+    temperature: 0.1,
+    max_tokens: 4000
+  })
+});
+
+if (!chatRes.ok) {
+  const errorText = await chatRes.text();
+  console.error('OpenAI Chat API error (parsing):', chatRes.status, errorText);
+  throw new Error(`OpenAI API error (parsing): ${chatRes.status}`);
+}
+
+const openaiData = await chatRes.json();
+// Sortie identique à ton code actuel
+const extractedContent: string = openaiData.choices?.[0]?.message?.content ?? '';
+
+console.log(`OpenAI responses output length: ${extractedContent.length || 0}`);
+console.log(`Output preview: ${extractedContent.substring(0, 200) || 'NULL/EMPTY'}`);
+
+if (!extractedContent || extractedContent.trim().length === 0) {
+  console.error('OpenAI returned empty content');
+  throw new Error('OpenAI returned empty response content');
+}
+
 
     // Parse JSON with robust error handling and repair functionality (inchangé)
     let extractedSegments: TravelDocumentData[];
