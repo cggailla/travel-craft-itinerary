@@ -265,7 +265,7 @@ Gather all **extra details not already structured**, especially:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // modèle vision-compatible
+        model: 'gpt-4o-mini', // modèle vision-compatible
         messages: [
           {
             role: 'system',
