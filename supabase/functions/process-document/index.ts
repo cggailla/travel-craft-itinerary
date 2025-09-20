@@ -279,9 +279,9 @@ Gather all **extra details not already structured**, especially:
                 text: `Analyze this document and extract travel segments according to the instructions.`
               },
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Data}`
+                type: 'file',
+                file: {
+                  file_data: `data:${mimeType};base64,${base64Data}`
                 }
               }
             ]
