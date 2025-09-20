@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     // On essaie des champs courants sans modifier ton schéma ailleurs.
     // --- DOWNLOAD from Supabase Storage (robuste & verbosé) ---
     const storageBucket: string =
-      document.storage_bucket || document.bucket || 'documents';
+      document.storage_bucket || document.bucket || 'travel-documents';
     
     let rawPath: string =
       document.storage_path ||
