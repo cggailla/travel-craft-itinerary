@@ -480,9 +480,9 @@ export default function TravelTimelineNew({
                    {selectedSegment.description && (
                      <div>
                        <span className="text-sm text-muted-foreground">Description</span>
-                       <div className="mt-1 text-sm bg-muted p-3 rounded">
-                         {selectedSegment.description}
-                       </div>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                          {selectedSegment.description}
+                        </div>
                      </div>
                    )}
 
@@ -490,9 +490,9 @@ export default function TravelTimelineNew({
                    {selectedSegment.raw_data?.comment && (
                      <div>
                        <span className="text-sm text-muted-foreground">Commentaire</span>
-                       <div className="mt-1 text-sm bg-muted p-3 rounded">
-                         {selectedSegment.raw_data.comment}
-                       </div>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                          {selectedSegment.raw_data.comment}
+                        </div>
                      </div>
                    )}
 
@@ -500,9 +500,9 @@ export default function TravelTimelineNew({
                    {selectedSegment.raw_data?.notes && (
                      <div>
                        <span className="text-sm text-muted-foreground">Notes</span>
-                       <div className="mt-1 text-sm bg-muted p-3 rounded">
-                         {selectedSegment.raw_data.notes}
-                       </div>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                          {selectedSegment.raw_data.notes}
+                        </div>
                      </div>
                    )}
 
@@ -510,9 +510,9 @@ export default function TravelTimelineNew({
                    {selectedSegment.raw_data?.remarks && (
                      <div>
                        <span className="text-sm text-muted-foreground">Remarques</span>
-                       <div className="mt-1 text-sm bg-muted p-3 rounded">
-                         {selectedSegment.raw_data.remarks}
-                       </div>
+                        <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                          {selectedSegment.raw_data.remarks}
+                        </div>
                      </div>
                    )}
                 </div>
