@@ -166,7 +166,7 @@ console.log('Using OpenAI Responses API with direct file attachment (two-step pi
 // ---------- Prompt 1 (ANALYSE) — inchangé ----------
 const analysisPrompt = `You are a document structure analyst.
 
-Read the RAW DOCUMENT TEXT below and output a short analysis describing the document’s structure and layout. 
+Read the DOCUMENT attached and output a short analysis describing the document’s structure and layout. 
 Do NOT extract data and do NOT generate JSON. 
 Your output must be concise and only guide the next parsing step.
 
@@ -181,16 +181,13 @@ Focus on:
 - KEY SERVICE TYPES: List which segment types are expected (flight, hotel, train, transfer, boat, activity, pass, other).
 
 Be brief, factual, and actionable. 
-This analysis will be used as the System prompt of the next step parser.
-
-=== RAW DOCUMENT TEXT ===
-<PASTE THE FULL EXTRACTED TEXT HERE>`;
+This analysis will be used as the System prompt of the next step parser.`;
 
 // ---------- Prompt 2 (PARSING) — inchangé dans le contenu ----------
 const parsingPrompt = `
 
 ========== STRUCTURE TO RETURN ==========
-Return ONLY the following JSON object (no explanations, no extra text):
+IMPORTANT !!!! : Return ONLY the following JSON object, NO EXPLANATIONS, NO EXTRA TEXT:
 
 {
   "travel_segments": [
@@ -252,10 +249,8 @@ confidence:
 - Parse with maximum granularity appropriate to the document type.
 - If unsure, set fields to null or low confidence.
 - Always include an “other” segment with title like “Informations générales” (dates null) if there are global notes/contacts/policies/allergies outside specific services.
-- Return ONLY the JSON.
-
-=== RAW DOCUMENT TEXT ===
-<PASTE THE FULL EXTRACTED TEXT HERE>`;
+- Return ONLY the JSON !!!!!
+`;
 
 // ============ APPEL 1 : Analyse (layout/structure) ============
 const analysisRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -308,11 +303,11 @@ console.log(systemDirectives);
 const parsingPromptWithDirectives =
 `You are an expert travel document analyzer. Your goal is to extract ALL segments from a specific travel document (voucher, confirmation, invoice, PDF, email, e-ticket, etc.) and return a structured list of trip segments to be used in a customer-facing travel booklet ("carnet de voyage"). You must capture every travel-related element: flights, hotels, trains, boats, activities, excursions, transfers, rentals, city passes, etc. Extract each service as an independent segment, even when part of a package.
 
-A previous analysis has been made. You MUST strictly follow the SYSTEM directives provided (above) to adapt the parsing granularity, ordering, and special rules for THIS document.
+A previous analysis has been made. You MUST strictly follow the SYSTEM directives provided to adapt the parsing granularity, ordering, and special rules for THIS document.
 
 ==========SYSTEM DIRECTIVES==========
 ${systemDirectives}
-`; + parsingPrompt
+` + parsingPrompt;
 
 
 // ============ APPEL 2 : Parsing JSON final ============
