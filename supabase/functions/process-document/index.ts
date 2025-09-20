@@ -162,7 +162,7 @@ Always write a clear title for the traveler. Examples:
 **start_date / end_date**:  
 - Use ISO format (YYYY-MM-DD) when available
 - If only one date is available (e.g. a flight), use it for both
-- Leave as ``null`` if truly missing
+- Leave as \`null\` if truly missing
 
 **provider**:  
 Use company name, hotel name, airline, transport company, or null if not found
@@ -196,7 +196,7 @@ Gather all **extra details not already structured**, especially:
 
 - Parse all content with maximum granularity
 - No hallucinations
-- If unsure of info: set ``null`` or low confidence
+- If unsure of info: set \`null\` or low confidence
 - Titles and comments must be clean, readable and client-facing
 - You must include **multiple segments per document if relevant**
 - Return maximum 30 segments per document
@@ -230,10 +230,21 @@ Gather all **extra details not already structured**, especially:
     }
 
     const openaiData = await openaiResponse.json();
-    const extractedContent = openaiData.choices[0].message.content;
+    console.log('OpenAI response structure check:', {
+      hasChoices: !!openaiData.choices,
+      choicesLength: openaiData.choices?.length,
+      hasMessage: !!(openaiData.choices?.[0]?.message),
+      hasContent: !!(openaiData.choices?.[0]?.message?.content)
+    });
+    
+    const extractedContent = openaiData.choices?.[0]?.message?.content;
 
     console.log(`OpenAI text completion response received from gpt-4o`);
-    console.log(`Raw OpenAI response: ${JSON.stringify(openaiData)}`);
+    console.log(`OpenAI response metadata:`, {
+      model: openaiData.model,
+      usage: openaiData.usage,
+      choices_count: openaiData.choices?.length
+    });
     console.log(`Extracted content length: ${extractedContent?.length || 0}`);
     console.log(`Extracted content preview: ${extractedContent?.substring(0, 200) || 'NULL/EMPTY'}`);
 
