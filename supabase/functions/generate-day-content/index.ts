@@ -35,7 +35,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-search-preview',
         messages: [
           {
             role: 'system',
@@ -53,8 +53,8 @@ STYLE ADGENTES - RÈGLES DE RÉDACTION :
 RÈGLES TECHNIQUES CRITIQUES :
 - RESPECTE EXACTEMENT les informations de la base de données (heures, références, prestataires, etc.)
 - NE MODIFIE JAMAIS les données confirmées
-- Utilise la recherche web pour compléter les informations manquantes (adresses, horaires, conseils pratiques)
-- Si une info n'est pas trouvée, écris "Non précisé"
+- Tu peux rechercher automatiquement sur le web des informations complémentaires (adresses exactes, horaires d'ouverture, conseils pratiques, etc.)
+- Si une info n'est pas trouvée même avec la recherche web, écris "Non précisé"
 - Génère 1-2 images maximum via URL Unsplash/Pexels
 - Utilise les classes CSS : theme-text, theme-border, theme-bg
 - Format de sortie : HTML pur sans balises <html>, <head> ou <body>`
@@ -64,28 +64,7 @@ RÈGLES TECHNIQUES CRITIQUES :
             content: prompt
           }
         ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'web_search',
-              description: 'Search the web for current information about places, addresses, opening hours, etc.',
-              parameters: {
-                type: 'object',
-                properties: {
-                  query: {
-                    type: 'string',
-                    description: 'Search query to find information'
-                  }
-                },
-                required: ['query']
-              }
-            }
-          }
-        ],
-        tool_choice: 'auto',
-        temperature: 0.7,
-        max_tokens: 3000
+        max_completion_tokens: 3000
       }),
     });
 
