@@ -6,10 +6,12 @@ import { DynamicItinerary } from "./DynamicItinerary";
 interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
+  tripId: string;
 }
 export function BookletTemplate({
   data,
-  options
+  options,
+  tripId
 }: BookletTemplateProps) {
   const getThemeColors = (theme: string) => {
     switch (theme) {
@@ -151,7 +153,7 @@ export function BookletTemplate({
           Itinéraire détaillé
         </h2>
         
-        <DynamicItinerary data={data} options={options} />
+        <DynamicItinerary data={data} options={options} tripId={tripId} />
       </div>
 
       {/* Documents de référence */}
