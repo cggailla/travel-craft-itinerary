@@ -1,239 +1,250 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      throw new Error("OpenAI API key not configured");
     }
 
     const { day, dayIndex } = await req.json();
-    console.log(`Génération contenu pour jour ${dayIndex + 1}:`, day);
+    console.log(`▶️ Génération contenu pour jour ${dayIndex + 1}:`, day);
 
     if (!day?.segments || !Array.isArray(day.segments)) {
-      throw new Error('Structure de jour invalide');
+      throw new Error("Structure de jour invalide");
     }
 
     const prompt = createPrompt(day, dayIndex);
-    console.log('Prompt GPT créé, appel à OpenAI...');
+    console.log("✅ Prompt GPT créé, appel à OpenAI...");
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${openAIApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'gpt-4o-search-preview',
+        model: "gpt-4o-search-preview",
+        temperature: 0.2,
+        top_p: 0.9,
+        max_completion_tokens: 2200,
         messages: [
           {
-            role: 'system',
-            content: `Tu es un expert en rédaction de carnets de voyage style ADGENTES. Tu dois créer du contenu HTML structuré, élégant et moderne pour chaque jour d'un voyage.
+            role: "system",
+            content: `Tu es un rédacteur de carnet de voyage ADGENTES avec accès à la recherche web. 
+Ta mission: produire UNIQUEMENT un fragment HTML (sans <html> <head> <body>) pour UNE étape/jour, fidèle aux données internes, 
+en complétant uniquement les infos manquantes via recherches ciblées (adresse précise, téléphone, URL officielle, check-in/out, contexte lieu, 1–2 photos libres).
 
-STYLE ADGENTES - APPROCHE GUIDE PLUTÔT QUE PLANNING :
-- Ton sophistiqué, informatif et engageant avec une approche narrative
-- Style guide souple et inspirant plutôt qu'un planning rigide
-- Titres élégants et descriptifs avec contexte géographique/culturel
-- Descriptions riches incluant histoire, anecdotes et conseils d'expert
-- Informations pratiques détaillées enrichies par recherche web
-- Contexte culturel et historique pour enrichir l'expérience
-- Conseils pratiques spécialisés selon le type d'activité
+RÈGLES NON NÉGOCIABLES
+1) Vérité: Les infos DB priment. N’invente rien. Si une info n’est pas trouvée, écris "Non précisé".
+2) Horaires: N’affiche des heures que si elles sont présentes dans les données. Sinon, repères souples (matin, après-midi).
+3) Photos: 1 à 2 images max, libres de droits (Unsplash/Pexels/Pixabay), pas de photo d’hôtel si un paysage pertinent existe. 
+   Chaque <img> doit avoir alt, width="1200" loading="lazy".
+4) Sortie: Retourne uniquement le HTML entre:
+   <!--START_HTML-->
+   ... TON HTML ...
+   <!--END_HTML-->
+   Aucun texte hors de ces balises.
+5) Sécurité: Jamais d’avis médicaux/juridiques. Pas de données personnelles nouvelles. 
 
-FORMAT HTML REQUIS :
-- Conteneur principal avec classes theme appropriées
-- Hiérarchie claire : date → segments → détails → conseils
-- Classes CSS cohérentes : theme-text, theme-border, theme-bg, theme-accent
-- Séparateurs visuels entre les segments
-- Mise en forme distinctive selon le type (vol, hôtel, activité, transfert)
-
-RÈGLES TECHNIQUES CRITIQUES :
-- RESPECTE EXACTEMENT les données confirmées (références, prestataires, adresses)
-- NE MODIFIE JAMAIS les informations factuelles de la base
-- Enrichis avec recherche web automatique (adresses complètes, contexte historique, conseils)
-- HEURES : N'inclus les horaires QUE si ils sont spécifiés dans les données
-- Si aucune heure précise, évite de mentionner des horaires pour garder la flexibilité
-- Privilégie des indications temporelles souples (matin, après-midi, soirée)
-- Format de sortie : HTML structuré sans balises <html>, <head> ou <body>`
+STYLE ADGENTES
+- Ton chaleureux, informatif, pas de superlatifs marketing.
+- Structure claire: Titre/date → cartes segments (icône+meta) → NOTE pratique → Suggestions → Photos.
+- Classes CSS à utiliser: theme-bg, theme-text, theme-border, theme-accent, segment-card, note, photo-block.`
           },
-          {
-            role: 'user',
-            content: prompt
-          }
+          { role: "user", content: prompt },
         ],
-        max_completion_tokens: 3000
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Erreur OpenAI:', response.status, errorText);
+      console.error("❌ Erreur OpenAI:", response.status, errorText);
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const generatedHTML = data.choices[0].message.content;
+    const raw = data.choices?.[0]?.message?.content || "";
 
-    console.log(`Contenu généré avec succès pour le jour ${dayIndex + 1}`);
+    // Extraction stricte HTML entre balises START/END
+    const match = raw.match(/<!--START_HTML-->([\s\S]*?)<!--END_HTML-->/);
+    let generatedHTML = match ? match[1].trim() : raw.trim();
+
+    // Nettoyage : pas de <html>/<head>/<body>
+    generatedHTML = generatedHTML.replace(
+      /<\/?(html|head|body)[^>]*>/gi,
+      "",
+    );
+
+    // Limite à 2 images max
+    const imgs = generatedHTML.match(/<img\b[^>]*>/gi) || [];
+    if (imgs.length > 2) {
+      generatedHTML = imgs.slice(0, 2).join("\n");
+    }
+
+    // Fallback si vide
+    if (!generatedHTML || generatedHTML.length < 100) {
+      console.warn("⚠️ Fallback activé: HTML trop court ou vide");
+      generatedHTML =
+        `<div class="theme-text">Contenu non disponible pour ce jour. Veuillez réessayer.</div>`;
+    }
+
+    console.log(
+      `✅ Contenu généré pour jour ${dayIndex + 1} — longueur ${generatedHTML.length} caractères`,
+    );
 
     return new Response(
       JSON.stringify({ html: generatedHTML }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
-
   } catch (error) {
-    console.error('Erreur dans generate-day-content:', error);
+    console.error("❌ Erreur dans generate-day-content:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error.message,
-        details: 'Voir les logs pour plus d\'informations'
+        details: "Voir les logs pour plus d'informations",
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-      }
+      },
     );
   }
 });
 
+// Prompt builder robuste
 function createPrompt(day: any, dayIndex: number): string {
   const dayDate = new Date(day.date);
-  const segments = day.segments || [];
-  
-  // Fonction helper pour formater les types de segments
-  const getSegmentTypeIcon = (type: string) => {
-    const icons = {
-      'flight': '✈️',
-      'hotel': '🏨', 
-      'activity': '🎯',
-      'car': '🚗',
-      'train': '🚆',
-      'boat': '⛵',
-      'transfer': '🚌',
-      'pass': '🎫',
-      'other': '📍'
-    };
-    return icons[type] || '📍';
+  const fmtDateLong = dayDate.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const fmtDateShort = dayDate.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const getIcon = (type: string) => ({
+    flight: "✈️",
+    hotel: "🏨",
+    activity: "🎯",
+    car: "🚗",
+    train: "🚆",
+    boat: "⛵",
+    transfer: "🚌",
+    pass: "🎫",
+    other: "📍",
+  } as Record<string, string>)[type] || "📍";
+
+  const formatTimeFromISO = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const h = d.getUTCHours(), m = d.getUTCMinutes();
+    if (h === 0 && m === 0) return null;
+    return d.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
   };
 
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return null;
-      // Vérifier si l'heure est spécifiée (différente de 00:00:00)
-      const hours = date.getUTCHours();
-      const minutes = date.getUTCMinutes();
-      if (hours === 0 && minutes === 0) return null; // Pas d'heure spécifiée
-      
-      return date.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZone: 'UTC'
-      });
-    } catch {
-      return null;
+  const factsLines: string[] = [];
+  const needLookup: string[] = [];
+
+  (day.segments || []).forEach((s: any, idx: number) => {
+    const startTime = formatTimeFromISO(s.start_date);
+    const endTime = formatTimeFromISO(s.end_date);
+    const icon = getIcon(s.segment_type);
+
+    factsLines.push([
+      `SEGMENT ${idx + 1} — ${s.segment_type.toUpperCase()} ${icon}`,
+      `Titre: ${JSON.stringify(s.title)}`,
+      `Prestataire: ${s.provider ?? "Non précisé"}`,
+      `Référence: ${s.reference_number ?? "Non précisée"}`,
+      `Adresse (DB): ${s.address ?? "Non précisée"}`,
+      `Heure début (DB): ${startTime ?? "Non spécifiée"}`,
+      `Heure fin (DB): ${endTime ?? "Non spécifiée"}`,
+      `Description (DB): ${s.description ?? "Non précisée"}`,
+    ].join("\n"));
+
+    if (s.segment_type === "hotel") {
+      if (!s.address) needLookup.push(
+        `Adresse postale exacte de l'hôtel; téléphone; site officiel; check-in/out (les afficher uniquement si trouvés)`,
+      );
+    } else if (s.segment_type === "boat") {
+      needLookup.push(
+        `Compagnie opératrice; terminal de départ/arrivée; consignes portuaires génériques (présentation 30–45min); durée typique`,
+      );
+    } else if (s.segment_type === "transfer") {
+      needLookup.push(
+        `Point de RDV générique au port/aéroport; durée indicative du trajet en ville`,
+      );
+    } else if (s.segment_type === "activity") {
+      needLookup.push(`Contexte lieu (2–3 phrases); conseils équipement minimal`);
     }
-  };
+  });
 
-  const segmentsDetails = segments.map((segment: any, i: number) => {
-    const startTime = formatTime(segment.start_date);
-    const endTime = formatTime(segment.end_date);
-    const icon = getSegmentTypeIcon(segment.segment_type);
-    
-    return `
-SEGMENT ${i + 1} - ${segment.segment_type.toUpperCase()} ${icon}
-• Titre: "${segment.title}"
-• Prestataire: ${segment.provider || 'Non précisé'}
-• Référence: ${segment.reference_number || 'Non précisée'}
-• Adresse: ${segment.address || 'À rechercher sur le web'}
-• Heure début: ${startTime || 'Non spécifiée - à mentionner seulement si pertinent'}
-• Heure fin: ${endTime || 'Non spécifiée - à mentionner seulement si pertinent'}
-• Description base: ${segment.description || 'À enrichir avec recherche web'}`;
-  }).join('\n');
-  
-  return `
-Crée le contenu HTML pour cette journée de voyage dans le style ADGENTES sophistiqué :
+  const htmlSkeleton = `
+<!--START_HTML-->
+<div class="day-page theme-bg rounded-lg p-6 mb-8 border theme-border" id="day-${fmtDateShort.replace(/\//g,"-")}">
+  <h2 class="text-2xl font-bold theme-text mb-2">${fmtDateShort}</h2>
+  <h3 class="text-xl theme-accent mb-6 font-medium">Titre évocateur de l’étape – ${fmtDateLong}</h3>
 
-📅 DATE: ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-📍 SEGMENTS À TRAITER: ${segments.length}
-
-${segmentsDetails}
-
-STRUCTURE HTML ATTENDUE (EXEMPLE) :
-<div class="theme-bg rounded-lg p-6 mb-8 border theme-border">
-  <h2 class="text-2xl font-bold theme-text mb-4">
-    ${dayDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-  </h2>
-  <h3 class="text-xl theme-accent mb-6 font-medium">
-    Titre évocateur du jour – Contexte géographique & thématique
-  </h3>
-  
   <div class="space-y-6">
-    <div class="border-l-4 theme-border pl-4">
-      <h4 class="font-semibold theme-text text-lg mb-2">
-        🚆 [Type] Titre élégant de l'activité (avec heure seulement si spécifiée)
-      </h4>
+    <div class="segment-card border-l-4 theme-border pl-4">
+      <h4 class="font-semibold theme-text text-lg mb-2">[Icône] [Type] [Titre]</h4>
       <div class="theme-text text-sm mb-3 leading-relaxed">
-        Description narrative enrichie avec contexte historique/culturel trouvé par recherche web.
-        Anecdotes pertinentes et conseils d'expert.
+        [Texte narratif enrichi. Si heures absentes en DB, ne pas inventer.]
       </div>
-      <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded text-sm">
+      <div class="bg-gray-50 p-3 rounded text-sm">
         <strong>Informations pratiques :</strong><br/>
-        • Point de rendez-vous : [Adresse complète trouvée par recherche]<br/>
-        • Durée estimée : [Si disponible]<br/>
-        • Conseils : [Spécifiques au type d'activité]
+        • Prestataire: [depuis DB]<br/>
+        • Adresse / Point de RDV: [DB ou "Non précisé"]<br/>
+        • Autres: [check-in/out si trouvés, sinon "Non précisé"]
       </div>
+    </div>
+
+    <div class="note theme-text text-sm border theme-border p-3 rounded">
+      <strong>NOTE :</strong> [Conseil pratique générique si pertinent.]
+    </div>
+
+    <div class="theme-text text-sm leading-relaxed">
+      <em>Suggestions :</em> [1–2 phrases utiles et sobres]
+    </div>
+
+    <div class="photo-block grid grid-cols-1 gap-3">
+      <!-- <img src="..." alt="..." width="1200" loading="lazy" /> -->
     </div>
   </div>
 </div>
+<!--END_HTML-->
+`.trim();
 
-INSTRUCTIONS SPÉCIALES PAR TYPE DE SEGMENT :
-
-✈️ VOL : Inclure aéroports complets, temps de trajet, conseils d'enregistrement
-🏨 HÔTEL : Check-in/out, commodités, quartier, restaurants proximité  
-🎯 ACTIVITÉ : Contexte historique, anecdotes, conseils pratiques, horaires d'ouverture
-🚗 LOCATION/TRANSFERT : Durée trajet, points remarquables sur la route, conseils conduite
-🚆 TRAIN : Gares exactes, correspondances, paysages traversés, conseils réservation
-⛵ BATEAU : Conditions météo, points d'intérêt navigation, conseils mal de mer
-🎫 PASS/BILLET : Modalités d'utilisation, sites couverts, conseils optimisation
-
-RÈGLES DE CHRONOLOGIE SOUPLE :
-- Si heures réelles disponibles → utilise-les en format français élégant
-- Si heures manquantes → NE PAS inventer d'horaires, utilise des indications souples (matin, après-midi)
-- Privilégie un ordre logique sans contraintes temporelles rigides
-- Style guide accompagnateur plutôt que planning strict
-
-ENRICHISSEMENT OBLIGATOIRE :
-- Recherche web pour adresses complètes et précises
-- Contexte historique/culturel des lieux visités  
-- Anecdotes locales et légendes si pertinentes
-- Conseils pratiques spécialisés (météo, tenue, horaires optimaux)
-- Informations transport public si nécessaire
-
-STYLE NARRATIF ADGENTES :
-- Ton expert et passionné, jamais commercial
-- Phrases élégantes mais accessibles  
-- Détails pratiques intégrés naturellement
-- Perspective d'initié avec conseils exclusifs
-- Évocation sensorielle des expériences
-
-CLASSES CSS À UTILISER :
-theme-bg, theme-text, theme-border, theme-accent pour la cohérence visuelle.
-
-FORMAT FINAL : HTML propre sans balises <html>/<head>/<body>, prêt pour intégration directe.
-`;
+  return [
+    `FAITS_DB (à respecter strictement) — ${fmtDateLong}\n\n${factsLines.join("\n\n")}`,
+    `\nA CHERCHER (web):\n- ${
+      Array.from(new Set(needLookup)).join("\n- ") || "Rien d’essentiel manquant"
+    }\n`,
+    `CONTRAINTES DE SORTIE:\n- Retourne uniquement le HTML entre <!--START_HTML--> et <!--END_HTML-->\n- 1 à 2 images libres max (Unsplash/Pexels/Pixabay)\n- Pas d’horaires inventés; écrire "Non précisé" quand introuvable\n- Classes CSS: theme-bg, theme-text, theme-border, theme-accent, segment-card, note, photo-block\n`,
+    `SQUELETTE HTML DE RÉFÉRENCE (à remplir proprement):\n${htmlSkeleton}`,
+  ].join("\n");
 }
