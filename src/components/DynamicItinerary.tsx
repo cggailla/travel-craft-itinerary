@@ -9,9 +9,10 @@ import { formatSegmentType, getSegmentIcon } from '@/services/bookletService';
 interface DynamicItineraryProps {
   data: BookletData;
   options: BookletOptions;
+  tripId: string;
 }
 
-export function DynamicItinerary({ data, options }: DynamicItineraryProps) {
+export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProps) {
   const [dayContents, setDayContents] = useState<DayContentResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -31,7 +32,7 @@ export function DynamicItinerary({ data, options }: DynamicItineraryProps) {
     try {
       console.log('Début génération contenu GPT pour', data.timeline.length, 'jours');
       
-      const results = await generateAllDaysContent(data.timeline);
+      const results = await generateAllDaysContent(tripId, data.timeline.length);
       setDayContents(results);
       
       const successCount = results.filter(r => r.success).length;
@@ -46,8 +47,7 @@ export function DynamicItinerary({ data, options }: DynamicItineraryProps) {
   };
 
   const regenerateDay = async (dayIndex: number) => {
-    const day = data.timeline[dayIndex];
-    if (!day) return;
+    if (dayIndex >= data.timeline.length) return;
     
     setDayContents(prev => prev.map((content, i) => 
       i === dayIndex ? { ...content, success: false, html: '', error: undefined } : content
@@ -55,7 +55,7 @@ export function DynamicItinerary({ data, options }: DynamicItineraryProps) {
 
     try {
       const { generateDayPageHTML } = await import('@/services/gptContentService');
-      const result = await generateDayPageHTML(day, dayIndex);
+      const result = await generateDayPageHTML(tripId, dayIndex);
       
       setDayContents(prev => prev.map((content, i) => 
         i === dayIndex ? result : content

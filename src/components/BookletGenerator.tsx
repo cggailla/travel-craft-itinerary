@@ -204,7 +204,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
               </Button>
             </div>
             
-            <BookletPreview data={bookletData} options={options} />
+            <BookletPreview data={bookletData} options={options} tripId={tripId} />
           </div>
         </TabsContent>
 

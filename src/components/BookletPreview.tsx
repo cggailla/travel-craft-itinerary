@@ -4,15 +4,16 @@ import { BookletTemplate } from "./BookletTemplate";
 interface BookletPreviewProps {
   data: BookletData;
   options: BookletOptions;
+  tripId: string;
 }
 
-export function BookletPreview({ data, options }: BookletPreviewProps) {
+export function BookletPreview({ data, options, tripId }: BookletPreviewProps) {
   return (
     <div className="w-full">
       {/* Conteneur avec style d'impression */}
       <div className="bg-white shadow-lg mx-auto" style={{ maxWidth: '210mm' }}>
         <div className="p-8">
-          <BookletTemplate data={data} options={options} />
+          <BookletTemplate data={data} options={options} tripId={tripId} />
         </div>
       </div>
       

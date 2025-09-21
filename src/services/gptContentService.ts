@@ -8,13 +8,13 @@ export interface DayContentResult {
   error?: string;
 }
 
-export async function generateDayPageHTML(day: TimelineDay, dayIndex: number): Promise<DayContentResult> {
+export async function generateDayPageHTML(tripId: string, dayIndex: number): Promise<DayContentResult> {
   try {
-    console.log(`Génération du contenu GPT pour le jour ${dayIndex + 1}:`, day);
+    console.log(`Génération du contenu GPT pour le voyage ${tripId}, jour ${dayIndex + 1}`);
 
     const { data, error } = await supabase.functions.invoke('generate-day-content', {
       body: {
-        day,
+        tripId,
         dayIndex,
       }
     });
@@ -57,11 +57,11 @@ export async function generateDayPageHTML(day: TimelineDay, dayIndex: number): P
   }
 }
 
-export async function generateAllDaysContent(timeline: TimelineDay[]): Promise<DayContentResult[]> {
-  console.log(`Génération parallèle du contenu pour ${timeline.length} jours`);
+export async function generateAllDaysContent(tripId: string, totalDays: number): Promise<DayContentResult[]> {
+  console.log(`Génération parallèle du contenu pour ${totalDays} jours du voyage ${tripId}`);
   
-  const promises = timeline.map((day, index) => 
-    generateDayPageHTML(day, index)
+  const promises = Array.from({ length: totalDays }, (_, index) => 
+    generateDayPageHTML(tripId, index)
   );
 
   const results = await Promise.allSettled(promises);
