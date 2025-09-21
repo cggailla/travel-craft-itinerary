@@ -2,6 +2,7 @@ import { BookletData, BookletOptions, formatSegmentType, getSegmentIcon } from "
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, MapPin, Clock, FileText, User, Phone } from "lucide-react";
+import { DynamicItinerary } from "./DynamicItinerary";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -192,82 +193,7 @@ export function BookletTemplate({ data, options }: BookletTemplateProps) {
           Itinéraire détaillé
         </h2>
         
-        {data.timeline.length === 0 ? (
-          <p className="text-gray-500">Aucun segment avec date trouvé.</p>
-        ) : (
-          <div className="space-y-8">
-            {data.timeline.map((day, dayIndex) => (
-              <div key={dayIndex} className="border rounded-lg p-6">
-                <h3 className="text-xl font-bold mb-4 theme-text flex items-center">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  {format(day.date, 'EEEE dd MMMM yyyy', { locale: fr })}
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    ({day.segments.length} activité{day.segments.length > 1 ? 's' : ''})
-                  </span>
-                </h3>
-                
-                <div className="space-y-4">
-                  {day.segments.map((segment, segmentIndex) => (
-                    <div key={segment.id} className="border-l-4 theme-border pl-4 py-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2">
-                            <span className="text-lg mr-2">{getSegmentIcon(segment.segment_type)}</span>
-                            <h4 className="font-semibold text-lg">{segment.title}</h4>
-                            <span className="ml-2 px-2 py-1 theme-bg rounded text-sm">
-                              {formatSegmentType(segment.segment_type)}
-                            </span>
-                          </div>
-                          
-                          {segment.provider && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Prestataire:</strong> {segment.provider}
-                            </p>
-                          )}
-                          
-                          {segment.reference_number && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Référence:</strong> {segment.reference_number}
-                            </p>
-                          )}
-                          
-                          {segment.address && (
-                            <div className="flex items-center text-sm text-gray-600 mb-1">
-                              <MapPin className="mr-1 h-3 w-3" />
-                              {segment.address}
-                            </div>
-                          )}
-                          
-                          {segment.start_date && (
-                            <div className="flex items-center text-sm text-gray-600 mb-2">
-                              <Clock className="mr-1 h-3 w-3" />
-                              {format(new Date(segment.start_date), 'HH:mm')}
-                              {segment.end_date && segment.end_date !== segment.start_date && (
-                                <> - {format(new Date(segment.end_date), 'HH:mm')}</>
-                              )}
-                            </div>
-                          )}
-                          
-                          {options.includeNotes && segment.description && (
-                            <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                              <strong>Description:</strong> {segment.description}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {segment.confidence && (
-                          <div className="text-right text-xs text-gray-500">
-                            Confiance: {Math.round(segment.confidence * 100)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <DynamicItinerary data={data} options={options} />
       </div>
 
       {/* Documents de référence */}
