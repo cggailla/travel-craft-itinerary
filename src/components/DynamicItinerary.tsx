@@ -16,6 +16,8 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
   const [dayContents, setDayContents] = useState<DayContentResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentDay, setCurrentDay] = useState<number>(-1);
+  const [dayStatus, setDayStatus] = useState<string>('');
 
   useEffect(() => {
     if (data.timeline.length > 0) {
@@ -28,11 +30,36 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
     
     setIsGenerating(true);
     setProgress(0);
+    setCurrentDay(-1);
+    setDayStatus('');
     
     try {
       console.log('Début génération contenu GPT pour', data.timeline.length, 'jours');
       
-      const results = await generateAllDaysContent(tripId, data.timeline.length);
+      const results = await generateAllDaysContent(
+        tripId, 
+        data.timeline.length,
+        (completedDays, currentDayIndex, status) => {
+          setCurrentDay(currentDayIndex);
+          setProgress((completedDays / data.timeline.length) * 100);
+          
+          // Messages détaillés pour l'utilisateur
+          if (status === 'generating') {
+            setDayStatus(`Génération du jour ${currentDayIndex + 1}...`);
+          } else if (status.startsWith('retry-')) {
+            const retryNum = status.split('-')[1];
+            setDayStatus(`Nouvelle tentative (${retryNum}) pour le jour ${currentDayIndex + 1}...`);
+          } else if (status.startsWith('waiting-')) {
+            const waitTime = status.split('-')[1];
+            setDayStatus(`Limite atteinte, attente ${waitTime}s pour le jour ${currentDayIndex + 1}...`);
+          } else if (status === 'completed') {
+            setDayStatus(`Jour ${currentDayIndex + 1} généré avec succès`);
+          } else if (status === 'failed') {
+            setDayStatus(`Échec génération jour ${currentDayIndex + 1}`);
+          }
+        }
+      );
+      
       setDayContents(results);
       
       const successCount = results.filter(r => r.success).length;
@@ -43,6 +70,8 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
     } finally {
       setIsGenerating(false);
       setProgress(100);
+      setCurrentDay(-1);
+      setDayStatus('Génération terminée');
     }
   };
 
@@ -121,15 +150,34 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
     <div className="space-y-8">
       {isGenerating && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center mb-2">
-            <Loader2 className="animate-spin mr-2 h-4 w-4 text-blue-600" />
-            <span className="text-blue-800 font-medium">
-              Génération du contenu enrichi par IA...
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <Loader2 className="animate-spin mr-2 h-4 w-4 text-blue-600" />
+              <span className="text-blue-800 font-medium">
+                Génération du contenu enrichi par IA
+              </span>
+            </div>
+            <span className="text-sm text-blue-600 font-medium">
+              {Math.round(progress)}%
             </span>
           </div>
-          <div className="text-sm text-blue-600">
-            Recherche d'informations complémentaires et rédaction en cours
+          
+          <div className="w-full bg-blue-200 rounded-full h-2 mb-3">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
+          
+          <div className="text-sm text-blue-600">
+            {dayStatus || 'Préparation...'}
+          </div>
+          
+          {currentDay >= 0 && (
+            <div className="text-xs text-blue-500 mt-1">
+              Jour {currentDay + 1} sur {data.timeline.length}
+            </div>
+          )}
         </div>
       )}
 
