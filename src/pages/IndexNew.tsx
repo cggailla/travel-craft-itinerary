@@ -17,6 +17,8 @@ import FileUploadNew from '@/components/FileUploadNew';
 import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
 import { createTrip } from '@/services/documentService';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 type AppPhase = 'create-trip' | 'upload' | 'processing' | 'timeline' | 'validated';
 
@@ -66,7 +68,46 @@ export default function IndexNew() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [tripId, setTripId] = useState<string | null>(null);
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+  const [isLoadingLatestTrip, setIsLoadingLatestTrip] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const loadLatestTrip = async () => {
+    setIsLoadingLatestTrip(true);
+    try {
+      const { data: trips, error } = await supabase
+        .from('trips')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (trips && trips.length > 0) {
+        const latestTripId = trips[0].id;
+        navigate(`/booklet?tripId=${latestTripId}`);
+        toast({
+          title: "Mode Dev activé",
+          description: "Redirection vers le dernier voyage créé",
+        });
+      } else {
+        toast({
+          title: "Aucun voyage trouvé",
+          description: "Créez d'abord un voyage pour utiliser le mode dev",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load latest trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le dernier voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLatestTrip(false);
+    }
+  };
 
   const createNewTrip = async () => {
     setIsCreatingTrip(true);
@@ -152,9 +193,32 @@ export default function IndexNew() {
               Travel Booklet Builder
             </h1>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
             Transformez vos documents de voyage en carnet organisé grâce à l'intelligence artificielle
           </p>
+          
+          {/* Mode Dev Button */}
+          <div className="flex justify-center">
+            <Button 
+              onClick={loadLatestTrip}
+              disabled={isLoadingLatestTrip}
+              variant="outline"
+              size="sm"
+              className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+            >
+              {isLoadingLatestTrip ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Chargement...
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Mode Dev - Charger dernier voyage
+                </>
+              )}
+            </Button>
+          </div>
         </header>
 
 
