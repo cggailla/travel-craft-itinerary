@@ -119,20 +119,21 @@ export default function IndexNew() {
   const loadLatestTrip = async () => {
     setIsLoadingLatestTrip(true);
     try {
-      const { data: trips, error } = await supabase
-        .from('trips')
-        .select('id')
+      const { data: segs, error } = await supabase
+        .from('travel_segments')
+        .select('trip_id, created_at')
+        .not('trip_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1);
 
       if (error) throw error;
 
-      if (trips && trips.length > 0) {
-        const latestTripId = trips[0].id;
+      if (segs && segs.length > 0 && segs[0].trip_id) {
+        const latestTripId = segs[0].trip_id as string;
         navigate(`/?tripId=${latestTripId}`);
         toast({
           title: "Mode Dev activé",
-          description: "Redirection vers le dernier voyage créé",
+          description: "Redirection vers le dernier voyage traité",
         });
       } else {
         toast({

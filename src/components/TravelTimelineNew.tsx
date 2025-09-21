@@ -42,9 +42,9 @@ export default function TravelTimelineNew({
       setLoading(true);
       const response = await getTravelSegments(tripId, 'all');
       if (response.success) {
-        setSegments(response.segments.filter(s => !tripId || s.documents?.trip_id === tripId));
-        setTimeline(response.timeline.filter(day => day.segments.some(s => !tripId || s.documents?.trip_id === tripId)));
-        setUndatedSegments((response.undated_segments || []).filter(s => !tripId || s.documents?.trip_id === tripId));
+        setSegments(response.segments);
+        setTimeline(response.timeline);
+        setUndatedSegments(response.undated_segments || []);
       } else {
         throw new Error(response.error);
       }
