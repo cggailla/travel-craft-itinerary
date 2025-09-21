@@ -39,25 +39,31 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Tu es un expert en rédaction de carnets de voyage style ADGENTES. Tu dois créer du contenu HTML structuré et élégant pour chaque jour d'un voyage.
+            content: `Tu es un expert en rédaction de carnets de voyage style ADGENTES. Tu dois créer du contenu HTML structuré, élégant et moderne pour chaque jour d'un voyage.
 
 STYLE ADGENTES - RÈGLES DE RÉDACTION :
-- Ton élégant, informatif et pratique
-- Structure chronologique claire avec horaires précis (ex: 11h30, 15h30)
-- Titres descriptifs et évocateurs (ex: "De la vallée du Douro à la côte atlantique – Nature & gourmandises")
-- Descriptions détaillées mais concises des activités
-- Informations pratiques complètes (adresses, coordonnées GPS, conseils vestimentaires)
-- Points de rendez-vous précis et instructions d'arrivée
-- Mentions des prestataires et lieux exacts
+- Ton sophistiqué, informatif et engageant avec une approche narrative
+- Structure chronologique précise avec horaires réels convertis depuis la base
+- Titres élégants et descriptifs avec contexte géographique/culturel
+- Descriptions riches incluant histoire, anecdotes et conseils d'expert
+- Informations pratiques détaillées et vérifiées par recherche web
+- Contexte culturel et historique pour enrichir l'expérience
+- Conseils pratiques spécialisés selon le type d'activité
+
+FORMAT HTML REQUIS :
+- Conteneur principal avec classes theme appropriées
+- Hiérarchie claire : date → segments → détails → conseils
+- Classes CSS cohérentes : theme-text, theme-border, theme-bg, theme-accent
+- Séparateurs visuels entre les segments
+- Mise en forme distinctive selon le type (vol, hôtel, activité, transfert)
 
 RÈGLES TECHNIQUES CRITIQUES :
-- RESPECTE EXACTEMENT les informations de la base de données (heures, références, prestataires, etc.)
-- NE MODIFIE JAMAIS les données confirmées
-- Tu peux rechercher automatiquement sur le web des informations complémentaires (adresses exactes, horaires d'ouverture, conseils pratiques, etc.)
-- Si une info n'est pas trouvée même avec la recherche web, écris "Non précisé"
-- Génère 1-2 images maximum via URL Unsplash/Pexels
-- Utilise les classes CSS : theme-text, theme-border, theme-bg
-- Format de sortie : HTML pur sans balises <html>, <head> ou <body>`
+- RESPECTE EXACTEMENT les données confirmées (heures, références, prestataires)
+- NE MODIFIE JAMAIS les informations factuelles de la base
+- Enrichis avec recherche web automatique (adresses complètes, contexte historique, conseils)
+- Convertis les heures ISO en format élégant français (ex: "14h30" au lieu de "00h00")
+- Si aucune heure n'est fournie, utilise une séquence logique dans la journée
+- Format de sortie : HTML structuré sans balises <html>, <head> ou <body>`
           },
           {
             role: 'user',
@@ -106,47 +112,122 @@ function createPrompt(day: any, dayIndex: number): string {
   const dayDate = new Date(day.date);
   const segments = day.segments || [];
   
+  // Fonction helper pour formater les types de segments
+  const getSegmentTypeIcon = (type: string) => {
+    const icons = {
+      'flight': '✈️',
+      'hotel': '🏨', 
+      'activity': '🎯',
+      'car': '🚗',
+      'train': '🚆',
+      'boat': '⛵',
+      'transfer': '🚌',
+      'pass': '🎫',
+      'other': '📍'
+    };
+    return icons[type] || '📍';
+  };
+
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return null;
+      return date.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: 'UTC'
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const segmentsDetails = segments.map((segment: any, i: number) => {
+    const startTime = formatTime(segment.start_date);
+    const endTime = formatTime(segment.end_date);
+    const icon = getSegmentTypeIcon(segment.segment_type);
+    
+    return `
+SEGMENT ${i + 1} - ${segment.segment_type.toUpperCase()} ${icon}
+• Titre: "${segment.title}"
+• Prestataire: ${segment.provider || 'Non précisé'}
+• Référence: ${segment.reference_number || 'Non précisée'}
+• Adresse: ${segment.address || 'À rechercher sur le web'}
+• Heure début: ${startTime || 'À définir logiquement dans la chronologie'}
+• Heure fin: ${endTime || 'À définir logiquement'}
+• Description base: ${segment.description || 'À enrichir avec recherche web'}`;
+  }).join('\n');
+  
   return `
-Génère le contenu HTML pour ce jour de voyage dans le style ADGENTES :
+Crée le contenu HTML pour cette journée de voyage dans le style ADGENTES sophistiqué :
 
-DATE: ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-NOMBRE D'ACTIVITÉS: ${segments.length}
+📅 DATE: ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+📍 SEGMENTS À TRAITER: ${segments.length}
 
-SEGMENTS DE LA BASE DE DONNÉES (À RESPECTER EXACTEMENT):
-${segments.map((segment: any, i: number) => `
-${i + 1}. ${segment.segment_type.toUpperCase()}: ${segment.title}
-   - Prestataire: ${segment.provider || 'Non précisé'}
-   - Référence: ${segment.reference_number || 'Non précisée'}
-   - Adresse: ${segment.address || 'Non précisée'}
-   - Heure début: ${segment.start_date ? new Date(segment.start_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Non précisée'}
-   - Heure fin: ${segment.end_date ? new Date(segment.end_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Non précisée'}
-   - Description: ${segment.description || 'Aucune'}
-`).join('\n')}
+${segmentsDetails}
 
-INSTRUCTIONS DE RÉDACTION STYLE ADGENTES :
-1. Titre de journée évocateur et descriptif
-2. Structure chronologique claire avec horaires précis
-3. Pour chaque activité/segment :
-   - Titre avec horaire (ex: "11h30 – Traversée de la passerelle 516 Arouca")
-   - Description élégante et informative
-   - Informations pratiques détaillées (point de rendez-vous, conseils, adresse complète)
-   - Recherche web pour compléter les infos manquantes (adresses exactes, conseils pratiques, horaires)
+STRUCTURE HTML ATTENDUE (EXEMPLE) :
+<div class="theme-bg rounded-lg p-6 mb-8 border theme-border">
+  <h2 class="text-2xl font-bold theme-text mb-4">
+    ${dayDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+  </h2>
+  <h3 class="text-xl theme-accent mb-6 font-medium">
+    Titre évocateur du jour – Contexte géographique & thématique
+  </h3>
+  
+  <div class="space-y-6">
+    <div class="border-l-4 theme-border pl-4">
+      <h4 class="font-semibold theme-text text-lg mb-2">
+        🚆 14h30 – [Type] Titre élégant de l'activité
+      </h4>
+      <div class="theme-text text-sm mb-3 leading-relaxed">
+        Description narrative enrichie avec contexte historique/culturel trouvé par recherche web.
+        Anecdotes pertinentes et conseils d'expert.
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded text-sm">
+        <strong>Informations pratiques :</strong><br/>
+        • Point de rendez-vous : [Adresse complète trouvée par recherche]<br/>
+        • Durée estimée : [Si disponible]<br/>
+        • Conseils : [Spécifiques au type d'activité]
+      </div>
+    </div>
+  </div>
+</div>
 
-4. Style de rédaction :
-   - Phrases courtes et directes
-   - Ton informatif mais engageant
-   - Détails pratiques précis
-   - Conseils utiles (chaussures, arrivée en avance, etc.)
+INSTRUCTIONS SPÉCIALES PAR TYPE DE SEGMENT :
 
-5. Format HTML structuré avec classes CSS theme-*
-6. 1-2 images pertinentes maximum (URL Unsplash/Pexels)
+✈️ VOL : Inclure aéroports complets, temps de trajet, conseils d'enregistrement
+🏨 HÔTEL : Check-in/out, commodités, quartier, restaurants proximité  
+🎯 ACTIVITÉ : Contexte historique, anecdotes, conseils pratiques, horaires d'ouverture
+🚗 LOCATION/TRANSFERT : Durée trajet, points remarquables sur la route, conseils conduite
+🚆 TRAIN : Gares exactes, correspondances, paysages traversés, conseils réservation
+⛵ BATEAU : Conditions météo, points d'intérêt navigation, conseils mal de mer
+🎫 PASS/BILLET : Modalités d'utilisation, sites couverts, conseils optimisation
 
-EXEMPLE DE STYLE ATTENDU :
-"11h30 – Traversée de la passerelle 516 Arouca (départ Alvarenga)
-Préparez-vous à vivre une expérience impressionnante sur l'un des ponts suspendus les plus longs du monde (516 m). À 175 m au-dessus de la rivière Paiva, cette passerelle offre une vue à couper le souffle sur les gorges et montagnes environnantes.
-Point de rendez-vous : Alvarenga – coordonnées GPS fournies avec votre billet
-Prévoir des chaussures confortables et de l'eau"
+RÈGLES DE CHRONOLOGIE :
+- Si heures réelles disponibles → utilise-les en format français élégant
+- Si heures manquantes → crée une séquence logique (matin, midi, après-midi, soir)
+- Assure une progression temporelle cohérente dans la journée
+- Évite les horaires en "00h00" → remplace par timing logique
 
-Format de sortie: HTML pur sans balises <html>, <head> ou <body>.
+ENRICHISSEMENT OBLIGATOIRE :
+- Recherche web pour adresses complètes et précises
+- Contexte historique/culturel des lieux visités  
+- Anecdotes locales et légendes si pertinentes
+- Conseils pratiques spécialisés (météo, tenue, horaires optimaux)
+- Informations transport public si nécessaire
+
+STYLE NARRATIF ADGENTES :
+- Ton expert et passionné, jamais commercial
+- Phrases élégantes mais accessibles  
+- Détails pratiques intégrés naturellement
+- Perspective d'initié avec conseils exclusifs
+- Évocation sensorielle des expériences
+
+CLASSES CSS À UTILISER :
+theme-bg, theme-text, theme-border, theme-accent pour la cohérence visuelle.
+
+FORMAT FINAL : HTML propre sans balises <html>/<head>/<body>, prêt pour intégration directe.
 `;
 }
