@@ -18,7 +18,7 @@ import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
 import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type AppPhase = 'create-trip' | 'upload' | 'processing' | 'timeline' | 'validated';
 
@@ -71,6 +71,20 @@ export default function IndexNew() {
   const [isLoadingLatestTrip, setIsLoadingLatestTrip] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check if tripId is provided in URL params
+  useEffect(() => {
+    const urlTripId = searchParams.get('tripId');
+    if (urlTripId) {
+      setTripId(urlTripId);
+      setCurrentPhase('timeline');
+      toast({
+        title: "Trip chargé",
+        description: "Visualisation du voyage existant",
+      });
+    }
+  }, [searchParams, toast]);
 
   const loadLatestTrip = async () => {
     setIsLoadingLatestTrip(true);
@@ -85,7 +99,7 @@ export default function IndexNew() {
 
       if (trips && trips.length > 0) {
         const latestTripId = trips[0].id;
-        navigate(`/booklet?tripId=${latestTripId}`);
+        navigate(`/?tripId=${latestTripId}`);
         toast({
           title: "Mode Dev activé",
           description: "Redirection vers le dernier voyage créé",
