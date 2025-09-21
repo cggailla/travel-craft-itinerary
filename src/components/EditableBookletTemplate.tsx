@@ -5,8 +5,8 @@ import { fr } from "date-fns/locale";
 import { Calendar, MapPin, Clock, User, Phone, Edit3, Save, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { DynamicItinerary } from "./DynamicItinerary";
+import { RichTextEditor } from "./RichTextEditor";
+import { EditableDynamicItinerary } from "./EditableDynamicItinerary";
 
 interface EditableBookletTemplateProps {
   data: BookletData;
@@ -158,11 +158,11 @@ export function EditableBookletTemplate({
       <div className="text-center mb-12">
         <div className="theme-bg p-8 rounded-lg">
           {isEditing ? (
-            <Input
-              value={editableData.tripTitle}
-              onChange={(e) => updateField('tripTitle', e.target.value)}
-              className="text-4xl font-bold mb-4 text-center border-2 border-dashed border-primary/30 bg-white/80 backdrop-blur-sm"
-              style={{ color: colors.primary }}
+            <RichTextEditor
+              content={editableData.tripTitle}
+              onChange={(content) => updateField('tripTitle', content.replace(/<[^>]*>/g, ''))}
+              placeholder="Titre du voyage"
+              className="text-center"
             />
           ) : (
             <h1 className="text-4xl font-bold mb-4 theme-text">
@@ -256,7 +256,7 @@ export function EditableBookletTemplate({
           Itinéraire détaillé
         </h2>
         
-        <DynamicItinerary data={data} options={options} tripId={tripId} />
+        <EditableDynamicItinerary data={data} options={options} tripId={tripId} isEditing={isEditing} />
       </div>
 
       {/* Notes personnelles */}
@@ -270,15 +270,17 @@ export function EditableBookletTemplate({
             <h3 className="font-semibold mb-2">Impressions générales</h3>
             <div className="bg-gray-50 p-4 rounded min-h-[150px]">
               {isEditing ? (
-                <Textarea
-                  value={editableData.personalNotes?.generalImpressions || ""}
-                  onChange={(e) => updatePersonalNotes('generalImpressions', e.target.value)}
+                <RichTextEditor
+                  content={editableData.personalNotes?.generalImpressions || ""}
+                  onChange={(content) => updatePersonalNotes('generalImpressions', content)}
                   placeholder="Partagez vos impressions générales sur ce voyage..."
-                  className="w-full h-32 border-2 border-dashed border-primary/30 bg-white/80 backdrop-blur-sm resize-none"
                 />
               ) : (
-                <div className="whitespace-pre-wrap text-gray-600">
-                  {editableData.personalNotes?.generalImpressions || "Espace pour vos impressions générales..."}
+                <div className="prose prose-sm max-w-none">
+                  <div dangerouslySetInnerHTML={{ 
+                    __html: editableData.personalNotes?.generalImpressions || 
+                    '<p class="text-gray-500 italic">Espace pour vos impressions générales...</p>' 
+                  }} />
                 </div>
               )}
             </div>
@@ -288,15 +290,17 @@ export function EditableBookletTemplate({
             <h3 className="font-semibold mb-2">Recommandations pour la prochaine fois</h3>
             <div className="bg-gray-50 p-4 rounded min-h-[150px]">
               {isEditing ? (
-                <Textarea
-                  value={editableData.personalNotes?.recommendations || ""}
-                  onChange={(e) => updatePersonalNotes('recommendations', e.target.value)}
+                <RichTextEditor
+                  content={editableData.personalNotes?.recommendations || ""}
+                  onChange={(content) => updatePersonalNotes('recommendations', content)}
                   placeholder="Notez vos recommandations pour un futur voyage..."
-                  className="w-full h-32 border-2 border-dashed border-primary/30 bg-white/80 backdrop-blur-sm resize-none"
                 />
               ) : (
-                <div className="whitespace-pre-wrap text-gray-600">
-                  {editableData.personalNotes?.recommendations || "Espace pour vos recommandations..."}
+                <div className="prose prose-sm max-w-none">
+                  <div dangerouslySetInnerHTML={{ 
+                    __html: editableData.personalNotes?.recommendations || 
+                    '<p class="text-gray-500 italic">Espace pour vos recommandations...</p>' 
+                  }} />
                 </div>
               )}
             </div>
