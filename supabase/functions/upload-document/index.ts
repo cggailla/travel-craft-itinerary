@@ -22,27 +22,33 @@ Deno.serve(async (req) => {
     const formData = await req.formData()
     const file = formData.get('file') as File
     let tripId = formData.get('trip_id') as string
+    const userId = formData.get('user_id') as string
     
     if (!file) {
       throw new Error('No file provided')
     }
+    
+    if (!userId) {
+      throw new Error('No user_id provided')
+    }
 
     console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`)
-    console.log(`Received trip_id: ${tripId}`)
+    console.log(`Received trip_id: ${tripId}, user_id: ${userId}`)
 
-    // If no trip_id provided, get the most recent trip
+    // If no trip_id provided, get the most recent trip for this user
     if (!tripId) {
-      console.log('No trip_id provided, getting most recent trip...')
+      console.log('No trip_id provided, getting most recent trip for user...')
       const { data: recentTrip, error: tripError } = await supabase
         .from('trips')
         .select('id')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
 
       if (tripError) {
         console.error('Error getting recent trip:', tripError)
-        throw new Error('No trip_id provided and could not find recent trip')
+        throw new Error('No trip_id provided and could not find recent trip for user')
       }
 
       tripId = recentTrip.id
@@ -75,7 +81,7 @@ Deno.serve(async (req) => {
 
     console.log('File uploaded successfully:', uploadData.path)
 
-    // Create document record in database with trip_id
+    // Create document record in database with trip_id and user_id
     const { data: documentData, error: documentError } = await supabase
       .from('documents')
       .insert({
@@ -84,6 +90,7 @@ Deno.serve(async (req) => {
         file_size: file.size,
         storage_path: uploadData.path,
         trip_id: tripId,
+        user_id: userId,
       })
       .select()
       .single()

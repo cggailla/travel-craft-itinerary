@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client'
+import { sessionManager } from '@/utils/sessionManager'
 
 // Supabase configuration
 const SUPABASE_URL = "https://jjlhsikgczigvtdzfroa.supabase.co"
@@ -33,6 +34,9 @@ export interface TravelSegmentResponse {
  */
 export async function createTrip(): Promise<{ success: boolean; trip_id?: string; error?: string }> {
   try {
+    // Get current user session ID for secure access
+    const userId = await sessionManager.getCurrentUserId();
+    
     // Use direct SQL query since trips table might not be in generated types
     const response = await fetch(`${SUPABASE_URL}/rest/v1/trips`, {
       method: 'POST',
@@ -43,7 +47,8 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
       },
       body: JSON.stringify({
         title: 'Nouveau carnet de voyage',
-        status: 'draft'
+        status: 'draft',
+        user_id: userId
       })
     })
 
@@ -73,8 +78,12 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
  */
 export async function uploadDocument(file: File, tripId: string | null = null): Promise<DocumentUploadResult> {
   try {
+    // Get current user session ID for secure access
+    const userId = await sessionManager.getCurrentUserId();
+    
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('user_id', userId)
     if (tripId) {
       formData.append('trip_id', tripId)
     }
