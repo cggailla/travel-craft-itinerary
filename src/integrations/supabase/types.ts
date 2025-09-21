@@ -118,6 +118,7 @@ export type Database = {
           raw_data: Json | null
           reference_number: string | null
           segment_type: string
+          sequence_order: number | null
           start_date: string | null
           title: string
           trip_id: string | null
@@ -137,6 +138,7 @@ export type Database = {
           raw_data?: Json | null
           reference_number?: string | null
           segment_type: string
+          sequence_order?: number | null
           start_date?: string | null
           title: string
           trip_id?: string | null
@@ -156,6 +158,7 @@ export type Database = {
           raw_data?: Json | null
           reference_number?: string | null
           segment_type?: string
+          sequence_order?: number | null
           start_date?: string | null
           title?: string
           trip_id?: string | null

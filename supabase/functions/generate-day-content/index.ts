@@ -48,7 +48,7 @@ serve(async (req) => {
       .eq('trip_id', tripId)
       .eq('validated', true)
       .order('start_date', { ascending: true })
-      .order('created_at', { ascending: true });
+      .order('sequence_order', { ascending: true });
 
     if (error) {
       throw new Error(`Erreur lors de la récupération des segments: ${error.message}`);

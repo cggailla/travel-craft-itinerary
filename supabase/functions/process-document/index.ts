@@ -522,8 +522,8 @@ if (!extractedContent || extractedContent.trim().length === 0) {
 
     console.log('Job updated with AI results');
 
-    // Create all travel segments with trip_id from document
-    const segmentInserts = extractedSegments.map(segment => ({
+    // Create all travel segments with trip_id from document  
+    const segmentInserts = extractedSegments.map((segment, index) => ({
       document_id: document_id,
       user_id: document.user_id,
       trip_id: document.trip_id, // Assign trip_id directly
@@ -537,7 +537,8 @@ if (!extractedContent || extractedContent.trim().length === 0) {
       description: segment.description,
       confidence: segment.confidence,
       raw_data: segment,
-      validated: false
+      validated: false,
+      sequence_order: index + 1  // Preserve GPT ordering
     }));
 
     const { data: createdSegments, error: segmentError } = await supabase
