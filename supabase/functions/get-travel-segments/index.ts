@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
         )
       `)
       .order('start_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true })
 
     // Filter by trip if provided - now using travel_segments.trip_id directly
     if (trip_id) {

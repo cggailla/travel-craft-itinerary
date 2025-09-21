@@ -46,7 +46,8 @@ export async function getBookletData(tripId: string): Promise<BookletData> {
       `)
       .eq('trip_id', tripId)
       .eq('validated', true)
-      .order('start_date', { ascending: true });
+      .order('start_date', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (error) {
       throw new Error(`Erreur lors de la récupération des segments: ${error.message}`);
