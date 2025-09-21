@@ -6,12 +6,10 @@ import { DynamicItinerary } from "./DynamicItinerary";
 interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
-  tripId: string;
 }
 export function BookletTemplate({
   data,
-  options,
-  tripId
+  options
 }: BookletTemplateProps) {
   const getThemeColors = (theme: string) => {
     switch (theme) {
@@ -94,40 +92,12 @@ export function BookletTemplate({
             </span>
           </div>
           
-          <div className="flex items-center justify-center">
-            <MapPin className="mr-2 h-5 w-5 theme-text" />
-            <span className="text-lg">
-              {data.destinations.length} destination{data.destinations.length > 1 ? 's' : ''}
-            </span>
-          </div>
+          
         </div>
       </div>
 
       {/* Table des matières */}
-      <div className="page-break mb-12">
-        <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
-          Sommaire
-        </h2>
-        
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span>Résumé du voyage</span>
-            <span>3</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Itinéraire détaillé</span>
-            <span>4</span>
-          </div>
-          {Object.entries(data.segmentsByType).map(([type, segments]) => <div key={type} className="flex justify-between ml-4">
-              
-              <span>•</span>
-            </div>)}
-          {options.includeDocuments && <div className="flex justify-between">
-              <span>Documents de référence</span>
-              <span>{data.timeline.length + 10}</span>
-            </div>}
-        </div>
-      </div>
+      
 
       {/* Résumé du voyage */}
       <div className="page-break mb-12">
@@ -183,7 +153,7 @@ export function BookletTemplate({
           Itinéraire détaillé
         </h2>
         
-        <DynamicItinerary data={data} options={options} tripId={tripId} />
+        <DynamicItinerary data={data} options={options} />
       </div>
 
       {/* Documents de référence */}
