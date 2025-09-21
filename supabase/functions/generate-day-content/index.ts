@@ -1,7 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
-import { format, parseISO, isValid } from 'https://esm.sh/date-fns@3.6.0'
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
@@ -20,75 +18,12 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    const { tripId, dayIndex } = await req.json();
-    console.log(`Génération contenu pour voyage ${tripId}, jour ${dayIndex + 1}`);
+    const { day, dayIndex } = await req.json();
+    console.log(`Génération contenu pour jour ${dayIndex + 1}:`, day);
 
-    if (!tripId || dayIndex === undefined) {
-      throw new Error('tripId et dayIndex requis');
+    if (!day?.segments || !Array.isArray(day.segments)) {
+      throw new Error('Structure de jour invalide');
     }
-
-    // Utiliser la même logique que bookletService.ts pour récupérer les données
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Récupérer tous les segments validés du voyage (même logique que bookletService.ts)
-    const { data: segments, error } = await supabase
-      .from('travel_segments')
-      .select(`
-        *,
-        documents (
-          id,
-          file_name,
-          file_type,
-          created_at
-        )
-      `)
-      .eq('trip_id', tripId)
-      .eq('validated', true)
-      .order('start_date', { ascending: true })
-      .order('sequence_order', { ascending: true });
-
-    if (error) {
-      throw new Error(`Erreur lors de la récupération des segments: ${error.message}`);
-    }
-
-    const typedSegments = segments || [];
-    
-    // Créer la timeline par jour (même logique que bookletService.ts)
-    const segmentsByDate = new Map();
-
-    typedSegments.forEach(segment => {
-      if (segment.start_date) {
-        const date = parseISO(segment.start_date);
-        if (isValid(date)) {
-          const dateKey = format(date, 'yyyy-MM-dd');
-          if (!segmentsByDate.has(dateKey)) {
-            segmentsByDate.set(dateKey, []);
-          }
-          segmentsByDate.get(dateKey).push(segment);
-        }
-      }
-    });
-
-    // Trier par date et créer la timeline
-    const sortedDates = Array.from(segmentsByDate.keys()).sort();
-    const timeline = sortedDates.map(dateKey => ({
-      date: parseISO(dateKey),
-      segments: segmentsByDate.get(dateKey) || []
-    }));
-
-    // Vérifier si le jour demandé existe
-    if (dayIndex >= timeline.length) {
-      throw new Error(`Jour ${dayIndex + 1} non trouvé dans la timeline`);
-    }
-
-    const day = timeline[dayIndex];
-    console.log(`Génération contenu pour jour ${dayIndex + 1}:`, {
-      date: day.date,
-      segments: day.segments.length
-    });
 
     const prompt = createPrompt(day, dayIndex);
     console.log('Prompt GPT créé, appel à OpenAI...');
@@ -124,6 +59,7 @@ FORMAT HTML REQUIS :
 
 RÈGLES TECHNIQUES CRITIQUES :
 - RESPECTE EXACTEMENT les données confirmées (références, prestataires, adresses)
+- RESPECTE OBLIGATOIREMENT l'ordre des segments de la base de donnée. 
 - NE MODIFIE JAMAIS les informations factuelles de la base
 - Enrichis avec recherche web automatique (adresses complètes, contexte historique, conseils)
 - HEURES : N'inclus les horaires QUE si ils sont spécifiés dans les données
@@ -136,6 +72,7 @@ RÈGLES TECHNIQUES CRITIQUES :
             content: prompt
           }
         ],
+        max_completion_tokens: 3000
       }),
     });
 
@@ -174,7 +111,7 @@ RÈGLES TECHNIQUES CRITIQUES :
 });
 
 function createPrompt(day: any, dayIndex: number): string {
-  const dayDate = day.date; // Maintenant c'est déjà un objet Date depuis parseISO
+  const dayDate = new Date(day.date);
   const segments = day.segments || [];
   
   // Fonction helper pour formater les types de segments
