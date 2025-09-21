@@ -37,39 +37,32 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
     // Get current user session ID for secure access
     const userId = await sessionManager.getCurrentUserId();
     
-    // Use direct SQL query since trips table might not be in generated types
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/trips`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
+    // Use Supabase client for better RLS handling
+    const { data, error } = await supabase
+      .from('trips')
+      .insert({
         title: 'Nouveau carnet de voyage',
         status: 'draft',
         user_id: userId
       })
-    })
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to create trip: ${response.status} - ${errorText}`)
+    if (error) {
+      console.error('Supabase error:', error);
+      throw new Error(`Failed to create trip: ${error.message}`);
     }
-
-    const data = await response.json()
-    const trip = Array.isArray(data) ? data[0] : data
 
     return {
       success: true,
-      trip_id: trip.id
-    }
+      trip_id: data.id
+    };
   } catch (error) {
-    console.error('Create trip error:', error)
+    console.error('Create trip error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create trip'
-    }
+    };
   }
 }
 
