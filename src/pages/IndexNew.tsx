@@ -79,12 +79,42 @@ export default function IndexNew() {
     if (urlTripId) {
       setTripId(urlTripId);
       setCurrentPhase('timeline');
-      toast({
-        title: "Trip chargé",
-        description: "Visualisation du voyage existant",
-      });
+      loadExistingTripData(urlTripId);
     }
   }, [searchParams, toast]);
+
+  const loadExistingTripData = async (tripId: string) => {
+    try {
+      // Récupérer les documents associés à ce trip
+      const { data: documents, error } = await supabase
+        .from('documents')  
+        .select('id')
+        .eq('trip_id', tripId);
+
+      if (error) throw error;
+
+      if (documents && documents.length > 0) {
+        const docIds = documents.map(doc => doc.id);
+        setProcessedDocuments(docIds);
+        toast({
+          title: "Trip chargé",
+          description: `${documents.length} documents trouvés pour ce voyage`,
+        });
+      } else {
+        toast({
+          title: "Trip chargé", 
+          description: "Aucun document trouvé pour ce voyage",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load trip data:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données du voyage",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadLatestTrip = async () => {
     setIsLoadingLatestTrip(true);
