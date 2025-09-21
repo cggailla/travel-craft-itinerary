@@ -20,13 +20,13 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
   const [dayStatus, setDayStatus] = useState<string>('');
 
   useEffect(() => {
-    if (data.timeline.length > 0) {
+    if (data.timeline.length > 0 && tripId) {
       generateContent();
     }
-  }, [data.timeline]);
+  }, [data.timeline, tripId]);
 
   const generateContent = async () => {
-    if (data.timeline.length === 0) return;
+    if (data.timeline.length === 0 || !tripId) return;
     
     setIsGenerating(true);
     setProgress(0);

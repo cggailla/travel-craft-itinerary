@@ -71,7 +71,7 @@ export default function TravelBooklet() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <BookletGenerator tripId={tripId} />
+        {tripId && <BookletGenerator tripId={tripId} />}
       </main>
     </div>
   );
