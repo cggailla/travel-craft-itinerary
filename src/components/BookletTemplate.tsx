@@ -101,51 +101,6 @@ export function BookletTemplate({
       {/* Table des matières */}
       
 
-      {/* Résumé du voyage */}
-      <div className="page-break mb-12">
-        
-        
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-3 theme-text">Informations générales</h3>
-            <div className="space-y-2">
-              <p><strong>Titre:</strong> {data.tripTitle}</p>
-              {data.startDate && <p><strong>Dates:</strong> {format(data.startDate, 'dd/MM/yyyy', {
-                locale: fr
-              })}
-                {data.endDate && data.endDate !== data.startDate && <> - {format(data.endDate, 'dd/MM/yyyy', {
-                  locale: fr
-                })}</>}</p>}
-              <p><strong>Durée:</strong> {data.totalDays} jour{data.totalDays > 1 ? 's' : ''}</p>
-              <p><strong>Nombre de segments:</strong> {data.segments.length}</p>
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-semibold mb-3 theme-text">Destinations</h3>
-            <div className="space-y-1">
-              {data.destinations.slice(0, 10).map((destination, index) => <div key={index} className="flex items-center">
-                  <MapPin className="mr-2 h-4 w-4 theme-text" />
-                  <span className="text-sm">{destination}</span>
-                </div>)}
-              {data.destinations.length > 10 && <p className="text-sm text-gray-500">... et {data.destinations.length - 10} autres</p>}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3 theme-text">Types d'activités</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {Object.entries(data.segmentsByType).map(([type, segments]) => <div key={type} className="theme-bg p-3 rounded flex items-center">
-                <span className="text-lg mr-2">{getSegmentIcon(type)}</span>
-                <div>
-                  <div className="font-medium">{formatSegmentType(type)}</div>
-                  <div className="text-sm text-gray-600">{segments.length} élément{segments.length > 1 ? 's' : ''}</div>
-                </div>
-              </div>)}
-          </div>
-        </div>
-      </div>
 
       {/* Itinéraire jour par jour */}
       <div className="page-break mb-12">
