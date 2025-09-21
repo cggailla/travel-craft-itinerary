@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
@@ -18,11 +19,57 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    const { day, dayIndex } = await req.json();
-    console.log(`Génération contenu pour jour ${dayIndex + 1}:`, day);
+    const { tripId, dayIndex } = await req.json();
+    console.log(`Génération contenu pour jour ${dayIndex + 1} du voyage ${tripId}`);
 
+    if (!tripId || dayIndex === undefined) {
+      throw new Error('tripId et dayIndex sont requis');
+    }
+
+    // Récupérer les segments du voyage pour construire la timeline
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: segments, error: segmentError } = await supabase
+      .from('travel_segments')
+      .select('*')
+      .eq('trip_id', tripId)
+      .eq('validated', true)
+      .order('start_date', { ascending: true })
+      .order('sequence_order', { ascending: true });
+
+    if (segmentError || !segments) {
+      throw new Error(`Impossible de récupérer les segments: ${segmentError?.message || 'Aucun segment trouvé'}`);
+    }
+
+    // Grouper les segments par date pour créer la timeline
+    const timeline: any[] = [];
+    const segmentsByDate = new Map();
+
+    segments.forEach(segment => {
+      if (segment.start_date) {
+        const dateKey = segment.start_date.split('T')[0]; // YYYY-MM-DD
+        if (!segmentsByDate.has(dateKey)) {
+          segmentsByDate.set(dateKey, []);
+        }
+        segmentsByDate.get(dateKey).push(segment);
+      }
+    });
+
+    // Créer la timeline triée
+    const sortedDates = Array.from(segmentsByDate.keys()).sort();
+    sortedDates.forEach(dateKey => {
+      const segments = segmentsByDate.get(dateKey) || [];
+      timeline.push({ 
+        date: new Date(dateKey), 
+        segments 
+      });
+    });
+
+    const day = timeline[dayIndex];
     if (!day?.segments || !Array.isArray(day.segments)) {
-      throw new Error('Structure de jour invalide');
+      throw new Error(`Aucun segment trouvé pour le jour ${dayIndex + 1}`);
     }
 
     const prompt = createPrompt(day, dayIndex);
