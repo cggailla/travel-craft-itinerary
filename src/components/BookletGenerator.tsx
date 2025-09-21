@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { BookletPreview } from "./BookletPreview";
 import { 
@@ -12,8 +11,6 @@ import {
 } from "@/services/bookletService";
 import { 
   Download, 
-  Eye, 
-  Settings, 
   FileText,
   Loader2,
   Calendar,
@@ -21,9 +18,6 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
@@ -32,10 +26,9 @@ interface BookletGeneratorProps {
 
 export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [bookletData, setBookletData] = useState<BookletData | null>(null);
-  const [options, setOptions] = useState<BookletOptions>(defaultBookletOptions);
+  const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [activeTab, setActiveTab] = useState("preview");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,9 +98,6 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
-  const updateOptions = (key: keyof BookletOptions, value: any) => {
-    setOptions(prev => ({ ...prev, [key]: value }));
-  };
 
   if (isLoading) {
     return (
@@ -173,134 +163,26 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         </CardContent>
       </Card>
 
-      {/* Interface à onglets */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="preview" className="flex items-center">
-            <Eye className="mr-2 h-4 w-4" />
-            Aperçu
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            Options
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="preview" className="mt-6">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Aperçu du carnet</h3>
-              <Button 
-                onClick={handleGeneratePdf}
-                disabled={isGeneratingPdf}
-                className="flex items-center"
-              >
-                {isGeneratingPdf ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
-              </Button>
-            </div>
-            
-            <BookletPreview data={bookletData} options={options} tripId={tripId} />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personnalisation du carnet</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Template */}
-              <div className="space-y-2">
-                <Label>Modèle</Label>
-                <Select 
-                  value={options.template} 
-                  onValueChange={(value: any) => updateOptions('template', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="classic">Classique</SelectItem>
-                    <SelectItem value="modern">Moderne</SelectItem>
-                    <SelectItem value="minimal">Minimaliste</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Couleur */}
-              <div className="space-y-2">
-                <Label>Thème de couleur</Label>
-                <Select 
-                  value={options.colorTheme} 
-                  onValueChange={(value: any) => updateOptions('colorTheme', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="blue">Bleu océan</SelectItem>
-                    <SelectItem value="green">Vert nature</SelectItem>
-                    <SelectItem value="orange">Orange coucher de soleil</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Options d'inclusion */}
-              <div className="space-y-4">
-                <Label className="text-base font-medium">Sections à inclure</Label>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="include-docs">Documents sources</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Inclure les références aux documents uploadés
-                    </p>
-                  </div>
-                  <Switch
-                    id="include-docs"
-                    checked={options.includeDocuments}
-                    onCheckedChange={(checked) => updateOptions('includeDocuments', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="include-notes">Notes et descriptions</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Inclure les descriptions détaillées des segments
-                    </p>
-                  </div>
-                  <Switch
-                    id="include-notes"
-                    checked={options.includeNotes}
-                    onCheckedChange={(checked) => updateOptions('includeNotes', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="include-maps">Cartes (bientôt)</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Inclure des cartes des destinations
-                    </p>
-                  </div>
-                  <Switch
-                    id="include-maps"
-                    checked={options.includeMaps}
-                    onCheckedChange={(checked) => updateOptions('includeMaps', checked)}
-                    disabled
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Interface simplifiée */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Carnet de voyage</h3>
+          <Button 
+            onClick={handleGeneratePdf}
+            disabled={isGeneratingPdf}
+            className="flex items-center"
+          >
+            {isGeneratingPdf ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
+          </Button>
+        </div>
+        
+        <BookletPreview data={bookletData} options={options} tripId={tripId} />
+      </div>
     </div>
   );
 }

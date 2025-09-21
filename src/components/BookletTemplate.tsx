@@ -125,12 +125,6 @@ export function BookletTemplate({ data, options, tripId }: BookletTemplateProps)
               <span>•</span>
             </div>
           ))}
-          {options.includeDocuments && (
-            <div className="flex justify-between">
-              <span>Documents de référence</span>
-              <span>{data.timeline.length + 10}</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -197,38 +191,6 @@ export function BookletTemplate({ data, options, tripId }: BookletTemplateProps)
         <DynamicItinerary data={data} options={options} tripId={tripId} />
       </div>
 
-      {/* Documents de référence */}
-      {options.includeDocuments && (
-        <div className="page-break mb-12">
-          <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
-            Documents de référence
-          </h2>
-          
-          {data.segments.filter(s => s.documents).length === 0 ? (
-            <p className="text-gray-500">Aucun document source trouvé.</p>
-          ) : (
-            <div className="space-y-4">
-              {data.segments
-                .filter(s => s.documents)
-                .map(segment => (
-                  segment.documents && (
-                    <div key={segment.id} className="border rounded p-4">
-                      <h4 className="font-semibold mb-2 flex items-center">
-                        <FileText className="mr-2 h-4 w-4 theme-text" />
-                        {segment.title}
-                      </h4>
-                      <div className="text-sm text-gray-600">
-                        <p><strong>Fichier:</strong> {segment.documents.file_name}</p>
-                        <p><strong>Type:</strong> {segment.documents.file_type}</p>
-                        <p><strong>Uploadé le:</strong> {format(new Date(segment.documents.created_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}</p>
-                      </div>
-                    </div>
-                  )
-                ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Notes personnelles */}
       <div className="page-break">

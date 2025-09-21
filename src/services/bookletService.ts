@@ -23,11 +23,11 @@ export interface BookletOptions {
 }
 
 export const defaultBookletOptions: BookletOptions = {
-  includeDocuments: true,
+  includeDocuments: false,
   includeMaps: false,
   includeNotes: true,
   colorTheme: 'blue',
-  template: 'classic',
+  template: 'modern',
 };
 
 export async function getBookletData(tripId: string): Promise<BookletData> {

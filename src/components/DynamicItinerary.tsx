@@ -198,6 +198,13 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
         }
 
         if (dayContent.success && dayContent.html) {
+          // Nettoyer le contenu HTML pour supprimer les encarts ```html
+          const cleanHtml = dayContent.html
+            .replace(/```html\n/g, '')
+            .replace(/\n```/g, '')
+            .replace(/```html/g, '')
+            .replace(/```/g, '');
+
           return (
             <div key={`gpt-${dayIndex}`} className="border rounded-lg p-6 relative">
               <button
@@ -209,7 +216,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
               </button>
               
               <div 
-                dangerouslySetInnerHTML={{ __html: dayContent.html }}
+                dangerouslySetInnerHTML={{ __html: cleanHtml }}
                 className="gpt-content"
               />
             </div>
