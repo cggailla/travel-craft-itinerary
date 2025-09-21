@@ -232,6 +232,9 @@ Crée le contenu HTML pour cette journée de voyage dans le style ADGENTES sophi
 
 ${segmentsDetails}
 
+!!!!!!  TOUTES LES INFOS PRESENTES DOIVENT ETRE PRESENTES OBLIGATOIREMENT DANS LE TEXTE GENERE. !!!!!
+
+
 STRUCTURE HTML ATTENDUE (EXEMPLE) :
 <div class="theme-bg rounded-lg p-6 mb-8 border theme-border">
   <h2 class="text-2xl font-bold theme-text mb-4">
