@@ -85,7 +85,7 @@ export default function IndexNew() {
 
       if (trips && trips.length > 0) {
         const latestTripId = trips[0].id;
-        navigate(`/travel-booklet?tripId=${latestTripId}`);
+        navigate(`/booklet?tripId=${latestTripId}`);
         toast({
           title: "Mode Dev activé",
           description: "Redirection vers le dernier voyage créé",
