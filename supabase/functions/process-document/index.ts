@@ -248,6 +248,7 @@ confidence:
 - FOLLOW the System directives from the previous analysis exactly (granularity, ordering, special rules).
 - Parse with maximum granularity appropriate to the document type.
 - If unsure, set fields to null or low confidence.
+- SPEAK FRENCH !
 - Always include an “other” segment with title like “Informations générales” (dates null) if there are global notes/contacts/policies/allergies outside specific services.
 - Return ONLY the JSON !!!!!
 `;
@@ -522,8 +523,8 @@ if (!extractedContent || extractedContent.trim().length === 0) {
 
     console.log('Job updated with AI results');
 
-    // Create all travel segments with trip_id from document  
-    const segmentInserts = extractedSegments.map((segment, index) => ({
+    // Create all travel segments with trip_id from document
+    const segmentInserts = extractedSegments.map(segment => ({
       document_id: document_id,
       user_id: document.user_id,
       trip_id: document.trip_id, // Assign trip_id directly
@@ -537,8 +538,7 @@ if (!extractedContent || extractedContent.trim().length === 0) {
       description: segment.description,
       confidence: segment.confidence,
       raw_data: segment,
-      validated: false,
-      sequence_order: index + 1  // Preserve GPT ordering
+      validated: false
     }));
 
     const { data: createdSegments, error: segmentError } = await supabase
