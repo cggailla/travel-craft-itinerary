@@ -37,7 +37,7 @@ serve(async (req) => {
       .eq('trip_id', tripId)
       .eq('validated', true)
       .order('start_date', { ascending: true })
-      .order('sequence_order', { ascending: true });
+      .order('sequence_order', { ascending: true, nullsFirst: false });
 
     if (segmentError || !segments) {
       throw new Error(`Impossible de récupérer les segments: ${segmentError?.message || 'Aucun segment trouvé'}`);
@@ -61,9 +61,20 @@ serve(async (req) => {
     const sortedDates = Array.from(segmentsByDate.keys()).sort();
     sortedDates.forEach(dateKey => {
       const segments = segmentsByDate.get(dateKey) || [];
+      
+      // Trier les segments par sequence_order pour respecter l'ordre voulu
+      const sortedSegments = segments.sort((a, b) => {
+        const aOrder = a.sequence_order ?? 999999;
+        const bOrder = b.sequence_order ?? 999999;
+        return aOrder - bOrder;
+      });
+      
+      console.log(`Date ${dateKey}: ${sortedSegments.length} segments triés par sequence_order:`, 
+        sortedSegments.map(s => `${s.title} (order: ${s.sequence_order})`));
+      
       timeline.push({ 
         date: new Date(dateKey), 
-        segments 
+        segments: sortedSegments 
       });
     });
 
