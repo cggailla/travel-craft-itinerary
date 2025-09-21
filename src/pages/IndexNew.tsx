@@ -86,20 +86,39 @@ export default function IndexNew() {
   const loadExistingTripData = async (tripId: string) => {
     try {
       // Récupérer les documents associés à ce trip
-      const { data: documents, error } = await supabase
+      const { data: documents, error: docError } = await supabase
         .from('documents')  
         .select('id')
         .eq('trip_id', tripId);
 
-      if (error) throw error;
+      if (docError) throw docError;
+
+      // Vérifier si tous les segments sont validés
+      const { data: segments, error: segError } = await supabase
+        .from('travel_segments')
+        .select('validated')
+        .eq('trip_id', tripId);
+
+      if (segError) throw segError;
 
       if (documents && documents.length > 0) {
         const docIds = documents.map(doc => doc.id);
         setProcessedDocuments(docIds);
-        toast({
-          title: "Trip chargé",
-          description: `${documents.length} documents trouvés pour ce voyage`,
-        });
+        
+        // Si tous les segments sont validés, passer en phase validated
+        const allValidated = segments && segments.length > 0 && segments.every(s => s.validated);
+        if (allValidated) {
+          setCurrentPhase('validated');
+          toast({
+            title: "Trip validé chargé",
+            description: "Tous les segments sont validés - carnet prêt à générer",
+          });
+        } else {
+          toast({
+            title: "Trip chargé",
+            description: `${documents.length} documents trouvés pour ce voyage`,
+          });
+        }
       } else {
         toast({
           title: "Trip chargé", 
