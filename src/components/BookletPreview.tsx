@@ -1,5 +1,5 @@
 import { BookletData, BookletOptions } from "@/services/bookletService";
-import { EditableBookletTemplate } from "./EditableBookletTemplate";
+import { BookletTemplate } from "./BookletTemplate";
 
 interface BookletPreviewProps {
   data: BookletData;
@@ -13,7 +13,7 @@ export function BookletPreview({ data, options, tripId }: BookletPreviewProps) {
       {/* Conteneur avec style d'impression */}
       <div className="bg-white shadow-lg mx-auto" style={{ maxWidth: '210mm' }}>
         <div className="p-8">
-          <EditableBookletTemplate data={data} options={options} tripId={tripId} />
+          <BookletTemplate data={data} options={options} tripId={tripId} />
         </div>
       </div>
       
