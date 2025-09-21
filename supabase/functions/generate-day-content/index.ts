@@ -41,12 +41,12 @@ serve(async (req) => {
             role: 'system',
             content: `Tu es un expert en rédaction de carnets de voyage style ADGENTES. Tu dois créer du contenu HTML structuré, élégant et moderne pour chaque jour d'un voyage.
 
-STYLE ADGENTES - RÈGLES DE RÉDACTION :
+STYLE ADGENTES - APPROCHE GUIDE PLUTÔT QUE PLANNING :
 - Ton sophistiqué, informatif et engageant avec une approche narrative
-- Structure chronologique précise avec horaires réels convertis depuis la base
+- Style guide souple et inspirant plutôt qu'un planning rigide
 - Titres élégants et descriptifs avec contexte géographique/culturel
 - Descriptions riches incluant histoire, anecdotes et conseils d'expert
-- Informations pratiques détaillées et vérifiées par recherche web
+- Informations pratiques détaillées enrichies par recherche web
 - Contexte culturel et historique pour enrichir l'expérience
 - Conseils pratiques spécialisés selon le type d'activité
 
@@ -58,11 +58,12 @@ FORMAT HTML REQUIS :
 - Mise en forme distinctive selon le type (vol, hôtel, activité, transfert)
 
 RÈGLES TECHNIQUES CRITIQUES :
-- RESPECTE EXACTEMENT les données confirmées (heures, références, prestataires)
+- RESPECTE EXACTEMENT les données confirmées (références, prestataires, adresses)
 - NE MODIFIE JAMAIS les informations factuelles de la base
 - Enrichis avec recherche web automatique (adresses complètes, contexte historique, conseils)
-- Convertis les heures ISO en format élégant français (ex: "14h30" au lieu de "00h00")
-- Si aucune heure n'est fournie, utilise une séquence logique dans la journée
+- HEURES : N'inclus les horaires QUE si ils sont spécifiés dans les données
+- Si aucune heure précise, évite de mentionner des horaires pour garder la flexibilité
+- Privilégie des indications temporelles souples (matin, après-midi, soirée)
 - Format de sortie : HTML structuré sans balises <html>, <head> ou <body>`
           },
           {
@@ -133,6 +134,11 @@ function createPrompt(day: any, dayIndex: number): string {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return null;
+      // Vérifier si l'heure est spécifiée (différente de 00:00:00)
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      if (hours === 0 && minutes === 0) return null; // Pas d'heure spécifiée
+      
       return date.toLocaleTimeString('fr-FR', { 
         hour: '2-digit', 
         minute: '2-digit',
@@ -154,8 +160,8 @@ SEGMENT ${i + 1} - ${segment.segment_type.toUpperCase()} ${icon}
 • Prestataire: ${segment.provider || 'Non précisé'}
 • Référence: ${segment.reference_number || 'Non précisée'}
 • Adresse: ${segment.address || 'À rechercher sur le web'}
-• Heure début: ${startTime || 'À définir logiquement dans la chronologie'}
-• Heure fin: ${endTime || 'À définir logiquement'}
+• Heure début: ${startTime || 'Non spécifiée - à mentionner seulement si pertinent'}
+• Heure fin: ${endTime || 'Non spécifiée - à mentionner seulement si pertinent'}
 • Description base: ${segment.description || 'À enrichir avec recherche web'}`;
   }).join('\n');
   
@@ -179,7 +185,7 @@ STRUCTURE HTML ATTENDUE (EXEMPLE) :
   <div class="space-y-6">
     <div class="border-l-4 theme-border pl-4">
       <h4 class="font-semibold theme-text text-lg mb-2">
-        🚆 14h30 – [Type] Titre élégant de l'activité
+        🚆 [Type] Titre élégant de l'activité (avec heure seulement si spécifiée)
       </h4>
       <div class="theme-text text-sm mb-3 leading-relaxed">
         Description narrative enrichie avec contexte historique/culturel trouvé par recherche web.
@@ -205,11 +211,11 @@ INSTRUCTIONS SPÉCIALES PAR TYPE DE SEGMENT :
 ⛵ BATEAU : Conditions météo, points d'intérêt navigation, conseils mal de mer
 🎫 PASS/BILLET : Modalités d'utilisation, sites couverts, conseils optimisation
 
-RÈGLES DE CHRONOLOGIE :
+RÈGLES DE CHRONOLOGIE SOUPLE :
 - Si heures réelles disponibles → utilise-les en format français élégant
-- Si heures manquantes → crée une séquence logique (matin, midi, après-midi, soir)
-- Assure une progression temporelle cohérente dans la journée
-- Évite les horaires en "00h00" → remplace par timing logique
+- Si heures manquantes → NE PAS inventer d'horaires, utilise des indications souples (matin, après-midi)
+- Privilégie un ordre logique sans contraintes temporelles rigides
+- Style guide accompagnateur plutôt que planning strict
 
 ENRICHISSEMENT OBLIGATOIRE :
 - Recherche web pour adresses complètes et précises
