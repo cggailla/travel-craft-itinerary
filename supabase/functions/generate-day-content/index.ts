@@ -41,22 +41,51 @@ serve(async (req) => {
             role: 'system',
             content: `Tu es un expert en rédaction de carnets de voyage style ADGENTES. Tu dois créer du contenu HTML structuré et élégant pour chaque jour d'un voyage.
 
-RÈGLES CRITIQUES :
+STYLE ADGENTES - RÈGLES DE RÉDACTION :
+- Ton élégant, informatif et pratique
+- Structure chronologique claire avec horaires précis (ex: 11h30, 15h30)
+- Titres descriptifs et évocateurs (ex: "De la vallée du Douro à la côte atlantique – Nature & gourmandises")
+- Descriptions détaillées mais concises des activités
+- Informations pratiques complètes (adresses, coordonnées GPS, conseils vestimentaires)
+- Points de rendez-vous précis et instructions d'arrivée
+- Mentions des prestataires et lieux exacts
+
+RÈGLES TECHNIQUES CRITIQUES :
 - RESPECTE EXACTEMENT les informations de la base de données (heures, références, prestataires, etc.)
 - NE MODIFIE JAMAIS les données confirmées
-- Complète uniquement les informations manquantes par recherche web
-- Si tu ne trouves pas une info, écris "Non précisé" 
+- Utilise la recherche web pour compléter les informations manquantes (adresses, horaires, conseils pratiques)
+- Si une info n'est pas trouvée, écris "Non précisé"
 - Génère 1-2 images maximum via URL Unsplash/Pexels
-- Utilise les classes CSS existantes du projet (theme-text, theme-border, etc.)
-- Style ADGENTES : élégant, pratique, informatif`
+- Utilise les classes CSS : theme-text, theme-border, theme-bg
+- Format de sortie : HTML pur sans balises <html>, <head> ou <body>`
           },
           {
             role: 'user',
             content: prompt
           }
         ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'web_search',
+              description: 'Search the web for current information about places, addresses, opening hours, etc.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  query: {
+                    type: 'string',
+                    description: 'Search query to find information'
+                  }
+                },
+                required: ['query']
+              }
+            }
+          }
+        ],
+        tool_choice: 'auto',
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 3000
       }),
     });
 
@@ -99,12 +128,12 @@ function createPrompt(day: any, dayIndex: number): string {
   const segments = day.segments || [];
   
   return `
-Génère le contenu HTML pour ce jour de voyage :
+Génère le contenu HTML pour ce jour de voyage dans le style ADGENTES :
 
 DATE: ${dayDate.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 NOMBRE D'ACTIVITÉS: ${segments.length}
 
-SEGMENTS DE LA BASE DE DONNÉES:
+SEGMENTS DE LA BASE DE DONNÉES (À RESPECTER EXACTEMENT):
 ${segments.map((segment: any, i: number) => `
 ${i + 1}. ${segment.segment_type.toUpperCase()}: ${segment.title}
    - Prestataire: ${segment.provider || 'Non précisé'}
@@ -115,16 +144,29 @@ ${i + 1}. ${segment.segment_type.toUpperCase()}: ${segment.title}
    - Description: ${segment.description || 'Aucune'}
 `).join('\n')}
 
-INSTRUCTIONS:
-1. Crée un HTML structuré avec le titre du jour
-2. Pour chaque segment, génère une carte élégante avec:
-   - Icône émoji appropriée
-   - Informations de la DB (EXACTEMENT comme fournies)
-   - Infos complémentaires trouvées par recherche web si nécessaire
-   - Conseils pratiques
-3. Ajoute un bloc "NOTES PRATIQUES" avec conseils du jour
-4. Ajoute 1-2 images pertinentes (URL directe Unsplash/Pexels)
-5. Utilise les classes CSS: theme-text, theme-border, theme-bg
+INSTRUCTIONS DE RÉDACTION STYLE ADGENTES :
+1. Titre de journée évocateur et descriptif
+2. Structure chronologique claire avec horaires précis
+3. Pour chaque activité/segment :
+   - Titre avec horaire (ex: "11h30 – Traversée de la passerelle 516 Arouca")
+   - Description élégante et informative
+   - Informations pratiques détaillées (point de rendez-vous, conseils, adresse complète)
+   - Recherche web pour compléter les infos manquantes (adresses exactes, conseils pratiques, horaires)
+
+4. Style de rédaction :
+   - Phrases courtes et directes
+   - Ton informatif mais engageant
+   - Détails pratiques précis
+   - Conseils utiles (chaussures, arrivée en avance, etc.)
+
+5. Format HTML structuré avec classes CSS theme-*
+6. 1-2 images pertinentes maximum (URL Unsplash/Pexels)
+
+EXEMPLE DE STYLE ATTENDU :
+"11h30 – Traversée de la passerelle 516 Arouca (départ Alvarenga)
+Préparez-vous à vivre une expérience impressionnante sur l'un des ponts suspendus les plus longs du monde (516 m). À 175 m au-dessus de la rivière Paiva, cette passerelle offre une vue à couper le souffle sur les gorges et montagnes environnantes.
+Point de rendez-vous : Alvarenga – coordonnées GPS fournies avec votre billet
+Prévoir des chaussures confortables et de l'eau"
 
 Format de sortie: HTML pur sans balises <html>, <head> ou <body>.
 `;
