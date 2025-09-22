@@ -18,6 +18,10 @@ export interface TravelSegment {
   validated: boolean;
   created_at: string;
   updated_at: string;
+  // New grouping columns
+  segment_group_id?: string;
+  is_multi_day?: boolean;
+  parent_segment_id?: string;
   // Related data
   documents?: {
     id: string;
