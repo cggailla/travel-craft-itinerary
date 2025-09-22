@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
       description: segment.description
     }))
 
+    console.log('Segments being sent to LLM:', segmentsForLLM.map(s => ({ index: s.index, id: s.id, title: s.title })))
+
     // Create the optimized prompt for LLM
     const prompt = `Tu es un expert en structuration d'itinéraires pour carnet de voyage. 
 Ta mission : regrouper des segments atomiques (vols, transferts, hôtels, activités, etc.) en **étapes ("steps")** cohérentes, et RENVOYER UNIQUEMENT l'affiliation de chaque segment à un identifiant d'étape (STEP_001, STEP_002, …).
@@ -189,7 +191,64 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
       throw new Error('Invalid response format from LLM')
     }
 
+    // Log what we received from the LLM to debug UUID issues
+    console.log('LLM response structure:', JSON.stringify(stepsData, null, 2))
+    for (const step of stepsData.travel_steps) {
+      if (step.logical_sequence) {
+        console.log(`Step ${step.step_id} segment IDs:`, step.logical_sequence.map(s => s.segment_id))
+      }
+    }
+
     console.log(`Processing ${stepsData.travel_steps.length} travel steps`)
+
+    // Create a mapping of segment indices to actual segment IDs for validation
+    const segmentIndexToId = new Map()
+    segments.forEach((segment, index) => {
+      segmentIndexToId.set(segment.id, segment.id) // Map actual ID to itself
+      segmentIndexToId.set(index.toString(), segment.id) // Map index to ID
+      segmentIndexToId.set(`seg_${segment.id}`, segment.id) // Map with prefix
+    })
+
+    // Validate and correct segment IDs in the response
+    for (const step of stepsData.travel_steps) {
+      if (step.logical_sequence && Array.isArray(step.logical_sequence)) {
+        for (const seq of step.logical_sequence) {
+          const originalSegmentId = seq.segment_id
+          
+          // Try to find the correct segment ID
+          let correctedSegmentId = null
+          
+          // Method 1: Direct lookup (if it's already a valid UUID)
+          if (segmentIndexToId.has(originalSegmentId)) {
+            correctedSegmentId = segmentIndexToId.get(originalSegmentId)
+          }
+          // Method 2: Try to find by partial match (for truncated UUIDs)
+          else {
+            const matchingSegment = segments.find(seg => 
+              seg.id.includes(originalSegmentId) || originalSegmentId.includes(seg.id)
+            )
+            if (matchingSegment) {
+              correctedSegmentId = matchingSegment.id
+            }
+          }
+          // Method 3: Try to find by index (if it's a number)
+          else if (!isNaN(parseInt(originalSegmentId))) {
+            const index = parseInt(originalSegmentId)
+            if (index >= 0 && index < segments.length) {
+              correctedSegmentId = segments[index].id
+            }
+          }
+          
+          if (correctedSegmentId) {
+            console.log(`Corrected segment ID: ${originalSegmentId} -> ${correctedSegmentId}`)
+            seq.segment_id = correctedSegmentId
+          } else {
+            console.error(`Could not find valid segment ID for: ${originalSegmentId}`)
+            throw new Error(`Invalid segment ID in LLM response: ${originalSegmentId}`)
+          }
+        }
+      }
+    }
 
     // Clear existing steps for this trip
     const { error: deleteStepSegmentsError } = await supabase
