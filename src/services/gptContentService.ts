@@ -29,13 +29,13 @@ export async function generateDayPageHTML(tripId: string, dayIndex: number): Pro
       };
     }
 
-    if (!data?.html) {
+    if (!data?.success) {
       console.error('Réponse invalide de l\'edge function:', data);
       return {
         dayIndex,
         html: '',
         success: false,
-        error: 'Réponse invalide du service GPT'
+        error: data?.error || 'Réponse invalide du service GPT'
       };
     }
 
@@ -57,10 +57,15 @@ export async function generateDayPageHTML(tripId: string, dayIndex: number): Pro
   }
 }
 
-// Parse les erreurs 429 pour extraire le délai d'attente
+//Parse rate limit errors to extract wait time 
 function parseRateLimitDelay(error: string): number | null {
-  const match = error.match(/Please try again in ([\d.]+)s/);
-  return match ? Math.ceil(parseFloat(match[1])) : null;
+  const match = error.match(/try again in (\d+(?:\.\d+)?)(ms|s)/i);
+  if (match) {
+    const value = parseFloat(match[1]);
+    const unit = match[2].toLowerCase();
+    return unit === 'ms' ? Math.ceil(value / 1000) : Math.ceil(value);
+  }
+  return null;
 }
 
 // Attendre avec un délai spécifique
@@ -75,9 +80,7 @@ async function generateDayWithRetry(
   maxRetries: number = 3,
   onProgress?: (dayIndex: number, status: string) => void
 ): Promise<DayContentResult> {
-  let retryCount = 0;
-  
-  while (retryCount <= maxRetries) {
+  for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
     try {
       onProgress?.(dayIndex, retryCount === 0 ? 'generating' : `retry-${retryCount}`);
       
@@ -88,21 +91,18 @@ async function generateDayWithRetry(
         return result;
       }
       
-      // Si ce n'est pas une erreur 429, on ne retry pas
-      if (!result.error?.includes('rate_limit_exceeded')) {
-        onProgress?.(dayIndex, 'failed');
-        return result;
+      // Check for rate limiting errors
+      if (result.error?.includes('Rate limit') || result.error?.includes('429')) {
+        const waitTime = parseRateLimitDelay(result.error) || (retryCount * 5 + 5);
+        if (retryCount < maxRetries) {
+          console.log(`Rate limit pour jour ${dayIndex + 1}, attente de ${waitTime}s...`);
+          onProgress?.(dayIndex, `waiting-${waitTime}`);
+          await delay(waitTime + 1); // +1s de marge
+          continue; // Continue to next retry
+        }
       }
       
-      const waitTime = parseRateLimitDelay(result.error);
-      if (waitTime && retryCount < maxRetries) {
-        console.log(`Rate limit pour jour ${dayIndex + 1}, attente de ${waitTime}s...`);
-        onProgress?.(dayIndex, `waiting-${waitTime}`);
-        await delay(waitTime + 1); // +1s de marge
-        retryCount++;
-        continue;
-      }
-      
+      // If not a rate limit error or final attempt, return the error
       onProgress?.(dayIndex, 'failed');
       return result;
       
@@ -112,8 +112,7 @@ async function generateDayWithRetry(
       if (retryCount < maxRetries) {
         onProgress?.(dayIndex, `error-retry-${retryCount}`);
         await delay(2); // Délai standard entre les tentatives
-        retryCount++;
-        continue;
+        continue; // Continue to next retry
       }
       
       onProgress?.(dayIndex, 'failed');
@@ -126,6 +125,7 @@ async function generateDayWithRetry(
     }
   }
   
+  // This should not be reached, but just in case
   onProgress?.(dayIndex, 'failed');
   return {
     dayIndex,
