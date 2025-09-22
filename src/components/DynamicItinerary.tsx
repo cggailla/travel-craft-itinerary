@@ -3,7 +3,8 @@ import { Calendar, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { BookletData, BookletOptions } from '@/services/bookletService';
-import { generateAllDaysContent, DayContentResult } from '@/services/gptContentService';
+import { generateAllStepsContent, StepContentResult } from '@/services/stepContentService';
+import { groupTravelSegments, getTravelSteps } from '@/services/stepGroupingService';
 import { formatSegmentType, getSegmentIcon } from '@/services/bookletService';
 
 interface DynamicItineraryProps {
@@ -13,137 +14,171 @@ interface DynamicItineraryProps {
 }
 
 export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProps) {
-  const [dayContents, setDayContents] = useState<DayContentResult[]>([]);
+  const [stepContents, setStepContents] = useState<StepContentResult[]>([]);
+  const [steps, setSteps] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [currentDay, setCurrentDay] = useState<number>(-1);
-  const [dayStatus, setDayStatus] = useState<string>('');
+  const [currentStep, setCurrentStep] = useState<number>(-1);
+  const [stepStatus, setStepStatus] = useState<string>('');
 
   useEffect(() => {
-    if (data.timeline.length > 0 && tripId) {
+    if (data.segments.length > 0 && tripId) {
       generateContent();
     }
-  }, [data.timeline, tripId]);
+  }, [data.segments, tripId]);
 
   const generateContent = async () => {
-    if (data.timeline.length === 0 || !tripId) return;
+    if (data.segments.length === 0 || !tripId) return;
     
     setIsGenerating(true);
     setProgress(0);
-    setCurrentDay(-1);
-    setDayStatus('');
+    setCurrentStep(-1);
+    setStepStatus('Groupement des segments en étapes...');
     
     try {
-      console.log('Début génération contenu GPT pour', data.timeline.length, 'jours');
+      // Étape 1: Grouper les segments en étapes logiques
+      console.log('Groupement des segments en étapes pour le voyage', tripId);
+      const groupingResult = await groupTravelSegments(tripId);
       
-      const results = await generateAllDaysContent(
-        tripId, 
-        data.timeline.length,
-        (completedDays, currentDayIndex, status) => {
-          setCurrentDay(currentDayIndex);
-          setProgress((completedDays / data.timeline.length) * 100);
+      if (!groupingResult.success) {
+        throw new Error(groupingResult.error || 'Erreur lors du groupement des segments');
+      }
+      
+      // Étape 2: Récupérer les étapes créées
+      setStepStatus('Récupération des étapes créées...');
+      const stepsResult = await getTravelSteps(tripId);
+      
+      if (!stepsResult.success) {
+        throw new Error(stepsResult.error || 'Erreur lors de la récupération des étapes');
+      }
+      
+      const travelSteps = stepsResult.steps || [];
+      setSteps(travelSteps);
+      
+      if (travelSteps.length === 0) {
+        setStepStatus('Aucune étape trouvée');
+        return;
+      }
+      
+      console.log(`Début génération contenu GPT pour ${travelSteps.length} étapes`);
+      
+      // Étape 3: Générer le contenu pour chaque étape
+      const results = await generateAllStepsContent(
+        tripId,
+        (stepId, status, error) => {
+          const stepIndex = travelSteps.findIndex(s => s.step_id === stepId);
+          setCurrentStep(stepIndex);
+          setProgress(((stepIndex + 1) / travelSteps.length) * 100);
           
           // Messages détaillés pour l'utilisateur
           if (status === 'generating') {
-            setDayStatus(`Génération du jour ${currentDayIndex + 1}...`);
-          } else if (status.startsWith('retry-')) {
-            const retryNum = status.split('-')[1];
-            setDayStatus(`Nouvelle tentative (${retryNum}) pour le jour ${currentDayIndex + 1}...`);
-          } else if (status.startsWith('waiting-')) {
-            const waitTime = status.split('-')[1];
-            setDayStatus(`Limite atteinte, attente ${waitTime}s pour le jour ${currentDayIndex + 1}...`);
+            setStepStatus(`Génération de l'étape ${stepIndex + 1}...`);
           } else if (status === 'completed') {
-            setDayStatus(`Jour ${currentDayIndex + 1} généré avec succès`);
-          } else if (status === 'failed') {
-            setDayStatus(`Échec génération jour ${currentDayIndex + 1}`);
+            setStepStatus(`Étape ${stepIndex + 1} générée avec succès`);
+          } else if (status === 'error') {
+            setStepStatus(`Erreur génération étape ${stepIndex + 1}: ${error}`);
           }
         }
       );
       
-      setDayContents(results);
+      setStepContents(results);
       
       const successCount = results.filter(r => r.success).length;
-      console.log(`Génération terminée: ${successCount}/${results.length} jours réussis`);
+      console.log(`Génération terminée: ${successCount}/${results.length} étapes réussies`);
       
     } catch (error) {
       console.error('Erreur lors de la génération:', error);
+      setStepStatus(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     } finally {
       setIsGenerating(false);
       setProgress(100);
-      setCurrentDay(-1);
-      setDayStatus('Génération terminée');
+      setCurrentStep(-1);
+      setStepStatus('Génération terminée');
     }
   };
 
-  const regenerateDay = async (dayIndex: number) => {
-    if (dayIndex >= data.timeline.length) return;
+  const regenerateStep = async (stepIndex: number) => {
+    if (stepIndex >= steps.length) return;
     
-    setDayContents(prev => prev.map((content, i) => 
-      i === dayIndex ? { ...content, success: false, html: '', error: undefined } : content
+    const step = steps[stepIndex];
+    if (!step) return;
+
+    setStepContents(prev => prev.map((content, i) => 
+      i === stepIndex ? { ...content, success: false, html: '', error: undefined } : content
     ));
 
     try {
-      const { generateDayPageHTML } = await import('@/services/gptContentService');
-      const result = await generateDayPageHTML(tripId, dayIndex);
+      const { generateStepPageHTML } = await import('@/services/stepContentService');
+      const result = await generateStepPageHTML(tripId, step.step_id);
       
-      setDayContents(prev => prev.map((content, i) => 
-        i === dayIndex ? result : content
+      setStepContents(prev => prev.map((content, i) => 
+        i === stepIndex ? result : content
       ));
     } catch (error) {
-      console.error(`Erreur régénération jour ${dayIndex + 1}:`, error);
+      console.error(`Erreur régénération étape ${stepIndex + 1}:`, error);
     }
   };
 
-  const renderStaticDay = (day: typeof data.timeline[0], dayIndex: number) => (
-    <div key={`static-${dayIndex}`} className="border rounded-lg p-6">
-      <h3 className="text-xl font-bold mb-4 theme-text flex items-center">
-        <Calendar className="mr-2 h-5 w-5" />
-        {format(day.date, 'EEEE dd MMMM yyyy', { locale: fr })}
-        <span className="ml-2 text-sm font-normal text-gray-500">
-          ({day.segments.length} activité{day.segments.length > 1 ? 's' : ''})
-        </span>
-      </h3>
-      
-      <div className="space-y-4">
-        {day.segments.map((segment) => (
-          <div key={segment.id} className="border-l-4 theme-border pl-4 py-2">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
-                  <span className="text-lg mr-2">{getSegmentIcon(segment.segment_type)}</span>
-                  <h4 className="font-semibold text-lg">{segment.title}</h4>
-                  <span className="ml-2 px-2 py-1 theme-bg rounded text-sm">
-                    {formatSegmentType(segment.segment_type)}
-                  </span>
-                </div>
-                
-                {segment.provider && (
-                  <p className="text-sm text-gray-600 mb-1">
-                    <strong>Prestataire:</strong> {segment.provider}
-                  </p>
-                )}
-                
-                {segment.reference_number && (
-                  <p className="text-sm text-gray-600 mb-1">
-                    <strong>Référence:</strong> {segment.reference_number}
-                  </p>
-                )}
-                
-                {options.includeNotes && segment.description && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                    <strong>Description:</strong> {segment.description}
+  const renderStaticStep = (step: any, stepIndex: number) => {
+    const segments = step.travel_step_segments?.map((tss: any) => tss.travel_segments) || [];
+    
+    return (
+      <div key={`static-${stepIndex}`} className="border rounded-lg p-6">
+        <h3 className="text-xl font-bold mb-4 theme-text flex items-center">
+          <Calendar className="mr-2 h-5 w-5" />
+          Étape {stepIndex + 1}: {step.step_title}
+          <span className="ml-2 text-sm font-normal text-gray-500">
+            ({segments.length} segment{segments.length > 1 ? 's' : ''})
+          </span>
+        </h3>
+        
+        {step.primary_location && (
+          <p className="text-sm text-gray-600 mb-4">
+            <strong>Lieu principal:</strong> {step.primary_location}
+          </p>
+        )}
+        
+        <div className="space-y-4">
+          {segments.map((segment: any) => (
+            <div key={segment.id} className="border-l-4 theme-border pl-4 py-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center mb-2">
+                    <span className="text-lg mr-2">{getSegmentIcon(segment.segment_type)}</span>
+                    <h4 className="font-semibold text-lg">{segment.title}</h4>
+                    <span className="ml-2 px-2 py-1 theme-bg rounded text-sm">
+                      {formatSegmentType(segment.segment_type)}
+                    </span>
                   </div>
-                )}
+                  
+                  {segment.provider && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      <strong>Prestataire:</strong> {segment.provider}
+                    </p>
+                  )}
+                  
+                  {segment.reference_number && (
+                    <p className="text-sm text-gray-600 mb-1">
+                      <strong>Référence:</strong> {segment.reference_number}
+                    </p>
+                  )}
+                  
+                  {options.includeNotes && segment.description && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                      <strong>Description:</strong> {segment.description}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  if (data.timeline.length === 0) {
-    return <p className="text-gray-500">Aucun segment avec date trouvé.</p>;
+  if (data.segments.length === 0) {
+    return <p className="text-gray-500">Aucun segment trouvé.</p>;
   }
 
   return (
@@ -170,47 +205,47 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
           </div>
           
           <div className="text-sm text-blue-600">
-            {dayStatus || 'Préparation...'}
+            {stepStatus || 'Préparation...'}
           </div>
           
-          {currentDay >= 0 && (
+          {currentStep >= 0 && steps.length > 0 && (
             <div className="text-xs text-blue-500 mt-1">
-              Jour {currentDay + 1} sur {data.timeline.length}
+              Étape {currentStep + 1} sur {steps.length}
             </div>
           )}
         </div>
       )}
 
-      {data.timeline.map((day, dayIndex) => {
-        const dayContent = dayContents[dayIndex];
+      {steps.map((step, stepIndex) => {
+        const stepContent = stepContents.find(c => c.stepId === step.step_id);
         
-        if (isGenerating || !dayContent) {
+        if (isGenerating || !stepContent) {
           return (
-            <div key={`loading-${dayIndex}`} className="border rounded-lg p-6">
+            <div key={`loading-${stepIndex}`} className="border rounded-lg p-6">
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="animate-spin mr-2 h-6 w-6 text-blue-600" />
                 <span className="text-blue-600">
-                  Génération jour {dayIndex + 1}...
+                  Génération étape {stepIndex + 1}...
                 </span>
               </div>
             </div>
           );
         }
 
-        if (dayContent.success && dayContent.html) {
+        if (stepContent.success && stepContent.html) {
           // Nettoyer le contenu HTML pour supprimer les encarts ```html
-          const cleanHtml = dayContent.html
+          const cleanHtml = stepContent.html
             .replace(/```html\n/g, '')
             .replace(/\n```/g, '')
             .replace(/```html/g, '')
             .replace(/```/g, '');
 
           return (
-            <div key={`gpt-${dayIndex}`} className="border rounded-lg p-6 relative">
+            <div key={`gpt-${stepIndex}`} className="border rounded-lg p-6 relative">
               <button
-                onClick={() => regenerateDay(dayIndex)}
+                onClick={() => regenerateStep(stepIndex)}
                 className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-                title="Régénérer ce jour"
+                title="Régénérer cette étape"
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
@@ -225,7 +260,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
 
         // Fallback vers rendu statique en cas d'erreur
         return (
-          <div key={`fallback-${dayIndex}`}>
+          <div key={`fallback-${stepIndex}`}>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
               <div className="flex items-center">
                 <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
@@ -233,7 +268,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
                   Erreur génération IA - Affichage standard
                 </span>
                 <button
-                  onClick={() => regenerateDay(dayIndex)}
+                  onClick={() => regenerateStep(stepIndex)}
                   className="ml-auto text-yellow-600 hover:text-yellow-800"
                   title="Réessayer la génération IA"
                 >
@@ -241,7 +276,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
                 </button>
               </div>
             </div>
-            {renderStaticDay(day, dayIndex)}
+            {renderStaticStep(step, stepIndex)}
           </div>
         );
       })}
