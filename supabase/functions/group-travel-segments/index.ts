@@ -81,21 +81,21 @@ Deno.serve(async (req) => {
 
     console.log('Segments being sent to LLM:', segmentsForLLM.map(s => ({ index: s.index, id: s.id, title: s.title })))
 
-    // Create the optimized prompt for LLM
-    const prompt = `Tu es un expert en structuration d'itinéraires pour carnet de voyage. 
-Ta mission : regrouper des segments atomiques (vols, transferts, hôtels, activités, etc.) en **étapes ("steps")** cohérentes, et RENVOYER UNIQUEMENT l'affiliation de chaque segment à un identifiant d'étape (STEP_001, STEP_002, …).
+    // Create the optimized prompt for LLM (favoring indices over UUIDs)
+    const prompt = `Tu es un expert en structuration d'itinéraires pour carnet de voyage.
+Ta mission : regrouper des segments atomiques (vols, transferts, hôtels, activités, etc.) en **étapes ("steps")** cohérentes.
 
 RÈGLES MÉTIER OBLIGATOIRES
-1) Pas de split intrajournalier : une étape couvre des **journées entières** (matin→soir). 
+1) Pas de split intrajournalier : une étape couvre des **journées entières** (matin→soir).
    • Si un check-in/check-out/arrivée se produit en milieu de journée, l'étape qui en résulte **commence le matin** de ce jour, et l'étape précédente **se termine la veille au soir**.
 2) Nouvelle étape lorsqu'on change de **base** (hôtel/ville/île/parc) ou qu'il y a une **journée de transition** (transports dominants sans base stable).
-3) Un même jour ne peut appartenir qu'à **une seule étape**.
+3) Un même jour n'appartient qu'à **une seule étape**.
 4) Conserver l'ordre chronologique des segments.
 5) Ne SUPPRIME, n'AJOUTE ni ne MODIFIE aucun segment d'entrée.
 
 CONTRAINTES D'AFFILIATION
-- Chaque segment d'entrée (index 0-based) doit apparaître **exactement une fois** dans l'affiliation.
-- Les \`step_id\` doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre d'apparition chronologique.
+- Chaque segment d'entrée (index 0-based affiché ci-dessous) doit apparaître **exactement une fois**.
+- Les `step_id` doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre d'apparition chronologique.
 - Les segments d'une même étape doivent être cohérents (même base ou journée de transition).
 - Si l'information est ambiguë, tranche de façon raisonnable en respectant les règles ci-dessus.
 
@@ -104,7 +104,7 @@ TYPES D'ÉTAPES AUTORISÉS : arrival_day, city_stay, safari_experience, travel_d
 RÔLES AUTORISÉS DANS LOGICAL_SEQUENCE : arrival_transport, departure_transport, accommodation_checkin, accommodation_checkout, main_activity, secondary_activity, meal, transfer, other
 
 SORTIE STRICTE (AUCUN TEXTE HORS JSON)
-Renvoyer un UNIQUE objet JSON conforme au schéma suivant :
+Renvoyer un UNIQUE objet JSON conforme au schéma suivant. Utilise des indices 0-based pour référencer les segments (champ obligatoire `segment_index`). `segment_id` peut être fourni en plus, mais sera ignoré si `segment_index` est présent.
 
 {
   "travel_steps": [
@@ -113,31 +113,19 @@ Renvoyer un UNIQUE objet JSON conforme au schéma suivant :
       "step_type": "arrival_day",
       "step_title": "Arrivée à Nairobi",
       "start_date": "2024-03-15",
-      "end_date": "2024-03-15", 
+      "end_date": "2024-03-15",
       "primary_location": "Nairobi",
-      "segment_ids": ["seg_123", "seg_124", "seg_125"],
+      "segment_indices": [0, 1, 2],
       "logical_sequence": [
-        {
-          "segment_id": "seg_123",
-          "position_in_step": 1,
-          "role": "arrival_transport"
-        },
-        {
-          "segment_id": "seg_124", 
-          "position_in_step": 2,
-          "role": "accommodation_checkin"
-        },
-        {
-          "segment_id": "seg_125",
-          "position_in_step": 3, 
-          "role": "secondary_activity"
-        }
+        { "segment_index": 0, "position_in_step": 1, "role": "arrival_transport" },
+        { "segment_index": 1, "position_in_step": 2, "role": "accommodation_checkin" },
+        { "segment_index": 2, "position_in_step": 3, "role": "secondary_activity" }
       ]
     }
   ]
 }
 
-SEGMENTS À TRAITER :
+SEGMENTS À TRAITER (indices 0-based inclus):
 ${JSON.stringify(segmentsForLLM, null, 2)}
 
 RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
@@ -201,53 +189,99 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
 
     console.log(`Processing ${stepsData.travel_steps.length} travel steps`)
 
-    // Create a mapping of segment indices to actual segment IDs for validation
-    const segmentIndexToId = new Map()
+    // Build robust lookup structures for segment resolution
+    const idSet = new Set<string>()
+    const byIndex = new Map<number, string>()
+    const normalizedToId = new Map<string, string>() // 32-hex (no dashes) -> original id
+
+    const normalize = (s: string) => s.replace(/[^a-fA-F0-9]/g, '').toLowerCase()
+
     segments.forEach((segment, index) => {
-      segmentIndexToId.set(segment.id, segment.id) // Map actual ID to itself
-      segmentIndexToId.set(index.toString(), segment.id) // Map index to ID
-      segmentIndexToId.set(`seg_${segment.id}`, segment.id) // Map with prefix
+      idSet.add(segment.id)
+      byIndex.set(index, segment.id)
+      normalizedToId.set(normalize(segment.id), segment.id)
     })
 
-    // Validate and correct segment IDs in the response
-    for (const step of stepsData.travel_steps) {
-      if (step.logical_sequence && Array.isArray(step.logical_sequence)) {
-        for (const seq of step.logical_sequence) {
-          const originalSegmentId = seq.segment_id
-          
-          // Try to find the correct segment ID
-          let correctedSegmentId = null
-          
-          // Method 1: Direct lookup (if it's already a valid UUID)
-          if (segmentIndexToId.has(originalSegmentId)) {
-            correctedSegmentId = segmentIndexToId.get(originalSegmentId)
-          }
-          // Method 2: Try to find by partial match (for truncated UUIDs)
-          else {
-            const matchingSegment = segments.find(seg => 
-              seg.id.includes(originalSegmentId) || originalSegmentId.includes(seg.id)
-            )
-            if (matchingSegment) {
-              correctedSegmentId = matchingSegment.id
-            }
-          }
-          // Method 3: Try to find by index (if it's a number)
-          else if (!isNaN(parseInt(originalSegmentId))) {
-            const index = parseInt(originalSegmentId)
-            if (index >= 0 && index < segments.length) {
-              correctedSegmentId = segments[index].id
-            }
-          }
-          
-          if (correctedSegmentId) {
-            console.log(`Corrected segment ID: ${originalSegmentId} -> ${correctedSegmentId}`)
-            seq.segment_id = correctedSegmentId
-          } else {
-            console.error(`Could not find valid segment ID for: ${originalSegmentId}`)
-            throw new Error(`Invalid segment ID in LLM response: ${originalSegmentId}`)
-          }
+    function resolveSegmentRef(ref: any): string | null {
+      // 1) Prefer explicit index
+      if (
+        ref &&
+        Number.isInteger(ref.segment_index) &&
+        ref.segment_index >= 0 &&
+        ref.segment_index < segments.length
+      ) {
+        return byIndex.get(ref.segment_index) as string
+      }
+
+      // 2) Exact UUID string
+      const sid = ref?.segment_id
+      if (typeof sid === 'string' && idSet.has(sid)) return sid
+
+      // 3) Fuzzy matching on normalized string (no dashes)
+      if (typeof sid === 'string') {
+        const norm = normalize(sid)
+        if (norm.length >= 8) {
+          // Try exact normalized match first
+          const exact = normalizedToId.get(norm)
+          if (exact) return exact
+
+          // Try prefix match
+          const candidates = segments.filter((s) => normalize(s.id).startsWith(norm))
+          if (candidates.length === 1) return candidates[0].id
+
+          // Try substring match
+          const incl = segments.filter((s) => normalize(s.id).includes(norm))
+          if (incl.length === 1) return incl[0].id
+        }
+
+        // 4) Numeric-only => treat as index (avoid partial numbers like "20b6...")
+        if (/^\d+$/.test(sid)) {
+          const idx = parseInt(sid, 10)
+          if (idx >= 0 && idx < segments.length) return byIndex.get(idx) as string
         }
       }
+
+      return null
+    }
+
+    // Ensure each step has a logical_sequence built from indices when possible, then resolve to UUIDs
+    for (const step of stepsData.travel_steps) {
+      // Build fallback logical_sequence from segment_indices or segment_ids
+      if (!Array.isArray(step.logical_sequence) || step.logical_sequence.length === 0) {
+        if (Array.isArray(step.segment_indices)) {
+          step.logical_sequence = step.segment_indices.map((idx: number, i: number) => ({
+            segment_index: idx,
+            position_in_step: i + 1,
+            role: 'other'
+          }))
+        } else if (Array.isArray(step.segment_ids)) {
+          step.logical_sequence = step.segment_ids.map((sid: string, i: number) => ({
+            segment_id: sid,
+            position_in_step: i + 1,
+            role: 'other'
+          }))
+        } else {
+          console.error(`Step ${step.step_id} has no logical_sequence/segment_indices/segment_ids`)
+          throw new Error(`Step ${step.step_id} has no segments to link`)
+        }
+      }
+
+      // Resolve each item in sequence to a valid UUID from our segments list
+      for (const [i, seq] of step.logical_sequence.entries()) {
+        if (seq.position_in_step == null) seq.position_in_step = i + 1
+        if (!seq.role) seq.role = 'other'
+
+        const resolved = resolveSegmentRef(seq)
+        if (!resolved) {
+          console.error(`Could not resolve segment reference in step ${step.step_id}:`, seq)
+          throw new Error(`Invalid segment reference in step ${step.step_id}`)
+        }
+        // Mutate to the canonical UUID and drop segment_index to avoid confusion
+        seq.segment_id = resolved
+        delete seq.segment_index
+      }
+
+      console.log(`Step ${step.step_id} resolved ${step.logical_sequence.length} segments`)
     }
 
     // Clear existing steps for this trip
