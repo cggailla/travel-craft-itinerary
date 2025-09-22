@@ -92,7 +92,6 @@ Deno.serve(async (req) => {
 
     const enrichData = await callOpenAIWithRetry({
       model: "gpt-4o-search-preview",
-      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
