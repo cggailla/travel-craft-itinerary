@@ -81,51 +81,46 @@ Deno.serve(async (req) => {
 
     console.log('Segments being sent to LLM:', segmentsForLLM.map(s => ({ index: s.index, id: s.id, title: s.title })))
 
-    // Create the optimized prompt for LLM (favoring indices over UUIDs)
+    // Create the simplified index-only prompt for LLM
     const prompt = `Tu es un expert en structuration d'itinéraires pour carnet de voyage.
-Ta mission : regrouper des segments atomiques (vols, transferts, hôtels, activités, etc.) en **étapes ("steps")** cohérentes.
+Ta mission : regrouper des segments atomiques en **étapes ("steps")** cohérentes.
 
 RÈGLES MÉTIER OBLIGATOIRES
 1) Pas de split intrajournalier : une étape couvre des **journées entières** (matin→soir).
-   • Si un check-in/check-out/arrivée se produit en milieu de journée, l'étape qui en résulte **commence le matin** de ce jour, et l'étape précédente **se termine la veille au soir**.
-2) Nouvelle étape lorsqu'on change de **base** (hôtel/ville/île/parc) ou qu'il y a une **journée de transition** (transports dominants sans base stable).
+2) Nouvelle étape lorsqu'on change de **base** (hôtel/ville/île/parc) ou qu'il y a une **journée de transition**.
 3) Un même jour n'appartient qu'à **une seule étape**.
 4) Conserver l'ordre chronologique des segments.
 5) Ne SUPPRIME, n'AJOUTE ni ne MODIFIE aucun segment d'entrée.
 
 CONTRAINTES D'AFFILIATION
 - Chaque segment d'entrée (index 0-based affiché ci-dessous) doit apparaître **exactement une fois**.
-- Les `step_id` doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre d'apparition chronologique.
-- Les segments d'une même étape doivent être cohérents (même base ou journée de transition).
-- Si l'information est ambiguë, tranche de façon raisonnable en respectant les règles ci-dessus.
+- Les `step_id` doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre chronologique.
 
 TYPES D'ÉTAPES AUTORISÉS : arrival_day, city_stay, safari_experience, travel_day, departure_day, beach_stay, mountain_stay, cultural_visit, activity_day, other
 
-RÔLES AUTORISÉS DANS LOGICAL_SEQUENCE : arrival_transport, departure_transport, accommodation_checkin, accommodation_checkout, main_activity, secondary_activity, meal, transfer, other
+RÔLES AUTORISÉS : arrival_transport, departure_transport, accommodation_checkin, accommodation_checkout, main_activity, secondary_activity, meal, transfer, other
 
-SORTIE STRICTE (AUCUN TEXTE HORS JSON)
-Renvoyer un UNIQUE objet JSON conforme au schéma suivant. Utilise des indices 0-based pour référencer les segments (champ obligatoire `segment_index`). `segment_id` peut être fourni en plus, mais sera ignoré si `segment_index` est présent.
+IMPORTANT : Utilise UNIQUEMENT des indices 0-based pour référencer les segments. NE GÉNÈRE AUCUN UUID ou segment_id.
 
+SORTIE STRICTE (JSON uniquement, aucun autre texte):
 {
   "travel_steps": [
     {
       "step_id": "STEP_001",
-      "step_type": "arrival_day",
+      "step_type": "arrival_day", 
       "step_title": "Arrivée à Nairobi",
       "start_date": "2024-03-15",
-      "end_date": "2024-03-15",
+      "end_date": "2024-03-15", 
       "primary_location": "Nairobi",
-      "segment_indices": [0, 1, 2],
       "logical_sequence": [
         { "segment_index": 0, "position_in_step": 1, "role": "arrival_transport" },
-        { "segment_index": 1, "position_in_step": 2, "role": "accommodation_checkin" },
-        { "segment_index": 2, "position_in_step": 3, "role": "secondary_activity" }
+        { "segment_index": 1, "position_in_step": 2, "role": "accommodation_checkin" }
       ]
     }
   ]
 }
 
-SEGMENTS À TRAITER (indices 0-based inclus):
+SEGMENTS À TRAITER (indices 0-based):
 ${JSON.stringify(segmentsForLLM, null, 2)}
 
 RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
@@ -179,160 +174,49 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
       throw new Error('Invalid response format from LLM')
     }
 
-    // Log what we received from the LLM to debug UUID issues
+    // Log what we received from the LLM  
     console.log('LLM response structure:', JSON.stringify(stepsData, null, 2))
-    for (const step of stepsData.travel_steps) {
-      if (step.logical_sequence) {
-        console.log(`Step ${step.step_id} segment IDs:`, step.logical_sequence.map(s => s.segment_id))
-      }
-    }
 
     console.log(`Processing ${stepsData.travel_steps.length} travel steps`)
 
-    // Build robust lookup structures for segment resolution
-    const idSet = new Set<string>()
-    const byIndex = new Map<number, string>()
-    const normalizedToId = new Map<string, string>() // 32-hex (no dashes) -> original id
-
-    const normalize = (s: string) => s.replace(/[^a-fA-F0-9]/g, '').toLowerCase()
-
-    segments.forEach((segment, index) => {
-      idSet.add(segment.id)
-      byIndex.set(index, segment.id)
-      normalizedToId.set(normalize(segment.id), segment.id)
-    })
-
-    // UUID validation regex
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-    function isValidUUID(str: string): boolean {
-      return UUID_REGEX.test(str)
-    }
-
-    function cleanAndValidateUUID(str: string): string | null {
-      if (!str || typeof str !== 'string') return null
-      
-      // Remove any extra characters and trim
-      let cleaned = str.trim()
-      
-      // Handle common malformations
-      if (cleaned.length > 36) {
-        // If too long, try to extract a valid UUID
-        const match = cleaned.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
-        if (match) {
-          cleaned = match[0]
-        } else {
-          console.error(`Malformed UUID (too long): "${str}"`)
-          return null
-        }
-      }
-      
-      if (!isValidUUID(cleaned)) {
-        console.error(`Invalid UUID format: "${str}" (cleaned: "${cleaned}")`)
+    // Simple index-to-UUID resolver
+    function resolveSegmentByIndex(segmentIndex: number): string | null {
+      if (!Number.isInteger(segmentIndex) || segmentIndex < 0 || segmentIndex >= segments.length) {
+        console.error(`Invalid segment index: ${segmentIndex} (valid range: 0-${segments.length - 1})`)
         return null
       }
       
-      return cleaned
+      const segmentId = segments[segmentIndex].id
+      console.log(`Resolved index ${segmentIndex} -> ${segmentId}`)
+      return segmentId
     }
 
-    function resolveSegmentRef(ref: any): string | null {
-      console.log(`Resolving segment ref:`, ref)
-      
-      // 1) Prefer explicit index
-      if (
-        ref &&
-        Number.isInteger(ref.segment_index) &&
-        ref.segment_index >= 0 &&
-        ref.segment_index < segments.length
-      ) {
-        const resolved = byIndex.get(ref.segment_index) as string
-        console.log(`Resolved by index ${ref.segment_index} -> ${resolved}`)
-        return resolved
-      }
-
-      // 2) Exact UUID string - with validation
-      const sid = ref?.segment_id
-      if (typeof sid === 'string') {
-        const cleanedUUID = cleanAndValidateUUID(sid)
-        if (cleanedUUID && idSet.has(cleanedUUID)) {
-          console.log(`Resolved exact UUID: ${sid} -> ${cleanedUUID}`)
-          return cleanedUUID
-        }
-        
-        // 3) Fuzzy matching on normalized string (no dashes)
-        const norm = normalize(sid)
-        if (norm.length >= 8) {
-          // Try exact normalized match first
-          const exact = normalizedToId.get(norm)
-          if (exact) {
-            console.log(`Resolved by normalized exact match: ${sid} -> ${exact}`)
-            return exact
-          }
-
-          // Try prefix match
-          const candidates = segments.filter((s) => normalize(s.id).startsWith(norm))
-          if (candidates.length === 1) {
-            console.log(`Resolved by prefix match: ${sid} -> ${candidates[0].id}`)
-            return candidates[0].id
-          }
-
-          // Try substring match
-          const incl = segments.filter((s) => normalize(s.id).includes(norm))
-          if (incl.length === 1) {
-            console.log(`Resolved by substring match: ${sid} -> ${incl[0].id}`)
-            return incl[0].id
-          }
-        }
-
-        // 4) Numeric-only => treat as index (avoid partial numbers like "20b6...")
-        if (/^\d+$/.test(sid)) {
-          const idx = parseInt(sid, 10)
-          if (idx >= 0 && idx < segments.length) {
-            const resolved = byIndex.get(idx) as string
-            console.log(`Resolved numeric as index ${idx} -> ${resolved}`)
-            return resolved
-          }
-        }
-      }
-
-      console.error(`Could not resolve segment reference:`, ref)
-      return null
-    }
-
-    // Ensure each step has a logical_sequence built from indices when possible, then resolve to UUIDs
+    // Process each step and resolve segment indices to UUIDs
     for (const step of stepsData.travel_steps) {
-      // Build fallback logical_sequence from segment_indices or segment_ids
+      // Ensure logical_sequence exists
       if (!Array.isArray(step.logical_sequence) || step.logical_sequence.length === 0) {
-        if (Array.isArray(step.segment_indices)) {
-          step.logical_sequence = step.segment_indices.map((idx: number, i: number) => ({
-            segment_index: idx,
-            position_in_step: i + 1,
-            role: 'other'
-          }))
-        } else if (Array.isArray(step.segment_ids)) {
-          step.logical_sequence = step.segment_ids.map((sid: string, i: number) => ({
-            segment_id: sid,
-            position_in_step: i + 1,
-            role: 'other'
-          }))
-        } else {
-          console.error(`Step ${step.step_id} has no logical_sequence/segment_indices/segment_ids`)
-          throw new Error(`Step ${step.step_id} has no segments to link`)
-        }
+        console.error(`Step ${step.step_id} has no logical_sequence`)
+        throw new Error(`Step ${step.step_id} has no segments to link`)
       }
 
-      // Resolve each item in sequence to a valid UUID from our segments list
+      // Resolve each segment index to actual UUID
       for (const [i, seq] of step.logical_sequence.entries()) {
         if (seq.position_in_step == null) seq.position_in_step = i + 1
         if (!seq.role) seq.role = 'other'
 
-        const resolved = resolveSegmentRef(seq)
-        if (!resolved) {
-          console.error(`Could not resolve segment reference in step ${step.step_id}:`, seq)
-          throw new Error(`Invalid segment reference in step ${step.step_id}`)
+        // Only use segment_index, ignore any segment_id from LLM
+        if (typeof seq.segment_index !== 'number') {
+          console.error(`Missing or invalid segment_index in step ${step.step_id}:`, seq)
+          throw new Error(`Invalid segment_index in step ${step.step_id}`)
         }
-        // Mutate to the canonical UUID and drop segment_index to avoid confusion
-        seq.segment_id = resolved
+
+        const resolvedId = resolveSegmentByIndex(seq.segment_index)
+        if (!resolvedId) {
+          throw new Error(`Could not resolve segment index ${seq.segment_index} in step ${step.step_id}`)
+        }
+
+        // Set the resolved UUID and remove index to avoid confusion  
+        seq.segment_id = resolvedId
         delete seq.segment_index
       }
 
