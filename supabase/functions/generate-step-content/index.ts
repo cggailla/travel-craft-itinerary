@@ -109,7 +109,6 @@ Règles :
         },
         { role: "user", content: JSON.stringify(stepData, null, 2) },
       ],
-      temperature: 0.2,
     });
 
     const enrichedStep = JSON.parse(enrichData.choices[0].message.content);
