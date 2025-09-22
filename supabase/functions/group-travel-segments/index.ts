@@ -94,7 +94,7 @@ RÈGLES MÉTIER OBLIGATOIRES
 
 CONTRAINTES D'AFFILIATION
 - Chaque segment d'entrée (index 0-based affiché ci-dessous) doit apparaître **exactement une fois**.
-- Les `step_id` doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre chronologique.
+- Les step_id doivent être **compacts et ordonnés**: STEP_001, STEP_002, STEP_003… dans l'ordre chronologique.
 
 TYPES D'ÉTAPES AUTORISÉS : arrival_day, city_stay, safari_experience, travel_day, departure_day, beach_stay, mountain_stay, cultural_visit, activity_day, other
 
