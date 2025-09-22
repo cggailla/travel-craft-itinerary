@@ -138,8 +138,8 @@ Règles :
       ],
     });
 
-    const enrichedStep = JSON.parse(enrichData.choices[0].message.content);
-
+    // Récupérer le contenu brut sans parser (évite les erreurs JSON)
+    const enrichedStepContent = enrichData.choices[0].message.content;
 
     // ============================
     // 🔹 Appel 2 : Rendu HTML
@@ -154,6 +154,9 @@ Règles :
           content: `
 Tu es un rédacteur de carnets de voyage ADGENTES.
 Ta mission : transformer le JSON enrichi en HTML narratif et structuré, en respectant strictement les données.
+
+IMPORTANT: Le JSON que tu reçois peut contenir des erreurs de formatage. Ignore les erreurs de syntaxe et utilise les données que tu peux extraire.
+
 Règles générales :
 - Intro étape : 
    • Séjour long → 2–3 paragraphes narratifs (contexte historique, culturel, recommandations).
@@ -169,7 +172,7 @@ Règles générales :
 - Format final = HTML propre sans <html>/<head>/<body>.
 `,
         },
-        { role: "user", content: JSON.stringify(enrichedStep, null, 2) },
+        { role: "user", content: enrichedStepContent },
       ],
       temperature: 0.5,
       max_tokens: 3500,
