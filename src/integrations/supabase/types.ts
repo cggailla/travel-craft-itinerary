@@ -114,9 +114,12 @@ export type Database = {
           document_id: string
           end_date: string | null
           id: string
+          is_multi_day: boolean | null
+          parent_segment_id: string | null
           provider: string | null
           raw_data: Json | null
           reference_number: string | null
+          segment_group_id: string | null
           segment_type: string
           sequence_order: number | null
           start_date: string | null
@@ -134,9 +137,12 @@ export type Database = {
           document_id: string
           end_date?: string | null
           id?: string
+          is_multi_day?: boolean | null
+          parent_segment_id?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
+          segment_group_id?: string | null
           segment_type: string
           sequence_order?: number | null
           start_date?: string | null
@@ -154,9 +160,12 @@ export type Database = {
           document_id?: string
           end_date?: string | null
           id?: string
+          is_multi_day?: boolean | null
+          parent_segment_id?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
+          segment_group_id?: string | null
           segment_type?: string
           sequence_order?: number | null
           start_date?: string | null
@@ -181,7 +190,95 @@ export type Database = {
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "travel_segments_parent_segment_id_fkey"
+            columns: ["parent_segment_id"]
+            isOneToOne: false
+            referencedRelation: "travel_segments"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      travel_step_segments: {
+        Row: {
+          created_at: string
+          id: string
+          position_in_step: number
+          role: string | null
+          segment_id: string
+          step_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position_in_step: number
+          role?: string | null
+          segment_id: string
+          step_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position_in_step?: number
+          role?: string | null
+          segment_id?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_step_segments_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "travel_segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_step_segments_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "travel_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_steps: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          primary_location: string | null
+          start_date: string | null
+          step_id: string
+          step_title: string
+          step_type: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          primary_location?: string | null
+          start_date?: string | null
+          step_id: string
+          step_title: string
+          step_type: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          primary_location?: string | null
+          start_date?: string | null
+          step_id?: string
+          step_title?: string
+          step_type?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       trips: {
         Row: {
@@ -219,9 +316,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_grouped_segments: {
+        Args: { p_trip_id: string }
+        Returns: {
+          child_segments: Json
+          end_date: string
+          group_id: string
+          parent_segment: Json
+          start_date: string
+          total_days: number
+        }[]
+      }
       get_user_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      group_similar_segments: {
+        Args: { p_trip_id: string }
+        Returns: undefined
       }
     }
     Enums: {
