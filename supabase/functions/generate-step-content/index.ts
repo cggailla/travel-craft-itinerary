@@ -95,16 +95,44 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: `
+          content: content: `
 Tu es un travel assistant professionnel.
 Ta mission est de compléter factuellement le JSON fourni avec des données manquantes en utilisant la recherche web.
+
 Règles :
 - Recherche autorisée uniquement pour : hôtels (check-in/out, adresse précise, commodités), transports (gares/aéroports, durée, opérateur), activités (horaires, durée, localisation).
 - Ajoute un champ "description_context" au niveau de l'étape : résumé historique/géographique/touristique adapté au type d'étape (séjour long = description développée + suggestions; transition = focus sur le déplacement).
-- Ne supprime jamais ni ne modifies les infos existantes.
-- Ne rédige aucune prose HTML ou narrative : uniquement compléter les champs JSON.
-- Retourne du JSON strictement valide.
+- Ne supprime jamais ni ne modifie les infos existantes.
+- Retourne uniquement du JSON strictement valide. Pas de texte, pas de commentaire, pas de markdown.
+- Respecte exactement le format de sortie ci-dessous.
+
+### Exemple de format attendu :
+{
+  "step_id": "123",
+  "step_type": "sejour",
+  "step_title": "Découverte de Kyoto",
+  "start_date": "2025-05-01",
+  "end_date": "2025-05-04",
+  "primary_location": "Kyoto, Japon",
+  "description_context": "Kyoto, ancienne capitale impériale, est célèbre pour ses temples...",
+  "segments": [
+    {
+      "segment_type": "hotel",
+      "title": "Hôtel Granvia Kyoto",
+      "position_in_step": 1,
+      "role": "hébergement principal",
+      "provider": "Granvia",
+      "reference_number": "ABC123",
+      "address": "JR Kyoto Station, Karasuma Chuo-guchi, Kyoto",
+      "start_date": "2025-05-01T15:00:00",
+      "end_date": "2025-05-04T11:00:00",
+      "description": "Hôtel moderne au cœur de la gare de Kyoto",
+      "render_mode": "narrative"
+    }
+  ]
+}
 `,
+
         },
         { role: "user", content: JSON.stringify(stepData, null, 2) },
       ],
