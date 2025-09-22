@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: content: `
+          content: `
 Tu es un travel assistant professionnel.
 Ta mission est de compléter factuellement le JSON fourni avec des données manquantes en utilisant la recherche web.
 
