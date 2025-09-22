@@ -114,12 +114,9 @@ export type Database = {
           document_id: string
           end_date: string | null
           id: string
-          is_multi_day: boolean | null
-          parent_segment_id: string | null
           provider: string | null
           raw_data: Json | null
           reference_number: string | null
-          segment_group_id: string | null
           segment_type: string
           sequence_order: number | null
           start_date: string | null
@@ -137,12 +134,9 @@ export type Database = {
           document_id: string
           end_date?: string | null
           id?: string
-          is_multi_day?: boolean | null
-          parent_segment_id?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
-          segment_group_id?: string | null
           segment_type: string
           sequence_order?: number | null
           start_date?: string | null
@@ -160,12 +154,9 @@ export type Database = {
           document_id?: string
           end_date?: string | null
           id?: string
-          is_multi_day?: boolean | null
-          parent_segment_id?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
-          segment_group_id?: string | null
           segment_type?: string
           sequence_order?: number | null
           start_date?: string | null
@@ -188,13 +179,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "travel_segments_parent_segment_id_fkey"
-            columns: ["parent_segment_id"]
-            isOneToOne: false
-            referencedRelation: "travel_segments"
             referencedColumns: ["id"]
           },
         ]
@@ -235,24 +219,9 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      get_grouped_segments: {
-        Args: { p_trip_id: string }
-        Returns: {
-          child_segments: Json
-          end_date: string
-          group_id: string
-          parent_segment: Json
-          start_date: string
-          total_days: number
-        }[]
-      }
       get_user_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      group_similar_segments: {
-        Args: { p_trip_id: string }
-        Returns: undefined
       }
     }
     Enums: {
