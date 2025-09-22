@@ -202,7 +202,42 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
       normalizedToId.set(normalize(segment.id), segment.id)
     })
 
+    // UUID validation regex
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    function isValidUUID(str: string): boolean {
+      return UUID_REGEX.test(str)
+    }
+
+    function cleanAndValidateUUID(str: string): string | null {
+      if (!str || typeof str !== 'string') return null
+      
+      // Remove any extra characters and trim
+      let cleaned = str.trim()
+      
+      // Handle common malformations
+      if (cleaned.length > 36) {
+        // If too long, try to extract a valid UUID
+        const match = cleaned.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+        if (match) {
+          cleaned = match[0]
+        } else {
+          console.error(`Malformed UUID (too long): "${str}"`)
+          return null
+        }
+      }
+      
+      if (!isValidUUID(cleaned)) {
+        console.error(`Invalid UUID format: "${str}" (cleaned: "${cleaned}")`)
+        return null
+      }
+      
+      return cleaned
+    }
+
     function resolveSegmentRef(ref: any): string | null {
+      console.log(`Resolving segment ref:`, ref)
+      
       // 1) Prefer explicit index
       if (
         ref &&
@@ -210,37 +245,57 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
         ref.segment_index >= 0 &&
         ref.segment_index < segments.length
       ) {
-        return byIndex.get(ref.segment_index) as string
+        const resolved = byIndex.get(ref.segment_index) as string
+        console.log(`Resolved by index ${ref.segment_index} -> ${resolved}`)
+        return resolved
       }
 
-      // 2) Exact UUID string
+      // 2) Exact UUID string - with validation
       const sid = ref?.segment_id
-      if (typeof sid === 'string' && idSet.has(sid)) return sid
-
-      // 3) Fuzzy matching on normalized string (no dashes)
       if (typeof sid === 'string') {
+        const cleanedUUID = cleanAndValidateUUID(sid)
+        if (cleanedUUID && idSet.has(cleanedUUID)) {
+          console.log(`Resolved exact UUID: ${sid} -> ${cleanedUUID}`)
+          return cleanedUUID
+        }
+        
+        // 3) Fuzzy matching on normalized string (no dashes)
         const norm = normalize(sid)
         if (norm.length >= 8) {
           // Try exact normalized match first
           const exact = normalizedToId.get(norm)
-          if (exact) return exact
+          if (exact) {
+            console.log(`Resolved by normalized exact match: ${sid} -> ${exact}`)
+            return exact
+          }
 
           // Try prefix match
           const candidates = segments.filter((s) => normalize(s.id).startsWith(norm))
-          if (candidates.length === 1) return candidates[0].id
+          if (candidates.length === 1) {
+            console.log(`Resolved by prefix match: ${sid} -> ${candidates[0].id}`)
+            return candidates[0].id
+          }
 
           // Try substring match
           const incl = segments.filter((s) => normalize(s.id).includes(norm))
-          if (incl.length === 1) return incl[0].id
+          if (incl.length === 1) {
+            console.log(`Resolved by substring match: ${sid} -> ${incl[0].id}`)
+            return incl[0].id
+          }
         }
 
         // 4) Numeric-only => treat as index (avoid partial numbers like "20b6...")
         if (/^\d+$/.test(sid)) {
           const idx = parseInt(sid, 10)
-          if (idx >= 0 && idx < segments.length) return byIndex.get(idx) as string
+          if (idx >= 0 && idx < segments.length) {
+            const resolved = byIndex.get(idx) as string
+            console.log(`Resolved numeric as index ${idx} -> ${resolved}`)
+            return resolved
+          }
         }
       }
 
+      console.error(`Could not resolve segment reference:`, ref)
       return null
     }
 

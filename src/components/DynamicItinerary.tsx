@@ -38,14 +38,24 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
     try {
       // Étape 1: Grouper les segments en étapes logiques
       console.log('Groupement des segments en étapes pour le voyage', tripId);
-      const groupingResult = await groupTravelSegments(tripId);
+      let groupingResult;
       
-      if (!groupingResult.success) {
-        throw new Error(groupingResult.error || 'Erreur lors du groupement des segments');
+      try {
+        groupingResult = await groupTravelSegments(tripId);
+        
+        if (!groupingResult.success) {
+          console.warn('Groupement échoué:', groupingResult.error);
+          setStepStatus('Erreur groupement - Tentative récupération étapes existantes...');
+        } else {
+          console.log('Groupement réussi:', groupingResult.message);
+        }
+      } catch (groupError) {
+        console.warn('Erreur lors du groupement:', groupError);
+        setStepStatus('Erreur groupement - Tentative récupération étapes existantes...');
       }
       
-      // Étape 2: Récupérer les étapes créées
-      setStepStatus('Récupération des étapes créées...');
+      // Étape 2: Récupérer les étapes créées (même si groupement a échoué)
+      setStepStatus('Récupération des étapes...');
       const stepsResult = await getTravelSteps(tripId);
       
       if (!stepsResult.success) {
@@ -56,13 +66,14 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
       setSteps(travelSteps);
       
       if (travelSteps.length === 0) {
-        setStepStatus('Aucune étape trouvée');
+        setStepStatus('Aucune étape trouvée - Impossible de générer l\'itinéraire détaillé');
         return;
       }
       
       console.log(`Début génération contenu GPT pour ${travelSteps.length} étapes`);
       
       // Étape 3: Générer le contenu pour chaque étape
+      setStepStatus('Génération du contenu enrichi...');
       const results = await generateAllStepsContent(
         tripId,
         (stepId, status, error) => {
@@ -72,7 +83,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
           
           // Messages détaillés pour l'utilisateur
           if (status === 'generating') {
-            setStepStatus(`Génération de l'étape ${stepIndex + 1}...`);
+            setStepStatus(`Génération de l'étape ${stepIndex + 1}/${travelSteps.length}...`);
           } else if (status === 'completed') {
             setStepStatus(`Étape ${stepIndex + 1} générée avec succès`);
           } else if (status === 'error') {
@@ -85,6 +96,7 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
       
       const successCount = results.filter(r => r.success).length;
       console.log(`Génération terminée: ${successCount}/${results.length} étapes réussies`);
+      setStepStatus(`Génération terminée: ${successCount}/${results.length} étapes générées`);
       
     } catch (error) {
       console.error('Erreur lors de la génération:', error);
@@ -93,7 +105,6 @@ export function DynamicItinerary({ data, options, tripId }: DynamicItineraryProp
       setIsGenerating(false);
       setProgress(100);
       setCurrentStep(-1);
-      setStepStatus('Génération terminée');
     }
   };
 
