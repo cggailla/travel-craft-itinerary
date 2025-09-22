@@ -90,19 +90,13 @@ Deno.serve(async (req) => {
     // ============================
     console.log("Calling OpenAI for enrichment…");
 
-    const enrichResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-search-preview",
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: `
+    const enrichData = await callOpenAIWithRetry({
+      model: "gpt-4o-search-preview",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `
 Tu es un travel assistant professionnel.
 Ta mission est de compléter factuellement le JSON fourni avec des données manquantes en utilisant la recherche web.
 Règles :
@@ -112,46 +106,26 @@ Règles :
 - Ne rédige aucune prose HTML ou narrative : uniquement compléter les champs JSON.
 - Retourne du JSON strictement valide.
 `,
-          },
-          { role: "user", content: JSON.stringify(stepData, null, 2) },
-        ],
-        temperature: 0.2,
-      }),
+        },
+        { role: "user", content: JSON.stringify(stepData, null, 2) },
+      ],
+      temperature: 0.2,
     });
 
-    if (!enrichResponse.ok) {
-      const errorText = await enrichResponse.text();
-      throw new Error(`OpenAI Enrichment error: ${enrichResponse.status} - ${errorText}`);
-    }
-
-    const enrichData = await enrichResponse.json();
     const enrichedStep = JSON.parse(enrichData.choices[0].message.content);
 
-    // (Optionnel) Sauvegarder en base
-    await supabase.from("travel_step_enriched").insert({
-      trip_id: tripId,
-      step_id: stepId,
-      enriched_json: enrichedStep,
-      created_at: new Date().toISOString(),
-    });
 
     // ============================
     // 🔹 Appel 2 : Rendu HTML
     // ============================
     console.log("Calling OpenAI for HTML rendering…");
 
-    const renderResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `
+    const renderData = await callOpenAIWithRetry({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
 Tu es un rédacteur de carnets de voyage ADGENTES.
 Ta mission : transformer le JSON enrichi en HTML narratif et structuré, en respectant strictement les données.
 Règles générales :
@@ -168,20 +142,13 @@ Règles générales :
 - Style ADGENTES : ton expert, élégant, engageant, jamais commercial.
 - Format final = HTML propre sans <html>/<head>/<body>.
 `,
-          },
-          { role: "user", content: JSON.stringify(enrichedStep, null, 2) },
-        ],
-        temperature: 0.5,
-        max_tokens: 3500,
-      }),
+        },
+        { role: "user", content: JSON.stringify(enrichedStep, null, 2) },
+      ],
+      temperature: 0.5,
+      max_tokens: 3500,
     });
 
-    if (!renderResponse.ok) {
-      const errorText = await renderResponse.text();
-      throw new Error(`OpenAI Render error: ${renderResponse.status} - ${errorText}`);
-    }
-
-    const renderData = await renderResponse.json();
     const generatedHtml = renderData.choices[0].message.content;
 
     // ============================
@@ -226,3 +193,44 @@ function getRenderMode(segmentType: string): "list" | "narrative" | "mixed" {
       return "mixed";
   }
 }
+
+/**
+ * Retry wrapper for OpenAI API calls with rate limit handling
+ */
+async function callOpenAIWithRetry(body: any, maxRetries = 3): Promise<any> {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    attempt++;
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAIApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+
+    if (response.status === 429) {
+      const errorText = await response.text();
+      console.warn("Rate limit error:", errorText);
+
+      // Essayer d'extraire le temps d'attente du message
+      const match = errorText.match(/try again in ([0-9.]+)s/i);
+      const waitSeconds = match ? parseFloat(match[1]) : 2;
+
+      console.log(`⏳ Waiting ${waitSeconds} seconds before retry (attempt ${attempt}/${maxRetries})…`);
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
+      continue;
+    }
+
+    throw new Error(`OpenAI API error: ${response.status} - ${await response.text()}`);
+  }
+
+  throw new Error("OpenAI API failed after max retries");
+}
+
