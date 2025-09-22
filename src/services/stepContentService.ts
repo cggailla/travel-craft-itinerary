@@ -85,7 +85,7 @@ async function generateStepWithRetry(
   tripId: string, 
   stepId: string, 
   maxRetries: number = 3,
-  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string) => void
+  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string, result?: StepContentResult) => void
 ): Promise<StepContentResult> {
   onProgress?.(stepId, 'generating');
 
@@ -94,7 +94,7 @@ async function generateStepWithRetry(
       const result = await generateStepPageHTML(tripId, stepId);
       
       if (result.success) {
-        onProgress?.(stepId, 'completed');
+        onProgress?.(stepId, 'completed', undefined, result);
         return result;
       }
 
@@ -111,7 +111,7 @@ async function generateStepWithRetry(
 
       // If this is the last attempt or not a rate limit error, return the error
       if (attempt === maxRetries) {
-        onProgress?.(stepId, 'error', result.error);
+        onProgress?.(stepId, 'error', result.error, result);
         return result;
       }
 
@@ -123,13 +123,14 @@ async function generateStepWithRetry(
       
       if (attempt === maxRetries) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        onProgress?.(stepId, 'error', errorMessage);
-        return {
+        const errorResult = {
           stepId,
           html: '',
           success: false,
           error: errorMessage
         };
+        onProgress?.(stepId, 'error', errorMessage, errorResult);
+        return errorResult;
       }
 
       await delay(attempt * 2);
@@ -137,13 +138,14 @@ async function generateStepWithRetry(
   }
 
   // This shouldn't be reached, but just in case
-  onProgress?.(stepId, 'error', 'Max retries exceeded');
-  return {
+  const errorResult = {
     stepId,
     html: '',
     success: false,
     error: 'Max retries exceeded'
   };
+  onProgress?.(stepId, 'error', 'Max retries exceeded', errorResult);
+  return errorResult;
 }
 
 /**
@@ -151,7 +153,7 @@ async function generateStepWithRetry(
  */
 export async function generateAllStepsContent(
   tripId: string,
-  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string) => void
+  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string, result?: StepContentResult) => void
 ): Promise<StepContentResult[]> {
   try {
     // First, fetch all steps for this trip

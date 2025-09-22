@@ -66,7 +66,9 @@ export function DynamicItinerary({
 
       // Étape 3: Générer le contenu pour chaque étape
       setStepStatus('Génération du contenu enrichi...');
-      const results = await generateAllStepsContent(tripId, (stepId, status, error) => {
+      setStepContents([]); // Initialiser le tableau vide
+      
+      const results = await generateAllStepsContent(tripId, (stepId, status, error, result) => {
         const stepIndex = travelSteps.findIndex(s => s.step_id === stepId);
         setCurrentStep(stepIndex);
         setProgress((stepIndex + 1) / travelSteps.length * 100);
@@ -74,12 +76,40 @@ export function DynamicItinerary({
         // Messages détaillés pour l'utilisateur
         if (status === 'generating') {
           setStepStatus(`Génération de l'étape ${stepIndex + 1}/${travelSteps.length}...`);
-        } else if (status === 'completed') {
+        } else if (status === 'completed' && result) {
           setStepStatus(`Étape ${stepIndex + 1} générée avec succès`);
+          // Afficher immédiatement l'étape générée
+          setStepContents(prev => {
+            const newContents = [...prev];
+            const existingIndex = newContents.findIndex(c => c.stepId === stepId);
+            
+            if (existingIndex >= 0) {
+              newContents[existingIndex] = result;
+            } else {
+              newContents.push(result);
+            }
+            return newContents;
+          });
         } else if (status === 'error') {
           setStepStatus(`Erreur génération étape ${stepIndex + 1}: ${error}`);
+          // Ajouter l'étape avec erreur pour permettre le fallback
+          if (result) {
+            setStepContents(prev => {
+              const newContents = [...prev];
+              const existingIndex = newContents.findIndex(c => c.stepId === stepId);
+              
+              if (existingIndex >= 0) {
+                newContents[existingIndex] = result;
+              } else {
+                newContents.push(result);
+              }
+              return newContents;
+            });
+          }
         }
       });
+      
+      // Mettre à jour avec les résultats finaux pour s'assurer que tout est synchronisé
       setStepContents(results);
       const successCount = results.filter(r => r.success).length;
       console.log(`Génération terminée: ${successCount}/${results.length} étapes réussies`);
