@@ -12,12 +12,16 @@ interface DynamicItineraryProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
+  isEditable?: boolean;
+  onRemoveSegment?: (segmentId: string) => void;
 }
 
 export function DynamicItinerary({
   data,
   options,
-  tripId
+  tripId,
+  isEditable = false,
+  onRemoveSegment
 }: DynamicItineraryProps) {
   const [enrichedSteps, setEnrichedSteps] = useState<EnrichedStep[]>([]);
   const [aiContents, setAiContents] = useState<Map<string, AIContentResult>>(new Map());
@@ -225,6 +229,8 @@ export function DynamicItinerary({
                 localContext: aiContent.localContext
               } : undefined}
               isLoading={isStepGenerating}
+              isEditable={isEditable}
+              onRemoveSegment={onRemoveSegment}
             />
             
             {/* Bouton de régénération en cas d'erreur IA */}

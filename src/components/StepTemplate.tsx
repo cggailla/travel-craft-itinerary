@@ -1,9 +1,10 @@
 import React from 'react';
-import { Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, MapPin, Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { formatSegmentType } from '@/services/bookletService';
+import { Button } from '@/components/ui/button';
 
 interface StepTemplateProps {
   step: EnrichedStep;
@@ -13,9 +14,11 @@ interface StepTemplateProps {
     localContext?: string;
   };
   isLoading?: boolean;
+  isEditable?: boolean;
+  onRemoveSegment?: (segmentId: string) => void;
 }
 
-export function StepTemplate({ step, aiContent, isLoading }: StepTemplateProps) {
+export function StepTemplate({ step, aiContent, isLoading, isEditable = false, onRemoveSegment }: StepTemplateProps) {
   const formatDate = (date: Date) => {
     return format(date, 'EEEE d MMMM yyyy', { locale: fr });
   };
@@ -69,7 +72,7 @@ export function StepTemplate({ step, aiContent, isLoading }: StepTemplateProps) 
 
           <div className="space-y-3">
             {section.segments.map((segment, segmentIndex) => (
-              <div key={segment.id} className="flex items-start gap-3 p-3 bg-background border rounded-lg">
+              <div key={segment.id} className="flex items-start gap-3 p-3 bg-background border rounded-lg group">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-medium text-sm text-foreground">
@@ -102,16 +105,29 @@ export function StepTemplate({ step, aiContent, isLoading }: StepTemplateProps) 
                   )}
                 </div>
 
-                <div className="text-right text-xs text-muted-foreground">
-                  {segment.start_date && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTime(segment.start_date)}
+                <div className="flex items-start gap-2">
+                  <div className="text-right text-xs text-muted-foreground">
+                    {segment.start_date && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatTime(segment.start_date)}
+                      </div>
+                    )}
+                    <div className="mt-1">
+                      {formatSegmentType(segment.segment_type)}
                     </div>
-                  )}
-                  <div className="mt-1">
-                    {formatSegmentType(segment.segment_type)}
                   </div>
+
+                  {isEditable && onRemoveSegment && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveSegment(segment.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

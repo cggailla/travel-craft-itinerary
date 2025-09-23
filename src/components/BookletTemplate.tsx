@@ -3,15 +3,26 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, MapPin, Clock, FileText, User, Phone } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
+import { SegmentManager } from "./SegmentManager";
+import { TravelSegment } from "@/types/travel";
+
 interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
+  isEditable?: boolean;
+  excludedSegments?: TravelSegment[];
+  onRemoveSegment?: (segmentId: string) => void;
+  onAddSegment?: (segmentId: string) => void;
 }
 export function BookletTemplate({
   data,
   options,
-  tripId
+  tripId,
+  isEditable = false,
+  excludedSegments = [],
+  onRemoveSegment,
+  onAddSegment
 }: BookletTemplateProps) {
   const getThemeColors = (theme: string) => {
     switch (theme) {
@@ -104,11 +115,27 @@ export function BookletTemplate({
 
       {/* Itinéraire jour par jour */}
       <div className="page-break mb-12">
-        <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
-          Itinéraire détaillé
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold theme-text border-b-2 theme-border pb-2">
+            Itinéraire détaillé
+          </h2>
+          {isEditable && onAddSegment && (
+            <div className="no-print">
+              <SegmentManager 
+                excludedSegments={excludedSegments}
+                onAddSegment={onAddSegment}
+              />
+            </div>
+          )}
+        </div>
         
-        <DynamicItinerary data={data} options={options} tripId={tripId} />
+        <DynamicItinerary 
+          data={data} 
+          options={options} 
+          tripId={tripId}
+          isEditable={isEditable}
+          onRemoveSegment={onRemoveSegment}
+        />
       </div>
 
       {/* Documents de référence */}
