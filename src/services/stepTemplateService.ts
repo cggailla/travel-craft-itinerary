@@ -3,6 +3,49 @@ import { EnrichedStep, StepSection, StepTemplate, TemplateSectionConfig, AIConte
 import { supabase } from "@/integrations/supabase/client";
 
 /**
+ * Calculate text similarity using normalized word overlap
+ */
+function calculateSimilarity(text1: string, text2: string): number {
+  const normalize = (text: string): string[] => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2)
+      .filter(word => !['le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'pour', 'au', 'aux', 'et', 'ou', 'dans', 'sur', 'avec'].includes(word));
+  };
+
+  const words1 = normalize(text1);
+  const words2 = normalize(text2);
+  
+  if (words1.length === 0 || words2.length === 0) return 0;
+
+  const intersection = words1.filter(word => words2.includes(word));
+  const union = [...new Set([...words1, ...words2])];
+  
+  return intersection.length / union.length;
+}
+
+/**
+ * Filter duplicate segments based on title similarity
+ */
+function filterDuplicateSegments(segments: TravelSegment[], similarityThreshold: number = 0.8): TravelSegment[] {
+  const filtered: TravelSegment[] = [];
+  
+  for (const segment of segments) {
+    const isDuplicate = filtered.some(existing => 
+      calculateSimilarity(segment.title, existing.title) >= similarityThreshold
+    );
+    
+    if (!isDuplicate) {
+      filtered.push(segment);
+    }
+  }
+  
+  return filtered;
+}
+
+/**
  * Step templates with predefined sections and roles
  */
 export const STEP_TEMPLATES: StepTemplate[] = [
@@ -172,10 +215,13 @@ export function groupSegmentsByRole(segments: TravelSegment[], template: StepTem
       sectionConfig.roles.includes(segment.raw_data?.role || segment.segment_type)
     );
 
-    if (sectionSegments.length > 0) {
+    // Filter duplicate segments within each section
+    const filteredSegments = filterDuplicateSegments(sectionSegments);
+
+    if (filteredSegments.length > 0) {
       sections.push({
         title: sectionConfig.title,
-        segments: sectionSegments,
+        segments: filteredSegments,
         role: sectionConfig.role,
         icon: sectionConfig.icon
       });
