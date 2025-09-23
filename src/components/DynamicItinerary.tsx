@@ -141,7 +141,12 @@ export function DynamicItinerary({
     const ensureMiscSection = (step: EnrichedStep) => {
       const idx = step.sections.findIndex(sec => sec.title === "Autres");
       if (idx >= 0) return step.sections[idx];
-      const newSec = { title: "Autres", icon: "🧭", segments: [] as any[] };
+      const newSec = { 
+        title: "Autres", 
+        icon: "🧭", 
+        segments: [] as any[], 
+        role: 'services' as const 
+      };
       step.sections.push(newSec);
       return newSec;
     };
@@ -156,8 +161,10 @@ export function DynamicItinerary({
 
     toInject.forEach(seg => {
       const target = pickStepForDate(seg.start_date) || cloned[0]; // fallback : première step
-      const misc = ensureMiscSection(target);
-      misc.segments.push(seg);
+      if (target) {
+        const misc = ensureMiscSection(target);
+        misc.segments.push(seg);
+      }
     });
 
     return cloned;

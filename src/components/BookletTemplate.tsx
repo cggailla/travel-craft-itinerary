@@ -186,8 +186,6 @@ export function BookletTemplate({
       {/* Segment Manager */}
       {editable && (
         <SegmentManager
-          open={isSegmentManagerOpen}
-          onClose={() => setIsSegmentManagerOpen(false)}
           excludedSegments={excludedSegments}
           onAddSegment={onAddSegment}
         />
