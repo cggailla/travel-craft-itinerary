@@ -120,11 +120,14 @@ export function BookletTemplate({
             Itinéraire détaillé
           </h2>
           {isEditable && onAddSegment && (
-            <div className="no-print">
+            <div className="no-print flex gap-2">
               <SegmentManager 
                 excludedSegments={excludedSegments}
                 onAddSegment={onAddSegment}
               />
+              <div className="text-xs text-muted-foreground px-2 py-1 bg-muted/50 rounded">
+                Mode édition: Utilisez les ❌ pour exclure des segments
+              </div>
             </div>
           )}
         </div>

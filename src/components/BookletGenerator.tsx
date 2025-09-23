@@ -181,7 +181,11 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
           </Button>
         </div>
         
-        <BookletPreview data={bookletData} options={options} tripId={tripId} />
+        <BookletPreview 
+          data={bookletData} 
+          options={options} 
+          tripId={tripId}
+        />
       </div>
     </div>
   );

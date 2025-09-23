@@ -21,23 +21,33 @@ export function SegmentManager({ excludedSegments, onAddSegment }: SegmentManage
     return format(date, 'HH:mm');
   };
 
-  if (excludedSegments.length === 0) return null;
-
+  // Toujours afficher le bouton, même s'il n'y a pas de segments exclus
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
-          Ajouter des segments ({excludedSegments.length})
+          Segments exclus ({excludedSegments.length})
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Segments disponibles à ajouter</DialogTitle>
+          <DialogTitle>
+            {excludedSegments.length > 0 
+              ? "Segments exclus à rajouter"
+              : "Aucun segment exclu"
+            }
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-3">
-          {excludedSegments.map((segment) => (
+        {excludedSegments.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Tous les segments sont affichés dans le carnet.</p>
+            <p className="text-sm mt-2">Utilisez les croix (❌) sur chaque segment pour les exclure.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {excludedSegments.map((segment) => (
             <div key={segment.id} className="flex items-start justify-between p-3 border rounded-lg bg-muted/30">
               <div className="flex-1 mr-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -91,9 +101,10 @@ export function SegmentManager({ excludedSegments, onAddSegment }: SegmentManage
               >
                 <Plus className="h-4 w-4" />
               </Button>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
