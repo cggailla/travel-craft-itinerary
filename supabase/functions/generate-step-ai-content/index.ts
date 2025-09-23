@@ -72,7 +72,7 @@ CONSIGNES:
 - Tips: 2-4 conseils pratiques et utiles pour cette étape
 - LocalContext: Contexte culturel/historique uniquement si pertinent
 - Ton: Informatif mais chaleureux, comme un guide de voyage
-- Longueur: Concis et utile, pas de remplissage`;
+- Longueur: Entre 1 et 2 paragraphes`;
 
     console.log('Calling OpenAI for AI content generation...');
 
@@ -94,7 +94,7 @@ CONSIGNES:
             content: prompt
           }
         ],
-        max_tokens: 800,
+        max_tokens: 2000,
         temperature: 0.7
       }),
     });
