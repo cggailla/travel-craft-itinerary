@@ -10,6 +10,8 @@ import { getTravelSegments, validateSegments } from '@/services/documentService'
 import { TravelSegment } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import ManualStepGrouper from './ManualStepGrouper';
+import { hasManualSteps } from '@/services/manualStepsService';
 interface TravelTimelineNewProps {
   documentIds?: string[];
   tripId?: string;
@@ -29,14 +31,22 @@ export default function TravelTimelineNew({
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
   const [selectedSegment, setSelectedSegment] = useState<TravelSegment | null>(null);
+  const [showManualGrouper, setShowManualGrouper] = useState(false);
+  const [hasExistingSteps, setHasExistingSteps] = useState(false);
   const {
     toast
   } = useToast();
   useEffect(() => {
     if (tripId) {
       loadTravelSegments(tripId);
+      checkExistingSteps(tripId);
     }
   }, [documentIds, tripId]);
+  const checkExistingSteps = async (tripId: string) => {
+    const exists = await hasManualSteps(tripId);
+    setHasExistingSteps(exists);
+  };
+
   const loadTravelSegments = async (tripId?: string) => {
     try {
       setLoading(true);
@@ -196,14 +206,46 @@ export default function TravelTimelineNew({
               <span className="text-muted-foreground">•</span>
               <span>{unvalidatedCount} en attente</span>
             </div>
-            {unvalidatedCount > 0 && <Button onClick={handleValidateAll} disabled={validating} size="sm" className="bg-secondary hover:bg-secondary-hover">
-                {validating ? 'Validation...' : `Valider tout (${unvalidatedCount})`}
-              </Button>}
+            <div className="flex space-x-2">
+              <Button 
+                onClick={() => setShowManualGrouper(!showManualGrouper)} 
+                variant={showManualGrouper ? "default" : "outline"}
+                size="sm"
+              >
+                {showManualGrouper ? 'Vue chronologique' : hasExistingSteps ? 'Modifier les étapes' : 'Créer des étapes'}
+              </Button>
+              {hasExistingSteps && !showManualGrouper && (
+                <Button 
+                  onClick={() => onValidated?.()} 
+                  size="sm" 
+                  className="bg-secondary hover:bg-secondary-hover"
+                >
+                  Générer le carnet
+                </Button>
+              )}
+              {!showManualGrouper && !hasExistingSteps && unvalidatedCount > 0 && (
+                <Button onClick={handleValidateAll} disabled={validating} size="sm" className="bg-secondary hover:bg-secondary-hover">
+                  {validating ? 'Validation...' : `Valider tout (${unvalidatedCount})`}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
+        {showManualGrouper ? (
+          <ManualStepGrouper
+            timeline={timeline}
+            undatedSegments={undatedSegments}
+            tripId={tripId!}
+            onStepsCreated={() => {
+              setShowManualGrouper(false);
+              setHasExistingSteps(true);
+              onValidated?.();
+            }}
+          />
+        ) : (
+          <div className="space-y-6">
           {/* Segments sans date */}
           {undatedSegments.length > 0 && (
             <div className="relative">
@@ -353,7 +395,8 @@ export default function TravelTimelineNew({
                   </Card>)}
               </div>
             </div>)}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
 

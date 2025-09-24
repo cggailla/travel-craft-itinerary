@@ -3,6 +3,7 @@ import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { BookletData, BookletOptions } from '@/services/bookletService';
 import { groupTravelSegments } from '@/services/stepGroupingService';
 import { getEnrichedSteps, createAIContentRequest } from '@/services/stepTemplateService';
+import { getManualSteps } from '@/services/manualStepsService';
 import { generateAllStepsAIContent, generateStepAIContent } from '@/services/aiContentService';
 import { AIContentResult } from '@/types/enrichedStep';
 import { EnrichedStep } from '@/types/enrichedStep';
@@ -49,30 +50,39 @@ export function DynamicItinerary({
     setIsGenerating(true);
     setProgress(0);
     setCurrentStep(-1);
-    setStepStatus('Groupement des segments en étapes...');
+    setStepStatus('Récupération des étapes manuelles...');
 
     try {
-      let groupingResult;
-      try {
-        groupingResult = await groupTravelSegments(tripId);
-        if (!groupingResult.success) {
-          setStepStatus('Erreur groupement - Tentative récupération étapes existantes...');
-        }
-      } catch {
-        setStepStatus('Erreur groupement - Tentative récupération étapes existantes...');
-      }
-
+      // Récupérer les étapes créées manuellement
       setProgress(30);
-      setStepStatus('Récupération des étapes...');
-      const stepsResult = await getEnrichedSteps(tripId);
+      const stepsResult = await getManualSteps(tripId);
 
       if (!stepsResult.success || !stepsResult.steps || stepsResult.steps.length === 0) {
-        setStepStatus('Aucune étape trouvée - Utilisation de la vue statique');
+        setStepStatus('Aucune étape manuelle trouvée - Créez d\'abord vos étapes');
         setIsGenerating(false);
         return;
       }
 
-      const steps = stepsResult.steps;
+      // Convertir les étapes manuelles au format EnrichedStep
+      const steps = stepsResult.steps.map(step => ({
+        stepId: step.id,
+        stepTitle: step.step_title,
+        stepType: step.step_type || 'manual',
+        primaryLocation: step.primary_location || '',
+        startDate: step.start_date ? new Date(step.start_date) : new Date(),
+        endDate: step.end_date ? new Date(step.end_date) : new Date(),
+        sections: [{
+          title: "Segments",
+          segments: step.travel_step_segments
+            ?.sort((a, b) => a.position_in_step - b.position_in_step)
+            .map(tss => tss.travel_segments)
+            .filter(Boolean) || [],
+          role: 'services' as const,
+          icon: '📋'
+        }],
+        rawData: step
+      }));
+
       setEnrichedSteps(steps);
       setProgress(50);
 
