@@ -11,7 +11,7 @@ import { TravelSegment } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import ManualStepGrouper from './ManualStepGrouper';
-import { hasManualSteps } from '@/services/manualStepsService';
+import { hasManualSteps, getManualSteps } from '@/services/manualStepsService';
 interface TravelTimelineNewProps {
   documentIds?: string[];
   tripId?: string;
@@ -33,6 +33,7 @@ export default function TravelTimelineNew({
   const [selectedSegment, setSelectedSegment] = useState<TravelSegment | null>(null);
   const [showManualGrouper, setShowManualGrouper] = useState(false);
   const [hasExistingSteps, setHasExistingSteps] = useState(false);
+  const [manualSteps, setManualSteps] = useState<any[]>([]);
   const {
     toast
   } = useToast();
@@ -45,6 +46,13 @@ export default function TravelTimelineNew({
   const checkExistingSteps = async (tripId: string) => {
     const exists = await hasManualSteps(tripId);
     setHasExistingSteps(exists);
+    
+    if (exists) {
+      const result = await getManualSteps(tripId);
+      if (result.success) {
+        setManualSteps(result.steps);
+      }
+    }
   };
 
   const loadTravelSegments = async (tripId?: string) => {
@@ -241,11 +249,50 @@ export default function TravelTimelineNew({
             onStepsCreated={() => {
               setShowManualGrouper(false);
               setHasExistingSteps(true);
+              checkExistingSteps(tripId!);
               onValidated?.();
             }}
           />
         ) : (
           <div className="space-y-6">
+          {/* Afficher les étapes créées si elles existent */}
+          {hasExistingSteps && manualSteps.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                Étapes créées
+              </h3>
+              <div className="grid gap-4">
+                {manualSteps.map((step, index) => (
+                  <Card key={step.id} className="border-primary/20">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-foreground">{step.step_title}</h4>
+                        {step.start_date && (
+                          <Badge variant="outline" className="text-xs">
+                            {format(parseISO(step.start_date), 'dd/MM/yyyy', { locale: fr })}
+                            {step.end_date && step.end_date !== step.start_date && 
+                              ` - ${format(parseISO(step.end_date), 'dd/MM/yyyy', { locale: fr })}`
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {step.travel_step_segments?.length || 0} segment(s) inclus
+                      </p>
+                      {step.primary_location && (
+                        <div className="flex items-center space-x-1 text-sm text-muted-foreground mt-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>{step.primary_location}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Segments sans date */}
           {undatedSegments.length > 0 && (
             <div className="relative">

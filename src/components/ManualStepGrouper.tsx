@@ -65,7 +65,17 @@ export default function ManualStepGrouper({
     setCurrentStepTitle(newStep.title);
   };
 
-  const updateStepDates = (step: ManualStep) => {
+  // Recalculer toutes les dates des étapes quand elles changent
+  useEffect(() => {
+    if (manualSteps.length > 0) {
+      const updatedSteps = manualSteps.map((step, index) => updateStepDates(step, index));
+      if (JSON.stringify(updatedSteps) !== JSON.stringify(manualSteps)) {
+        setManualSteps(updatedSteps);
+      }
+    }
+  }, [manualSteps.length]);
+
+  const updateStepDates = (step: ManualStep, stepIndex?: number) => {
     if (step.segments.length === 0) {
       return { ...step, startDate: undefined, endDate: undefined };
     }
@@ -76,10 +86,30 @@ export default function ManualStepGrouper({
       .map(d => new Date(d!))
       .sort((a, b) => a.getTime() - b.getTime());
 
+    let startDate = dates.length > 0 ? dates[0] : undefined;
+    let endDate = dates.length > 0 ? dates[dates.length - 1] : undefined;
+
+    // Si on a l'index de l'étape, calculer la date de fin comme le jour avant le début de l'étape suivante
+    if (stepIndex !== undefined && stepIndex < manualSteps.length - 1) {
+      const nextStep = manualSteps[stepIndex + 1];
+      if (nextStep && nextStep.startDate) {
+        const nextStepStart = new Date(nextStep.startDate);
+        const calculatedEndDate = new Date(nextStepStart);
+        calculatedEndDate.setDate(calculatedEndDate.getDate() - 1);
+        
+        // Si la différence est moins d'un jour, on garde juste la date de début
+        if (startDate && (calculatedEndDate.getTime() - startDate.getTime()) >= 24 * 60 * 60 * 1000) {
+          endDate = calculatedEndDate;
+        } else {
+          endDate = startDate;
+        }
+      }
+    }
+
     return {
       ...step,
-      startDate: dates.length > 0 ? dates[0] : undefined,
-      endDate: dates.length > 0 ? dates[dates.length - 1] : undefined,
+      startDate,
+      endDate,
     };
   };
 
@@ -92,20 +122,20 @@ export default function ManualStepGrouper({
           ...step,
           segments: [...step.segments, segment]
         };
-        return updateStepDates(updatedStep);
+        return updateStepDates(updatedStep, index);
       }
       return step;
     }));
   };
 
   const removeSegmentFromStep = (stepId: string, segmentId: string) => {
-    setManualSteps(prev => prev.map(step => {
+    setManualSteps(prev => prev.map((step, index) => {
       if (step.id === stepId) {
         const updatedStep = {
           ...step,
           segments: step.segments.filter(s => s.id !== segmentId)
         };
-        return updateStepDates(updatedStep);
+        return updateStepDates(updatedStep, index);
       }
       return step;
     }));
@@ -212,6 +242,18 @@ export default function ManualStepGrouper({
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-y-auto h-full space-y-4">
+          {/* Informations générales */}
+          <div>
+            <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center">
+              <FileText className="h-4 w-4 mr-1" />
+              Informations générales
+            </h4>
+            <div className="text-center py-3 text-muted-foreground border-2 border-dashed border-muted rounded-lg bg-muted/20">
+              <FileText className="h-5 w-5 mx-auto mb-1 opacity-50" />
+              <p className="text-xs">Zone pour segments d'information générale</p>
+            </div>
+          </div>
+
           {/* Segments sans date */}
           {undatedSegments.length > 0 && (
             <div>
