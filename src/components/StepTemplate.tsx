@@ -12,15 +12,30 @@ interface StepTemplateProps {
     localContext?: string;
   };
   isLoading?: boolean;
+  nextStepStartDate?: Date;
 }
 export function StepTemplate({
   step,
   aiContent,
-  isLoading
+  isLoading,
+  nextStepStartDate
 }: StepTemplateProps) {
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
   });
+
+  // Calculate robust end date: next step start date - 1 day, or step's own end date if no next step
+  const calculateEndDate = () => {
+    if (nextStepStartDate) {
+      const calculatedEndDate = new Date(nextStepStartDate);
+      calculatedEndDate.setDate(calculatedEndDate.getDate() - 1);
+      return calculatedEndDate;
+    }
+    return step.endDate;
+  };
+
+  const endDate = calculateEndDate();
+  const isSingleDay = step.startDate.toDateString() === endDate.toDateString();
   return <div className="mb-8 p-6 bg-card rounded-lg border">
       {/* Header */}
       <div className="mb-6">
@@ -34,7 +49,10 @@ export function StepTemplate({
             <MapPin className="h-4 w-4" />
             {step.primaryLocation}
           </span>
-          <span>{formatDate(step.startDate)} → {formatDate(step.endDate)}</span>
+          <span>
+            {formatDate(step.startDate)}
+            {!isSingleDay && <> → {formatDate(endDate)}</>}
+          </span>
         </div>
       </div>
 

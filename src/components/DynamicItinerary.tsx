@@ -145,6 +145,7 @@ export function DynamicItinerary({
       {visibleSteps.length > 0 && visibleSteps.map((step, index) => {
         const aiContent = aiContents.get(step.stepId);
         const isStepGenerating = isGenerating && currentStep === index;
+        const nextStep = visibleSteps[index + 1];
 
         return (
           <div key={step.stepId}>
@@ -156,6 +157,7 @@ export function DynamicItinerary({
                 localContext: aiContent.localContext,
               } : undefined}
               isLoading={isStepGenerating}
+              nextStepStartDate={nextStep?.startDate}
             />
           </div>
         );
