@@ -56,7 +56,6 @@ serve(async (req) => {
     const prompt = `Génère du contenu descriptif pour cette étape de voyage en français.
 ${tripSummary ? `\nCONTEXTE DU VOYAGE COMPLET:\n${tripSummary}\n` : ''}
 ÉTAPE: ${stepTitle}
-LIEU: ${primaryLocation}
 SECTIONS:
 ${sectionsInfo}
 
@@ -68,9 +67,9 @@ Réponds uniquement en JSON avec cette structure exacte:
 }
 
 CONSIGNES:
-- Overview: Description engageante et informative de l'étape${tripSummary ? ', en tenant compte du contexte du voyage complet' : ''}
-- Tips: 2-4 conseils pratiques et utiles pour cette étape
-- LocalContext: Contexte culturel/historique uniquement si pertinent
+- Overview: Description engageante et informative de la chronologie de l'étape. Tu t'adaptes au type d'étape (séjour long : détailler le lieu, activité phare / jour de trajet : rester très factuel et détailler précisément le déroulé et les détails (numéro, horaire, ...), ...). Tu te concentres sur l'endroit ou l'activité phare de l'étape. Tu t'appuies sur le contexte et le déroulé des segments (ainsi que le descriptif) pour rédiger le déroulement de l'étape. Regarde les durées pour coller au mieux avec la réalité de l'étape (si on reste 4j dans un lieux mais qu'il y a un trajet pour aller jusqu'à l'hôtel qui dure qq heures : tu détailles rapidement les points factuels du trajet puis tu t'attardes sur le lieu principal. 
+- Tips: 2-4 conseils pratiques et utiles pour cette étape qui sont liés aux activités faites. Ne jamais faire de conseils qui snt déjà pris en compte (ex : recommandé d'acheter ses billets alors que les billets sont dans les segments)
+- LocalContext: Contexte culturel/historique du lieu majoritaire. Recommendations adaptés en fonction du temps disponible. 
 - Ton: Informatif mais chaleureux, comme un guide de voyage
 - Longueur: Entre 1 et 2 paragraphes${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres étapes si pertinent' : ''}`;
 
