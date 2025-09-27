@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -47,7 +46,7 @@ serve(async (req) => {
 
     console.log(`Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
 
-    // Create structured prompt for targeted content generation
+    // Format sections for the prompt
     const sectionsInfo = sections.map((section: any) => {
       const segmentTitles = section.segments.map((s: any) => s.title);
       return `${section.title} (${section.role}): ${segmentTitles.join(', ')}`;
@@ -56,6 +55,7 @@ serve(async (req) => {
     const prompt = `Génère du contenu descriptif pour cette étape de voyage en français.
 ${tripSummary ? `\nCONTEXTE DU VOYAGE COMPLET:\n${tripSummary}\n` : ''}
 ÉTAPE: ${stepTitle}
+LIEU: ${primaryLocation}
 SECTIONS:
 ${sectionsInfo}
 
@@ -64,14 +64,7 @@ Réponds uniquement en JSON avec cette structure exacte:
   "overview": "Description générale de cette étape en 2-3 phrases (100-150 mots max)",
   "tips": ["Conseil pratique 1", "Conseil pratique 2", "Conseil pratique 3"],
   "localContext": "Informations culturelles/historiques intéressantes sur le lieu (80-120 mots max, optionnel)"
-}
-
-CONSIGNES:
-- Overview: Description engageante et informative de la chronologie de l'étape. Tu t'adaptes au type d'étape (séjour long : détailler le lieu, activité phare / jour de trajet : rester très factuel et détailler précisément le déroulé et les détails (numéro, horaire, ...), ...). Tu te concentres sur l'endroit ou l'activité phare de l'étape. Tu t'appuies sur le contexte et le déroulé des segments (ainsi que le descriptif) pour rédiger le déroulement de l'étape. Regarde les durées pour coller au mieux avec la réalité de l'étape (si on reste 4j dans un lieux mais qu'il y a un trajet pour aller jusqu'à l'hôtel qui dure qq heures : tu détailles rapidement les points factuels du trajet puis tu t'attardes sur le lieu principal. 
-- Tips: 2-4 conseils pratiques et utiles pour cette étape qui sont liés aux activités faites. Ne jamais faire de conseils qui snt déjà pris en compte (ex : recommandé d'acheter ses billets alors que les billets sont dans les segments)
-- LocalContext: Contexte culturel/historique du lieu majoritaire. Recommendations adaptés en fonction du temps disponible. 
-- Ton: Informatif mais chaleureux, comme un guide de voyage
-- Longueur: Entre 1 et 2 paragraphes${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres étapes si pertinent' : ''}`;
+}`;
 
     console.log('Calling OpenAI for AI content generation...');
 
@@ -86,7 +79,7 @@ CONSIGNES:
         messages: [
           {
             role: 'system',
-            content: 'Tu es un expert en voyage qui génère du contenu descriptif concis et utile pour des carnets de voyage. Réponds uniquement en JSON valide.'
+            content: 'Tu es un expert en voyage qui génère du contenu descriptif concis et utile pour des carnets de voyage. Réponds uniquement en JSON valide, sans balises Markdown ni texte supplémentaire.'
           },
           {
             role: 'user',
@@ -116,15 +109,20 @@ CONSIGNES:
     const openaiData = await response.json();
     console.log('OpenAI response received');
 
-    const content = openaiData.choices[0].message.content;
-    
-    // Parse JSON response
+    let content = openaiData.choices[0].message.content;
+
+    // 🛠️ Nettoyage du JSON pour éviter les erreurs de parsing
+    content = content
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
     let aiContent;
     try {
       aiContent = JSON.parse(content);
     } catch (parseError) {
       console.error('Error parsing OpenAI JSON response:', parseError);
-      console.error('Raw content:', content);
+      console.error('Raw content after cleanup:', content);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -137,7 +135,6 @@ CONSIGNES:
       );
     }
 
-    // Validate response structure
     if (!aiContent.overview || !Array.isArray(aiContent.tips)) {
       console.error('Invalid AI response structure:', aiContent);
       return new Response(
