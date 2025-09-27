@@ -190,7 +190,8 @@ export default function TravelTimelineNew({
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return 'Date non spécifiée';
     try {
       const date = parseISO(dateString);
       if (!isValid(date)) return dateString;
@@ -202,7 +203,8 @@ export default function TravelTimelineNew({
     }
   };
 
-  const formatTime = (dateString: string) => {
+  const formatTime = (dateString: string | undefined | null) => {
+    if (!dateString) return '';
     try {
       const date = parseISO(dateString);
       if (!isValid(date)) return '';
@@ -791,12 +793,12 @@ export default function TravelTimelineNew({
                 <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
                   <div>
                     <span>Créé le</span>
-                    <div className="mt-1">{format(parseISO(selectedSegment.created_at), 'dd/MM/yyyy HH:mm')}</div>
+                    <div className="mt-1">{selectedSegment.created_at ? format(parseISO(selectedSegment.created_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</div>
                   </div>
                   
                   <div>
                     <span>Modifié le</span>
-                    <div className="mt-1">{format(parseISO(selectedSegment.updated_at), 'dd/MM/yyyy HH:mm')}</div>
+                    <div className="mt-1">{selectedSegment.updated_at ? format(parseISO(selectedSegment.updated_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</div>
                   </div>
                 </div>
               </div>
