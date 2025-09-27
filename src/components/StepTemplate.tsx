@@ -92,35 +92,40 @@ export function StepTemplate({
 
                 const segmentDateStr = formatSegmentDate();
 
-                return <div key={segment.id} className="relative p-3 bg-background border rounded-lg">
-                  {/* Render different layouts based on segment type */}
-                  {segment.segment_type === 'flight' && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
-                          {segment.reference_number && <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                              Vol {segment.reference_number}
-                            </span>}
-                        </div>
-                        {segment.provider && <p className="text-xs text-muted-foreground mb-1">✈️ {segment.provider}</p>}
-                        {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
-                        <div className="flex gap-4 text-xs">
-                          {segment.address && <span className="text-muted-foreground">📍 {segment.address}</span>}
-                        </div>
+                // Travel segments (flight, car, train, transfer) - vertical dotted line style
+                if (['flight', 'car', 'train', 'transfer'].includes(segment.segment_type)) {
+                  return <div key={segment.id} className="relative flex items-center my-3">
+                    {/* Vertical dotted line */}
+                    <div className="w-px h-12 border-l-2 border-dotted border-muted-foreground/40 flex-shrink-0"></div>
+                    
+                    {/* Segment info on the side */}
+                    <div className="ml-4 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-sm text-muted-foreground">{segment.title}</h4>
+                        {segment.reference_number && <span className="text-xs px-2 py-0.5 bg-muted/50 text-muted-foreground rounded">
+                            {segment.reference_number}
+                          </span>}
                       </div>
-                      <div className="text-right text-xs text-muted-foreground">
-                        {segmentDateStr && <p className="flex items-center gap-1 justify-end mb-1">
-                            <Calendar className="h-3 w-3" />
-                            {segmentDateStr}
-                          </p>}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {segment.provider && <span>
+                          {segment.segment_type === 'flight' && '✈️'}
+                          {segment.segment_type === 'car' && '🚗'}
+                          {segment.segment_type === 'train' && '🚊'}
+                          {segment.segment_type === 'transfer' && '🚌'}
+                          {' '}{segment.provider}
+                        </span>}
+                        {segmentDateStr && <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {segmentDateStr}
+                        </span>}
                       </div>
-                      <div className="absolute bottom-2 right-2 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                        {formatSegmentType(segment.segment_type)}
-                      </div>
+                      {segment.description && <p className="text-xs text-muted-foreground/80 mt-1">{segment.description}</p>}
                     </div>
-                  )}
+                  </div>;
+                }
 
+                // Main segments (hotel, activity) - keep boxed style
+                return <div key={segment.id} className="relative p-3 bg-background border rounded-lg">
                   {segment.segment_type === 'hotel' && (
                     <div className="flex items-start gap-3">
                       <div className="flex-1">
@@ -144,34 +149,6 @@ export function StepTemplate({
                           </p>}
                       </div>
                       <div className="absolute bottom-2 right-2 text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
-                        {formatSegmentType(segment.segment_type)}
-                      </div>
-                    </div>
-                  )}
-
-                  {segment.segment_type === 'car' && (
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
-                          {segment.reference_number && <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded">
-                              {segment.reference_number}
-                            </span>}
-                        </div>
-                        {segment.provider && <p className="text-xs text-muted-foreground mb-1">🚗 {segment.provider}</p>}
-                        {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
-                        {segment.address && <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {segment.address}
-                          </p>}
-                      </div>
-                      <div className="text-right text-xs text-muted-foreground">
-                        {segmentDateStr && <p className="flex items-center gap-1 justify-end mb-1">
-                            <Calendar className="h-3 w-3" />
-                            {segmentDateStr}
-                          </p>}
-                      </div>
-                      <div className="absolute bottom-2 right-2 text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded">
                         {formatSegmentType(segment.segment_type)}
                       </div>
                     </div>
@@ -206,7 +183,7 @@ export function StepTemplate({
                   )}
 
                   {/* Default layout for other segment types */}
-                  {!['flight', 'hotel', 'car', 'activity'].includes(segment.segment_type) && (
+                  {!['hotel', 'activity'].includes(segment.segment_type) && (
                     <div className="flex items-start gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
