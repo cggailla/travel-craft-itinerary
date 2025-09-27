@@ -34,8 +34,7 @@ export function StepTemplate({
             <MapPin className="h-4 w-4" />
             {step.primaryLocation}
           </span>
-          <span>{formatDate(step.startDate)}</span>
-          {step.startDate.toDateString() !== step.endDate.toDateString() && <span>→ {formatDate(step.endDate)}</span>}
+          <span>{formatDate(step.startDate)} → {formatDate(step.endDate)}</span>
         </div>
       </div>
 
