@@ -13,11 +13,6 @@ interface DynamicItineraryProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
-
-  // édition
-  editable?: boolean;
-  excludedSegmentIds?: Set<string>;
-  onRemoveSegment?: (segmentId: string) => void;
   allSegments?: BookletData["segments"];
 }
 
@@ -25,9 +20,6 @@ export function DynamicItinerary({
   data,
   options,
   tripId,
-  editable = false,
-  excludedSegmentIds = new Set<string>(),
-  onRemoveSegment,
   allSegments = [],
 }: DynamicItineraryProps) {
   const [enrichedSteps, setEnrichedSteps] = useState<EnrichedStep[]>([]);
@@ -122,63 +114,10 @@ export function DynamicItinerary({
     }
   };
 
-  // --- Filtrage + Injection des segments manquants ---
+  // --- Affichage simple des segments ---
   const visibleSteps = useMemo<EnrichedStep[]>(() => {
-    // 1) clone des steps
-    const cloned: EnrichedStep[] = enrichedSteps.map(s => ({
-      ...s,
-      sections: s.sections.map(sec => ({
-        ...sec,
-        segments: sec.segments.filter(seg => !excludedSegmentIds.has(seg.id)), // filtrage
-      })),
-    }));
-
-    // 2) set d’IDs déjà présents après filtrage
-    const presentIds = new Set<string>();
-    cloned.forEach(s =>
-      s.sections.forEach(sec =>
-        sec.segments.forEach(seg => presentIds.add(seg.id))
-      )
-    );
-
-    // 3) segments inclus mais absents → injection
-    const toInject = allSegments.filter(
-      seg => !excludedSegmentIds.has(seg.id) && !presentIds.has(seg.id)
-    );
-
-    if (toInject.length === 0) return cloned;
-
-    const ensureMiscSection = (step: EnrichedStep) => {
-      const idx = step.sections.findIndex(sec => sec.title === "Autres");
-      if (idx >= 0) return step.sections[idx];
-      const newSec = { 
-        title: "Autres", 
-        icon: "🧭", 
-        segments: [] as any[], 
-        role: 'services' as const 
-      };
-      step.sections.push(newSec);
-      return newSec;
-    };
-
-    const pickStepForDate = (d?: string) => {
-      if (!d) return undefined;
-      const dt = new Date(d);
-      return cloned.find(
-        st => dt >= st.startDate && dt <= st.endDate
-      );
-    };
-
-    toInject.forEach(seg => {
-      const target = pickStepForDate(seg.start_date) || cloned[0]; // fallback : première step
-      if (target) {
-        const misc = ensureMiscSection(target);
-        misc.segments.push(seg);
-      }
-    });
-
-    return cloned;
-  }, [enrichedSteps, excludedSegmentIds, allSegments]);
+    return enrichedSteps;
+  }, [enrichedSteps]);
 
   return (
     <div className="space-y-6">
@@ -217,9 +156,6 @@ export function DynamicItinerary({
                 localContext: aiContent.localContext,
               } : undefined}
               isLoading={isStepGenerating}
-              // édition
-              editable={editable}
-              onRemoveSegment={onRemoveSegment}
             />
           </div>
         );

@@ -1,44 +1,20 @@
-import { useMemo, useState } from "react";
 import { BookletData, BookletOptions } from "@/services/bookletService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Clock, FileText, Plus, ListPlus } from "lucide-react";
+import { Calendar, Clock, FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
-import { Button } from "@/components/ui/button";
-import { SegmentManager } from "./SegmentManager";
 
 interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
-
-  // Ajouts pour l’édition
-  editable?: boolean;
-  excludedSegmentIds?: Set<string>;
-  onRemoveSegment?: (segmentId: string) => void;
-  onAddSegment?: (segmentId: string) => void;
-  allSegments?: BookletData["segments"];
 }
 
 export function BookletTemplate({
   data,
   options,
   tripId,
-  editable = false,
-  excludedSegmentIds = new Set<string>(),
-  onRemoveSegment,
-  onAddSegment,
-  allSegments = [],
 }: BookletTemplateProps) {
-  const [isSegmentManagerOpen, setIsSegmentManagerOpen] = useState(false);
-
-  const excludedSegments = useMemo(
-    () => allSegments.filter(s => excludedSegmentIds.has(s.id)),
-    [allSegments, excludedSegmentIds]
-  );
-
-  const includedCount = data.segments.length;
-  const excludedCount = excludedSegmentIds.size;
 
   const colors = (() => {
     switch (options.colorTheme) {
@@ -94,27 +70,6 @@ export function BookletTemplate({
         </div>
       </div>
 
-      {/* Barre d'outils d'édition */}
-      {editable && (
-        <div className="mb-6 flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-          <div className="text-sm text-muted-foreground">
-            Segments inclus: <span className="font-medium text-foreground">{includedCount}</span>
-            {" · "}
-            exclus: <span className="font-medium text-foreground">{excludedCount}</span>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              className="flex items-center gap-2"
-              onClick={() => setIsSegmentManagerOpen(true)}
-            >
-              <ListPlus className="h-4 w-4" />
-              Ajouter des segments
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Itinéraire */}
       <div className="page-break mb-12">
         <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
@@ -125,11 +80,6 @@ export function BookletTemplate({
           data={data}
           options={options}
           tripId={tripId}
-          // édition
-          editable={editable}
-          excludedSegmentIds={excludedSegmentIds}
-          onRemoveSegment={onRemoveSegment}
-          allSegments={allSegments}
         />
       </div>
 
@@ -182,14 +132,6 @@ export function BookletTemplate({
         <p>Carnet généré le {format(new Date(), "dd MMMM yyyy à HH:mm", { locale: fr })}</p>
         <p>Travel Booklet Builder - Votre compagnon de voyage numérique</p>
       </div>
-
-      {/* Segment Manager */}
-      {editable && (
-        <SegmentManager
-          excludedSegments={excludedSegments}
-          onAddSegment={onAddSegment}
-        />
-      )}
     </div>
   );
 }

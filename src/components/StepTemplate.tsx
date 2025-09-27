@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, XCircle } from 'lucide-react';
+import { Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { EnrichedStep } from '@/types/enrichedStep';
@@ -13,20 +13,10 @@ interface StepTemplateProps {
     localContext?: string;
   };
   isLoading?: boolean;
-
-  // édition
-  editable?: boolean;
-  onRemoveSegment?: (segmentId: string) => void;
 }
 
-export function StepTemplate({ step, aiContent, isLoading, editable = false, onRemoveSegment }: StepTemplateProps) {
+export function StepTemplate({ step, aiContent, isLoading }: StepTemplateProps) {
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', { locale: fr });
-
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    return format(date, 'HH:mm');
-  };
 
   return (
     <div className="mb-8 p-6 bg-card rounded-lg border">
@@ -93,24 +83,7 @@ export function StepTemplate({ step, aiContent, isLoading, editable = false, onR
                   </div>
 
                   <div className="text-right text-xs text-muted-foreground">
-                    {segment.start_date && (
-                      <div className="flex items-center gap-1 justify-end">
-                        <Clock className="h-3 w-3" />
-                        {formatTime(segment.start_date)}
-                      </div>
-                    )}
-                    <div className="mt-1">{formatSegmentType(segment.segment_type)}</div>
-
-                    {editable && (
-                      <button
-                        onClick={() => onRemoveSegment?.(segment.id)}
-                        className="mt-2 inline-flex items-center gap-1 text-destructive hover:underline"
-                        aria-label={`Supprimer ${segment.title}`}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        <span>Supprimer</span>
-                      </button>
-                    )}
+                    <div>{formatSegmentType(segment.segment_type)}</div>
                   </div>
                 </div>
               ))}
