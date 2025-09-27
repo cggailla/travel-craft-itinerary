@@ -167,7 +167,8 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
       stepsData = JSON.parse(cleanedContent)
     } catch (parseError) {
       console.error('Failed to parse LLM response:', generatedContent)
-      throw new Error(`Failed to parse LLM response: ${parseError.message}`)
+      const errorMessage = parseError instanceof Error ? parseError.message : 'Erreur de parsing inconnue';
+      throw new Error(`Failed to parse LLM response: ${errorMessage}`)
     }
 
     if (!stepsData.travel_steps || !Array.isArray(stepsData.travel_steps)) {
@@ -181,8 +182,8 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
 
     // Simple index-to-UUID resolver
     function resolveSegmentByIndex(segmentIndex: number): string | null {
-      if (!Number.isInteger(segmentIndex) || segmentIndex < 0 || segmentIndex >= segments.length) {
-        console.error(`Invalid segment index: ${segmentIndex} (valid range: 0-${segments.length - 1})`)
+      if (!segments || !Number.isInteger(segmentIndex) || segmentIndex < 0 || segmentIndex >= segments.length) {
+        console.error(`Invalid segment index: ${segmentIndex} (valid range: 0-${segments ? segments.length - 1 : 'N/A'})`)
         return null
       }
       
@@ -276,7 +277,7 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
 
       // Insert step segments relationships
       if (step.logical_sequence && Array.isArray(step.logical_sequence)) {
-        const stepSegments = step.logical_sequence.map(seq => ({
+        const stepSegments = step.logical_sequence.map((seq: any) => ({
           step_id: stepDbId,
           segment_id: seq.segment_id,
           position_in_step: seq.position_in_step,
@@ -312,10 +313,11 @@ RÉPONSE ATTENDUE : JSON uniquement, aucun autre texte.`
 
   } catch (error) {
     console.error('Group travel segments function error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Une erreur inconnue est survenue';
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: errorMessage
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

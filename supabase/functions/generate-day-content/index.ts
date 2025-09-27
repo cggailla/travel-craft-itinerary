@@ -63,14 +63,14 @@ serve(async (req) => {
       const segments = segmentsByDate.get(dateKey) || [];
       
       // Trier les segments par sequence_order pour respecter l'ordre voulu
-      const sortedSegments = segments.sort((a, b) => {
+      const sortedSegments = segments.sort((a: any, b: any) => {
         const aOrder = a.sequence_order ?? 999999;
         const bOrder = b.sequence_order ?? 999999;
         return aOrder - bOrder;
       });
       
       console.log(`Date ${dateKey}: ${sortedSegments.length} segments triés par sequence_order:`, 
-        sortedSegments.map(s => `${s.title} (order: ${s.sequence_order})`));
+        sortedSegments.map((s: any) => `${s.title} (order: ${s.sequence_order})`));
       
       timeline.push({ 
         date: new Date(dateKey), 
@@ -166,10 +166,11 @@ RÈGLES TECHNIQUES CRITIQUES :
 
   } catch (error) {
     console.error('Erreur dans generate-day-content:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Une erreur inconnue est survenue';
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: errorMessage,
         details: 'Voir les logs pour plus d\'informations'
       }),
       {
@@ -186,7 +187,7 @@ function createPrompt(day: any, dayIndex: number): string {
   
   // Fonction helper pour formater les types de segments
   const getSegmentTypeIcon = (type: string) => {
-    const icons = {
+    const icons: { [key: string]: string } = {
       'flight': '✈️',
       'hotel': '🏨', 
       'activity': '🎯',
