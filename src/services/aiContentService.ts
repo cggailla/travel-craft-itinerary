@@ -2,6 +2,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIContentRequest, AIContentResult } from '@/types/enrichedStep';
 
 /**
+ * Consolidate duplicate segments within trip steps
+ */
+async function consolidateStepSegments(tripId: string): Promise<void> {
+  console.log(`Consolidating duplicate segments for trip: ${tripId}`);
+  
+  const { data, error } = await supabase.functions.invoke('consolidate-step-segments', {
+    body: { tripId }
+  });
+
+  if (error) {
+    console.error('Error consolidating segments:', error);
+    throw new Error(`Failed to consolidate segments: ${error.message}`);
+  }
+
+  if (!data?.success) {
+    console.error('Consolidation function returned error:', data?.error);
+    throw new Error(data?.error || 'Unknown consolidation error');
+  }
+
+  console.log(`Consolidation completed: ${data.totalConsolidated} segments merged`);
+}
+
+/**
  * Generate trip summary for context
  */
 async function generateTripSummary(tripId: string): Promise<string> {
@@ -169,7 +192,18 @@ export async function generateAllStepsAIContent(
 ): Promise<AIContentResult[]> {
   const results: AIContentResult[] = [];
 
-  // Step 0: Generate trip summary for context
+  // Step 0: Consolidate duplicate segments first
+  onProgress?.('consolidation', 'generating');
+  try {
+    await consolidateStepSegments(tripId);
+    onProgress?.('consolidation', 'completed');
+  } catch (error) {
+    console.warn('Failed to consolidate segments:', error);
+    onProgress?.('consolidation', 'error', error instanceof Error ? error.message : 'Unknown consolidation error');
+    // Continue with generation even if consolidation fails
+  }
+
+  // Step 1: Generate trip summary for context (with consolidated segments)
   onProgress?.('trip-summary', 'generating');
   const tripSummary = await generateTripSummary(tripId);
   onProgress?.('trip-summary', 'completed');

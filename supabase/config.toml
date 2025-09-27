@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-trip-summary]
 verify_jwt = false
+
+[functions.consolidate-step-segments]
+verify_jwt = false
