@@ -76,54 +76,67 @@ serve(async (req) => {
         continue;
       }
 
-      // Group consecutive duplicate segments
-      const segmentsToKeep: any[] = [];
-      const segmentsToDelete: string[] = [];
-      let currentGroup: any[] = [];
+      // Group duplicate segments globally by key (type|title|provider|address)
+      const segmentsToDeleteSet = new Set<string>();
 
-      for (let i = 0; i < stepSegments.length; i++) {
-        const current = stepSegments[i];
-        const segment = current.travel_segments;
-
-        if (!segment) continue;
-
-        if (currentGroup.length === 0) {
-          currentGroup = [current];
-        } else {
-          const lastInGroup = currentGroup[currentGroup.length - 1];
-          const lastSegment = lastInGroup.travel_segments;
-
-          // Check if segments are duplicates and should be merged
-          if (areSegmentsDuplicate(lastSegment, segment)) {
-            currentGroup.push(current);
-          } else {
-            // Process the current group
-            if (currentGroup.length > 1) {
-              const consolidated = await consolidateSegmentGroup(supabase, currentGroup);
-              if (consolidated.segmentsToDelete.length > 0) {
-                segmentsToDelete.push(...consolidated.segmentsToDelete);
-                totalConsolidated += consolidated.segmentsToDelete.length;
-              }
-            }
-            segmentsToKeep.push(currentGroup[0]);
-            currentGroup = [current];
-          }
-        }
+      const groups = new Map<string, any[]>();
+      for (const item of stepSegments) {
+        const seg = item.travel_segments;
+        if (!seg) continue;
+        const key = buildGroupKey(seg);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(item);
       }
 
-      // Process the last group
-      if (currentGroup.length > 1) {
-        const consolidated = await consolidateSegmentGroup(supabase, currentGroup);
-        if (consolidated.segmentsToDelete.length > 0) {
-          segmentsToDelete.push(...consolidated.segmentsToDelete);
+      for (const [key, groupItems] of groups.entries()) {
+        const sampleSeg = groupItems[0].travel_segments;
+        if (!shouldMergeByType(sampleSeg?.segment_type)) continue;
+        if (groupItems.length <= 1) continue;
+
+        // Sort by date (fallback to position)
+        const sorted = [...groupItems].sort((a, b) => {
+          const aDate = a.travel_segments?.start_date ? new Date(a.travel_segments.start_date).getTime() : Number.MAX_SAFE_INTEGER;
+          const bDate = b.travel_segments?.start_date ? new Date(b.travel_segments.start_date).getTime() : Number.MAX_SAFE_INTEGER;
+          if (aDate !== bDate) return aDate - bDate;
+          return (a.position_in_step ?? 0) - (b.position_in_step ?? 0);
+        });
+
+        // Partition into consecutive-date subgroups and consolidate each subgroup separately
+        let currentSubgroup: any[] = [];
+        for (let i = 0; i < sorted.length; i++) {
+          const current = sorted[i];
+          const currSeg = current.travel_segments;
+          if (!currSeg) continue;
+
+          if (currentSubgroup.length === 0) {
+            currentSubgroup = [current];
+            continue;
+          }
+
+          const prev = currentSubgroup[currentSubgroup.length - 1];
+          const prevSeg = prev.travel_segments;
+          if (areDatesConsecutive(prevSeg?.end_date, currSeg?.start_date)) {
+            currentSubgroup.push(current);
+          } else {
+            if (currentSubgroup.length > 1) {
+              const consolidated = await consolidateSegmentGroup(supabase, currentSubgroup);
+              consolidated.segmentsToDelete.forEach(id => segmentsToDeleteSet.add(id));
+              totalConsolidated += consolidated.segmentsToDelete.length;
+            }
+            currentSubgroup = [current];
+          }
+        }
+        // Flush last subgroup
+        if (currentSubgroup.length > 1) {
+          const consolidated = await consolidateSegmentGroup(supabase, currentSubgroup);
+          consolidated.segmentsToDelete.forEach(id => segmentsToDeleteSet.add(id));
           totalConsolidated += consolidated.segmentsToDelete.length;
         }
       }
-      if (currentGroup.length > 0) {
-        segmentsToKeep.push(currentGroup[0]);
-      }
 
-      // Delete duplicate segments from travel_step_segments
+      const segmentsToDelete = Array.from(segmentsToDeleteSet);
+
+      // Delete duplicate segments from travel_step_segments and reorder
       if (segmentsToDelete.length > 0) {
         const { error: deleteError } = await supabase
           .from('travel_step_segments')
@@ -202,6 +215,19 @@ function areDatesConsecutive(endDate: string, startDate: string): boolean {
   return diffInDays >= 0 && diffInDays <= 2;
 }
 
+function normalizeText(val: any): string {
+  return (val ?? '').toString().trim().toLowerCase();
+}
+
+function buildGroupKey(seg: any): string {
+  return [
+    normalizeText(seg?.segment_type),
+    normalizeText(seg?.title),
+    normalizeText(seg?.provider),
+    normalizeText(seg?.address)
+  ].join('|');
+}
+
 async function consolidateSegmentGroup(supabase: any, group: any[]): Promise<{ segmentsToDelete: string[] }> {
   if (group.length <= 1) return { segmentsToDelete: [] };
 
@@ -259,7 +285,19 @@ async function reorderStepSegments(supabase: any, stepId: string): Promise<void>
     return;
   }
 
-  // Update positions to be sequential (1, 2, 3, ...)
+  // Phase 1: move to a safe temporary range to avoid unique conflicts
+  for (let i = 0; i < remainingSegments.length; i++) {
+    const { error: tmpError } = await supabase
+      .from('travel_step_segments')
+      .update({ position_in_step: 1000 + i + 1 })
+      .eq('id', remainingSegments[i].id);
+    if (tmpError) {
+      console.error('Error setting temporary position:', tmpError);
+      // Continue to try updating others
+    }
+  }
+
+  // Phase 2: normalize to 1..N
   for (let i = 0; i < remainingSegments.length; i++) {
     const { error: updateError } = await supabase
       .from('travel_step_segments')
