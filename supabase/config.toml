@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.validate-segments]
 verify_jwt = false
+
+[functions.generate-trip-summary]
+verify_jwt = false

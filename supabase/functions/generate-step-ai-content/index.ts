@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     console.log('Generate step AI content function called');
     
-    const { stepId, stepTitle, primaryLocation, sections } = await req.json();
+    const { stepId, stepTitle, primaryLocation, sections, tripSummary } = await req.json();
     
     if (!stepId || !stepTitle || !sections) {
       return new Response(
@@ -54,7 +54,7 @@ serve(async (req) => {
     }).join('\n');
 
     const prompt = `Génère du contenu descriptif pour cette étape de voyage en français.
-
+${tripSummary ? `\nCONTEXTE DU VOYAGE COMPLET:\n${tripSummary}\n` : ''}
 ÉTAPE: ${stepTitle}
 LIEU: ${primaryLocation}
 SECTIONS:
@@ -68,11 +68,11 @@ Réponds uniquement en JSON avec cette structure exacte:
 }
 
 CONSIGNES:
-- Overview: Description engageante et informative de l'étape
+- Overview: Description engageante et informative de l'étape${tripSummary ? ', en tenant compte du contexte du voyage complet' : ''}
 - Tips: 2-4 conseils pratiques et utiles pour cette étape
 - LocalContext: Contexte culturel/historique uniquement si pertinent
 - Ton: Informatif mais chaleureux, comme un guide de voyage
-- Longueur: Entre 1 et 2 paragraphes`;
+- Longueur: Entre 1 et 2 paragraphes${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres étapes si pertinent' : ''}`;
 
     console.log('Calling OpenAI for AI content generation...');
 

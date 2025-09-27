@@ -2,6 +2,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIContentRequest, AIContentResult } from '@/types/enrichedStep';
 
 /**
+ * Generate trip summary for context
+ */
+async function generateTripSummary(tripId: string): Promise<string> {
+  console.log(`Generating trip summary for trip: ${tripId}`);
+  
+  const { data, error } = await supabase.functions.invoke('generate-trip-summary', {
+    body: { tripId }
+  });
+
+  if (error) {
+    console.error('Error calling generate-trip-summary function:', error);
+    return '';
+  }
+
+  if (!data?.success) {
+    console.error('Generate-trip-summary function returned error:', data?.error);
+    return '';
+  }
+
+  return data.tripSummary || '';
+}
+
+/**
  * Generate AI content for a step using targeted prompts
  */
 export async function generateStepAIContent(request: AIContentRequest): Promise<AIContentResult> {
@@ -139,15 +162,21 @@ async function generateStepAIContentWithRetry(
 /**
  * Generate AI content for all steps
  */
-
 export async function generateAllStepsAIContent(
   requests: AIContentRequest[],
+  tripId: string,
   onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string, result?: AIContentResult) => void
 ): Promise<AIContentResult[]> {
   const results: AIContentResult[] = [];
 
+  // Step 0: Generate trip summary for context
+  onProgress?.('trip-summary', 'generating');
+  const tripSummary = await generateTripSummary(tripId);
+  onProgress?.('trip-summary', 'completed');
+
+  // Process each step with trip summary context
   for (let i = 0; i < requests.length; i++) {
-    const request = requests[i];
+    const request = { ...requests[i], tripSummary };
     console.log(`Processing AI content for step ${i + 1}/${requests.length}: ${request.stepId}`);
     
     const result = await generateStepAIContentWithRetry(request, 3, onProgress);

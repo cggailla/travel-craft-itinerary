@@ -46,6 +46,7 @@ export interface AIContentRequest {
   stepTitle: string;
   primaryLocation: string;
   sections: StepSection[];
+  tripSummary?: string;
 }
 
 export interface AIContentResult {

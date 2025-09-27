@@ -82,22 +82,41 @@ export function DynamicItinerary({
       setAiContents(new Map());
 
       const aiRequests = steps.map(createAIContentRequest);
-      const results = await generateAllStepsAIContent(aiRequests, (stepId, status, _error, result) => {
-        const stepIndex = steps.findIndex(s => s.stepId === stepId);
-        setCurrentStep(stepIndex);
-        setProgress(50 + ((stepIndex + 1) / steps.length * 50));
-
-        if (status === 'generating') {
-          setStepStatus(`Génération du contenu pour l'étape ${stepIndex + 1}/${steps.length}...`);
-        } else if (status === 'completed' && result) {
-          setStepStatus(`Contenu généré pour l'étape ${stepIndex + 1}`);
-          setAiContents(prev => {
-            const m = new Map(prev);
-            m.set(stepId, result);
-            return m;
-          });
+      const results = await generateAllStepsAIContent(
+        aiRequests, 
+        tripId,
+        (stepId, status, error, result) => {
+          console.log(`Step ${stepId} status: ${status}`, error || result);
+          setProgress(prev => prev + 1);
+          
+          if (stepId === 'trip-summary') {
+            if (status === 'generating') {
+              setCurrentStep(-1); // Special index for trip summary
+              setStepStatus('Génération du résumé du voyage...');
+            } else if (status === 'completed') {
+              setStepStatus('Résumé du voyage généré');
+            }
+            return;
+          }
+          
+          const stepIndex = steps.findIndex(s => s.stepId === stepId);
+          setCurrentStep(stepIndex);
+          setProgress(50 + ((stepIndex + 1) / steps.length * 50));
+          
+          if (status === 'generating') {
+            setStepStatus(`Génération du contenu pour l'étape ${stepIndex + 1}/${steps.length}...`);
+          } else if (status === 'completed' && result) {
+            setStepStatus(`Contenu généré pour l'étape ${stepIndex + 1}`);
+            setAiContents(prev => {
+              const m = new Map(prev);
+              m.set(stepId, result);
+              return m;
+            });
+          } else if (status === 'error') {
+            console.error(`Error generating content for step ${stepId}:`, error);
+          }
         }
-      });
+      );
 
       const aiMap = new Map<string, AIContentResult>();
       results.forEach(r => aiMap.set(r.stepId, r));
