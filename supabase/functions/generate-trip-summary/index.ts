@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting trip summary generation');
+    console.log('Starting trip pre-analysis generation');
     
     const { tripId } = await req.json();
 
@@ -73,28 +73,31 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Found ${steps.length} travel steps, generating summary`);
+    console.log(`Found ${steps.length} travel steps, building timeline data`);
 
-    // Prepare step information for AI
+    // Prepare step information for AI with chronological timeline
     const stepsInfo = steps.map((step, index) => {
-      const accommodations = step.travel_step_segments
-        .filter((tss: any) => tss.role === 'accommodation')
-        .map((tss: any) => tss.travel_segments.title)
-        .join(', ');
-      
-      const activities = step.travel_step_segments
-        .filter((tss: any) => tss.role === 'activities')
-        .map((tss: any) => tss.travel_segments.title)
-        .join(', ');
-
-      const transports = step.travel_step_segments
-        .filter((tss: any) => tss.role === 'transport')
-        .map((tss: any) => tss.travel_segments.title)
-        .join(', ');
-
       const startDate = new Date(step.start_date).toLocaleDateString('fr-FR');
       const endDate = new Date(step.end_date).toLocaleDateString('fr-FR');
-      const duration = Math.ceil((new Date(step.end_date).getTime() - new Date(step.start_date).getTime()) / (1000 * 60 * 60 * 24));
+      const duration = Math.ceil(
+        (new Date(step.end_date).getTime() - new Date(step.start_date).getTime()) 
+        / (1000 * 60 * 60 * 24)
+      );
+
+      // Keep timeline of segments ordered by position_in_step
+      const timeline = step.travel_step_segments
+        .sort((a: any, b: any) => a.position_in_step - b.position_in_step)
+        .map((tss: any) => {
+          const seg = tss.travel_segments;
+          return {
+            type: seg.segment_type,
+            title: seg.title,
+            description: seg.description,
+            start_date: seg.start_date,
+            end_date: seg.end_date,
+            role: tss.role
+          };
+        });
 
       return {
         position: index + 1,
@@ -104,9 +107,7 @@ serve(async (req) => {
         startDate,
         endDate,
         duration,
-        accommodations,
-        activities,
-        transports
+        timeline
       };
     });
 
@@ -124,20 +125,18 @@ serve(async (req) => {
     }
 
     // Create AI prompt
-    const prompt = `Voici les étapes du voyage avec leurs informations détaillées :
+    const prompt = `Voici les étapes du voyage avec leurs informations détaillées et chronologiques :
 
 ${stepsInfo.map(step => 
-  `Étape ${step.position} : ${step.stepTitle} (${step.primaryLocation})
-  Dates : ${step.startDate} → ${step.endDate} (${step.duration} jour${step.duration > 1 ? 's' : ''})
-  Transport : ${step.transports || 'Non spécifié'}
-  Hébergement : ${step.accommodations || 'Non spécifié'}
-  Activités : ${step.activities || 'Non spécifié'}`
+  `Étape ${step.position} : ${step.stepTitle} (${step.startDate} → ${step.endDate}, ${step.duration} jour${step.duration > 1 ? 's' : ''})
+Timeline :
+${step.timeline.map(seg => `- ${seg.type} : ${seg.title}${seg.description ? " (" + seg.description + ")" : ""}`).join('\n')}`
 ).join('\n\n')}
 
 Crée un résumé chronologique avec le format suivant :
 - Titre de chaque étape : "Étape X – [Lieu] (dates au format JJ/MM)"
-- Sous chaque titre : descriptif factuel court basé uniquement sur les informations disponibles
-- Ton neutre et factuel : indiquer l'hôtel, les nuits, les activités, transferts
+- Sous chaque titre : descriptif factuel court basé sur la chronologie fournie (transport, transferts, hôtels, activités)
+- Ton neutre et factuel
 - Ne pas inventer d'informations touristiques`;
 
     console.log('Calling OpenAI API');
@@ -154,7 +153,7 @@ Crée un résumé chronologique avec le format suivant :
         messages: [
           {
             role: 'system',
-            content: 'Tu es un assistant spécialisé dans la préparation de carnets de voyage. Ton rôle est de transformer une structure JSON contenant des étapes et leurs segments en un résumé chronologique simple, factuel et lisible. Règles : Le résumé doit suivre l\'ordre chronologique des étapes. Chaque étape doit avoir un titre clair au format : "Étape X – [Lieu] (dates)". Sous chaque titre, écrire un court descriptif factuel basé uniquement sur les informations disponibles dans les segments. Le ton doit être neutre et factuel : indiquer l\'hôtel, les nuits prévues, les éventuelles activités, transferts ou vols. Ne pas inventer d\'informations touristiques. L\'objectif est de donner un contexte clair et compact qui servira ensuite à un générateur pour écrire du texte enrichi.'
+            content: 'Tu es un assistant spécialisé dans la préparation de carnets de voyage. Ton rôle est de transformer des étapes de voyage (avec segments chronologiques) en un résumé lisible et factuel. Règles : Le résumé doit suivre l\'ordre chronologique des étapes. Chaque étape doit avoir un titre clair au format : "Étape X – [Lieu] (dates)". Sous chaque titre, écrire un court descriptif factuel basé sur la chronologie (exemple : vol, puis transfert, puis check-in hôtel). Le ton doit être neutre et factuel. Ne pas inventer d\'informations touristiques. L\'objectif est de donner un contexte clair et compact qui servira ensuite à un générateur pour écrire du texte enrichi.'
           },
           {
             role: 'user',
@@ -185,7 +184,8 @@ Crée un résumé chronologique avec le format suivant :
 
     return new Response(JSON.stringify({
       success: true,
-      tripSummary
+      tripSummary,
+      stepsInfo // <-- utile si tu veux debugger ou inspecter
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
