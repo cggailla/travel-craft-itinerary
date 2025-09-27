@@ -36,9 +36,16 @@ export function StepTemplate({
 
   const endDate = calculateEndDate();
   const isSingleDay = step.startDate.toDateString() === endDate.toDateString();
-  return <div className="mb-8 p-6 bg-card rounded-lg border">
+  return <div className="mb-8 p-6 bg-card rounded-lg border relative">
+      {/* Date in top right corner */}
+      <div className="absolute top-6 right-6 text-base font-medium text-foreground">
+        {formatDate(step.startDate)}
+        {!isSingleDay && <span className="text-muted-foreground mx-2">→</span>}
+        {!isSingleDay && formatDate(endDate)}
+      </div>
+
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 pr-32">
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-semibold text-foreground">{step.stepTitle}</h2>
@@ -49,11 +56,6 @@ export function StepTemplate({
             <MapPin className="h-4 w-4" />
             {step.primaryLocation}
           </span>
-          <div className="text-base font-medium text-foreground">
-            {formatDate(step.startDate)}
-            {!isSingleDay && <span className="text-muted-foreground mx-2">→</span>}
-            {!isSingleDay && formatDate(endDate)}
-          </div>
         </div>
       </div>
 
