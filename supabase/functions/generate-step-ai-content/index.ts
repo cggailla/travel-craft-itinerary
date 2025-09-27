@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -46,7 +47,7 @@ serve(async (req) => {
 
     console.log(`Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
 
-    // Format sections for the prompt
+    // Create structured prompt for targeted content generation
     const sectionsInfo = sections.map((section: any) => {
       const segmentTitles = section.segments.map((s: any) => s.title);
       return `${section.title} (${section.role}): ${segmentTitles.join(', ')}`;
@@ -61,10 +62,17 @@ ${sectionsInfo}
 
 Réponds uniquement en JSON avec cette structure exacte:
 {
-  "overview": "Description générale de cette étape en 2-3 phrases (100-150 mots max)",
+  "overview": "Description générale de cette étape en 1 paragraphe",
   "tips": ["Conseil pratique 1", "Conseil pratique 2", "Conseil pratique 3"],
   "localContext": "Informations culturelles/historiques intéressantes sur le lieu (80-120 mots max, optionnel)"
-}`;
+}
+
+CONSIGNES:
+- Overview: Description engageante et informative de l'étape${tripSummary ? ', en tenant compte du contexte du voyage complet' : ''}
+- Tips: 2-4 conseils pratiques et utiles pour cette étape
+- LocalContext: Contexte culturel/historique uniquement si pertinent
+- Ton: Informatif mais chaleureux, comme un guide de voyage
+${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres étapes si pertinent' : ''}`;
 
     console.log('Calling OpenAI for AI content generation...');
 
@@ -79,7 +87,7 @@ Réponds uniquement en JSON avec cette structure exacte:
         messages: [
           {
             role: 'system',
-            content: 'Tu es un expert en voyage qui génère du contenu descriptif concis et utile pour des carnets de voyage. Réponds uniquement en JSON valide, sans balises Markdown ni texte supplémentaire.'
+            content: 'Tu es un expert en voyage qui génère du contenu descriptif concis et utile pour des carnets de voyage. Réponds uniquement en JSON valide.'
           },
           {
             role: 'user',
@@ -109,20 +117,15 @@ Réponds uniquement en JSON avec cette structure exacte:
     const openaiData = await response.json();
     console.log('OpenAI response received');
 
-    let content = openaiData.choices[0].message.content;
-
-    // 🛠️ Nettoyage du JSON pour éviter les erreurs de parsing
-    content = content
-      .replace(/```json/g, '')
-      .replace(/```/g, '')
-      .trim();
-
+    const content = openaiData.choices[0].message.content;
+    
+    // Parse JSON response
     let aiContent;
     try {
       aiContent = JSON.parse(content);
     } catch (parseError) {
       console.error('Error parsing OpenAI JSON response:', parseError);
-      console.error('Raw content after cleanup:', content);
+      console.error('Raw content:', content);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -135,6 +138,7 @@ Réponds uniquement en JSON avec cette structure exacte:
       );
     }
 
+    // Validate response structure
     if (!aiContent.overview || !Array.isArray(aiContent.tips)) {
       console.error('Invalid AI response structure:', aiContent);
       return new Response(
