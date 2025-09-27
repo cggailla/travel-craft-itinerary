@@ -97,3 +97,62 @@ export async function hasManualSteps(tripId: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function validateManualSteps(tripId: string) {
+  try {
+    // Récupérer tous les segments associés aux étapes manuelles
+    const { data: steps, error: stepsError } = await supabase
+      .from('travel_steps')
+      .select(`
+        id,
+        travel_step_segments (
+          travel_segments (
+            id
+          )
+        )
+      `)
+      .eq('trip_id', tripId);
+
+    if (stepsError) throw stepsError;
+
+    // Extraire tous les IDs des segments
+    const segmentIds: string[] = [];
+    steps?.forEach(step => {
+      step.travel_step_segments?.forEach((tss: any) => {
+        if (tss.travel_segments?.id) {
+          segmentIds.push(tss.travel_segments.id);
+        }
+      });
+    });
+
+    // Valider tous les segments associés aux étapes
+    if (segmentIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from('travel_segments')
+        .update({ validated: true })
+        .in('id', segmentIds);
+
+      if (updateError) throw updateError;
+    }
+
+    // Marquer le trip comme validé
+    const { error: tripError } = await supabase
+      .from('trips')
+      .update({ status: 'validated' })
+      .eq('id', tripId);
+
+    if (tripError) throw tripError;
+
+    return {
+      success: true,
+      validatedSegments: segmentIds.length
+    };
+  } catch (error) {
+    console.error('Error validating manual steps:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      validatedSegments: 0
+    };
+  }
+}

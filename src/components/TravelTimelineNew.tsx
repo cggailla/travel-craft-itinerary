@@ -36,6 +36,7 @@ export default function TravelTimelineNew({
   const [showManualGrouper, setShowManualGrouper] = useState(false);
   const [hasExistingSteps, setHasExistingSteps] = useState(false);
   const [manualSteps, setManualSteps] = useState<any[]>([]);
+  const [validatingSteps, setValidatingSteps] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -126,6 +127,36 @@ export default function TravelTimelineNew({
       });
     } finally {
       setValidating(false);
+    }
+  };
+
+  const handleValidateAndGenerate = async () => {
+    if (!tripId) return;
+
+    try {
+      setValidatingSteps(true);
+      const { validateManualSteps } = await import('@/services/manualStepsService');
+      const result = await validateManualSteps(tripId);
+      
+      if (result.success) {
+        toast({
+          title: "Validation réussie",
+          description: `${result.validatedSegments} segments validés`
+        });
+        // Déclencher la génération du carnet
+        onValidated?.();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      toast({
+        title: "Erreur de validation",
+        description: "Impossible de valider les étapes",
+        variant: "destructive"
+      });
+    } finally {
+      setValidatingSteps(false);
     }
   };
 
@@ -261,11 +292,12 @@ export default function TravelTimelineNew({
                 </Button>
                 {hasExistingSteps && !showManualGrouper && (
                   <Button 
-                    onClick={() => onValidated?.()} 
+                    onClick={handleValidateAndGenerate}
+                    disabled={validatingSteps}
                     size="sm" 
                     className="bg-secondary hover:bg-secondary-hover"
                   >
-                    Générer le carnet
+                    {validatingSteps ? 'Validation...' : 'Valider et générer le carnet'}
                   </Button>
                 )}
                 {!showManualGrouper && !hasExistingSteps && unvalidatedCount > 0 && (
