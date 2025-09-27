@@ -135,78 +135,72 @@ export function StepTemplate({
                           </div>
                         )}
 
-                        {/* Hotel Layout */}
+                        {/* Hotel Layout - Previous UI */}
                         {segment.segment_type === 'hotel' && (
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                              <span className="text-white text-xl">🏨</span>
-                            </div>
+                          <div className="flex items-start gap-3">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-base text-foreground">{segment.title}</h4>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
                                 {segment.reference_number && (
-                                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                  <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
                                     Rés. {segment.reference_number}
                                   </span>
                                 )}
                               </div>
-                              {segment.provider && <p className="text-sm text-muted-foreground mb-1 font-medium">{segment.provider}</p>}
-                              {segment.description && <p className="text-sm text-muted-foreground mb-2">{segment.description}</p>}
+                              {segment.provider && <p className="text-xs text-muted-foreground mb-1">🏨 {segment.provider}</p>}
+                              {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
                               {segment.address && (
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
                                   {segment.address}
                                 </p>
                               )}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right text-xs text-muted-foreground">
                               {segmentDateStr && (
-                                <div className="flex items-center gap-2 justify-end mb-2">
-                                  <Calendar className="h-4 w-4 text-green-600" />
-                                  <span className="text-sm font-medium text-foreground">{segmentDateStr}</span>
-                                </div>
+                                <p className="flex items-center gap-1 justify-end mb-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {segmentDateStr}
+                                </p>
                               )}
-                              <span className="inline-block px-2 py-1 bg-green-50 text-green-700 rounded text-xs">
-                                {formatSegmentType(segment.segment_type)}
-                              </span>
+                            </div>
+                            <div className="absolute bottom-2 right-2 text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                              {formatSegmentType(segment.segment_type)}
                             </div>
                           </div>
                         )}
 
-                        {/* Activity Layout */}
+                        {/* Activity Layout - Previous UI */}
                         {segment.segment_type === 'activity' && (
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                              <span className="text-white text-xl">🎯</span>
-                            </div>
+                          <div className="flex items-start gap-3">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold text-base text-foreground">{segment.title}</h4>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
                                 {segment.reference_number && (
-                                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                  <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">
                                     {segment.reference_number}
                                   </span>
                                 )}
                               </div>
-                              {segment.provider && <p className="text-sm text-muted-foreground mb-1 font-medium">{segment.provider}</p>}
-                              {segment.description && <p className="text-sm text-muted-foreground mb-2">{segment.description}</p>}
+                              {segment.provider && <p className="text-xs text-muted-foreground mb-1">🎯 {segment.provider}</p>}
+                              {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
                               {segment.address && (
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
                                   {segment.address}
                                 </p>
                               )}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right text-xs text-muted-foreground">
                               {segmentDateStr && (
-                                <div className="flex items-center gap-2 justify-end mb-2">
-                                  <Calendar className="h-4 w-4 text-purple-600" />
-                                  <span className="text-sm font-medium text-foreground">{segmentDateStr}</span>
-                                </div>
+                                <p className="flex items-center gap-1 justify-end mb-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {segmentDateStr}
+                                </p>
                               )}
-                              <span className="inline-block px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs">
-                                {formatSegmentType(segment.segment_type)}
-                              </span>
+                            </div>
+                            <div className="absolute bottom-2 right-2 text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                              {formatSegmentType(segment.segment_type)}
                             </div>
                           </div>
                         )}
