@@ -69,7 +69,27 @@ export function StepTemplate({
             
 
             <div className="space-y-3">
-              {section.segments.map(segment => <div key={segment.id} className="flex items-start gap-3 p-3 bg-background border rounded-lg">
+              {section.segments.map(segment => {
+                const hasStartDate = segment.start_date;
+                const hasEndDate = segment.end_date;
+                const startDate = hasStartDate ? new Date(segment.start_date) : null;
+                const endDate = hasEndDate ? new Date(segment.end_date) : null;
+                
+                const formatSegmentDate = () => {
+                  if (!startDate) return null;
+                  
+                  if (!endDate || startDate.toDateString() === endDate.toDateString()) {
+                    // Single day or no end date
+                    return format(startDate, 'd MMM yyyy', { locale: fr });
+                  } else {
+                    // Multiple days
+                    return `${format(startDate, 'd MMM', { locale: fr })} → ${format(endDate, 'd MMM yyyy', { locale: fr })}`;
+                  }
+                };
+
+                const segmentDateStr = formatSegmentDate();
+
+                return <div key={segment.id} className="flex items-start gap-3 p-3 bg-background border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
@@ -79,6 +99,11 @@ export function StepTemplate({
                     </div>
 
                     {segment.provider && <p className="text-xs text-muted-foreground mb-1">{segment.provider}</p>}
+
+                    {segmentDateStr && <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {segmentDateStr}
+                      </p>}
 
                     {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
 
@@ -91,7 +116,8 @@ export function StepTemplate({
                   <div className="text-right text-xs text-muted-foreground">
                     <div>{formatSegmentType(segment.segment_type)}</div>
                   </div>
-                </div>)}
+                </div>;
+              })}
             </div>
           </div>;
     })}
