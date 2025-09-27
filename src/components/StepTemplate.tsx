@@ -49,10 +49,11 @@ export function StepTemplate({
             <MapPin className="h-4 w-4" />
             {step.primaryLocation}
           </span>
-          <span>
+          <div className="text-base font-medium text-foreground">
             {formatDate(step.startDate)}
-            {!isSingleDay && <> → {formatDate(endDate)}</>}
-          </span>
+            {!isSingleDay && <span className="text-muted-foreground mx-2">→</span>}
+            {!isSingleDay && formatDate(endDate)}
+          </div>
         </div>
       </div>
 
