@@ -143,8 +143,8 @@ export default function TravelTimelineNew({
           title: "Validation réussie",
           description: `${result.validatedSegments} segments validés`
         });
-        // Déclencher la génération du carnet
-        onValidated?.();
+        // Rediriger vers la génération du carnet
+        window.location.href = `/booklet?tripId=${tripId}`;
       } else {
         throw new Error(result.error);
       }

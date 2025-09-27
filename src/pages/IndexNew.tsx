@@ -357,35 +357,6 @@ export default function IndexNew() {
                 onValidated={handleValidated}
                 tripId={tripId}
               />
-
-              {currentPhase === 'validated' && (
-                <Card className="border-secondary bg-secondary/5">
-                  <CardContent className="p-6 text-center">
-                    <CheckCircle className="h-16 w-16 text-secondary mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-foreground mb-2">
-                      Carnet de voyage validé !
-                    </h3>
-                     <p className="text-muted-foreground mb-6">
-                       Votre itinéraire est maintenant organisé et prêt à être utilisé.
-                     </p>
-                     <div className="flex flex-wrap gap-4">
-                       <Link to={`/booklet?tripId=${tripId}`}>
-                         <Button className="flex items-center">
-                           <FileText className="h-4 w-4 mr-2" />
-                           Générer le carnet
-                         </Button>
-                       </Link>
-                       <Button
-                         onClick={resetApp}
-                         variant="outline"
-                       >
-                         <RefreshCw className="h-4 w-4 mr-2" />
-                         Nouveau carnet
-                       </Button>
-                     </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           )}
         </div>
