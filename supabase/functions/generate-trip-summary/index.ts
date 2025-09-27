@@ -130,7 +130,7 @@ serve(async (req) => {
 ${stepsInfo.map(step => 
   `Étape ${step.position} : ${step.stepTitle} (${step.startDate} → ${step.endDate}, ${step.duration} jour${step.duration > 1 ? 's' : ''})
 Timeline :
-${step.timeline.map(seg => `- ${seg.type} : ${seg.title}${seg.description ? " (" + seg.description + ")" : ""}`).join('\n')}`
+${step.timeline.map((seg: any) => `- ${seg.type} : ${seg.title}${seg.description ? " (" + seg.description + ")" : ""}`).join('\n')}`
 ).join('\n\n')}
 
 Crée un résumé chronologique avec le format suivant :

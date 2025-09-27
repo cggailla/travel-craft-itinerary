@@ -159,7 +159,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Extract text function error:', err);
 
     // Best-effort job update without re-reading the request
@@ -174,7 +174,7 @@ serve(async (req) => {
           .from('document_processing_jobs')
           .update({
             status: 'failed',
-            error_message: err?.message ? String(err.message) : 'Unexpected error',
+            error_message: err instanceof Error ? err.message : 'Unexpected error',
             updated_at: new Date().toISOString(),
           })
           .eq('document_id', document_id);
@@ -185,7 +185,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: err?.message ?? 'Unexpected error',
+      error: err instanceof Error ? err.message : 'Unexpected error',
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

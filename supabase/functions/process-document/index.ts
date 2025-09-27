@@ -400,7 +400,7 @@ if (!extractedContent || extractedContent.trim().length === 0) {
         throw new Error('No travel_segments array found in parsed response');
         
       } catch (parseError) {
-        console.log('Direct JSON parsing failed, attempting repair...', (parseError as Error).message.substring(0, 100));
+        console.log('Direct JSON parsing failed, attempting repair...', parseError instanceof Error ? parseError.message.substring(0, 100) : 'Unknown error');
         
         // JSON repair for truncated responses
         try {
