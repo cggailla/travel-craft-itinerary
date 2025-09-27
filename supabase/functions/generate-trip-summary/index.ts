@@ -124,20 +124,21 @@ serve(async (req) => {
     }
 
     // Create AI prompt
-    const prompt = `Crée un résumé factuel et chronologique de ce voyage en une phrase par étape, format concis et descriptif.
+    const prompt = `Voici les étapes du voyage avec leurs informations détaillées :
 
-Étapes du voyage:
 ${stepsInfo.map(step => 
-  `${step.position}. ${step.stepTitle} (${step.primaryLocation}) - ${step.duration}j
-  ${step.startDate} → ${step.endDate}
-  Transport: ${step.transports || 'Non spécifié'}
-  Hébergement: ${step.accommodations || 'Non spécifié'}
-  Activités: ${step.activities || 'Non spécifié'}`
+  `Étape ${step.position} : ${step.stepTitle} (${step.primaryLocation})
+  Dates : ${step.startDate} → ${step.endDate} (${step.duration} jour${step.duration > 1 ? 's' : ''})
+  Transport : ${step.transports || 'Non spécifié'}
+  Hébergement : ${step.accommodations || 'Non spécifié'}
+  Activités : ${step.activities || 'Non spécifié'}`
 ).join('\n\n')}
 
-Format souhaité: "Étape 1: [description factuelle] → Étape 2: [description factuelle] → ..." 
-
-Reste factuel, concis et chronologique. Maximum 2-3 lignes par étape.`;
+Crée un résumé chronologique avec le format suivant :
+- Titre de chaque étape : "Étape X – [Lieu] (dates au format JJ/MM)"
+- Sous chaque titre : descriptif factuel court basé uniquement sur les informations disponibles
+- Ton neutre et factuel : indiquer l'hôtel, les nuits, les activités, transferts
+- Ne pas inventer d'informations touristiques`;
 
     console.log('Calling OpenAI API');
 
@@ -153,14 +154,14 @@ Reste factuel, concis et chronologique. Maximum 2-3 lignes par étape.`;
         messages: [
           {
             role: 'system',
-            content: 'Tu es un assistant spécialisé dans la création de résumés factuels de voyages. Tu dois créer des résumés chronologiques concis et informatifs.'
+            content: 'Tu es un assistant spécialisé dans la préparation de carnets de voyage. Ton rôle est de transformer une structure JSON contenant des étapes et leurs segments en un résumé chronologique simple, factuel et lisible. Règles : Le résumé doit suivre l\'ordre chronologique des étapes. Chaque étape doit avoir un titre clair au format : "Étape X – [Lieu] (dates)". Sous chaque titre, écrire un court descriptif factuel basé uniquement sur les informations disponibles dans les segments. Le ton doit être neutre et factuel : indiquer l\'hôtel, les nuits prévues, les éventuelles activités, transferts ou vols. Ne pas inventer d\'informations touristiques. L\'objectif est de donner un contexte clair et compact qui servira ensuite à un générateur pour écrire du texte enrichi.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 1500,
         temperature: 0.3
       }),
     });
