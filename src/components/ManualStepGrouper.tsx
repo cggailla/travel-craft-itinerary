@@ -65,7 +65,7 @@ export default function ManualStepGrouper({
     setCurrentStepTitle(newStep.title);
   };
 
-  const updateStepDates = (step: ManualStep) => {
+  const updateStepDates = (step: ManualStep, allSteps: ManualStep[], stepIndex: number) => {
     if (step.segments.length === 0) {
       return { ...step, startDate: undefined, endDate: undefined };
     }
@@ -76,10 +76,40 @@ export default function ManualStepGrouper({
       .map(d => new Date(d!))
       .sort((a, b) => a.getTime() - b.getTime());
 
+    const startDate = dates.length > 0 ? dates[0] : undefined;
+    
+    // Calculer la date de fin basée sur la prochaine étape
+    let endDate = startDate;
+    if (startDate && stepIndex < allSteps.length - 1) {
+      // Chercher la prochaine étape avec une date
+      for (let i = stepIndex + 1; i < allSteps.length; i++) {
+        const nextStep = allSteps[i];
+        const nextStepDates = nextStep.segments
+          .map(s => s.start_date)
+          .filter(d => d)
+          .map(d => new Date(d!))
+          .sort((a, b) => a.getTime() - b.getTime());
+        
+        if (nextStepDates.length > 0) {
+          const nextStepStart = nextStepDates[0];
+          const dayBefore = new Date(nextStepStart);
+          dayBefore.setDate(dayBefore.getDate() - 1);
+          
+          // Si c'est moins d'un jour, garder la date de début
+          if (dayBefore.getTime() <= startDate.getTime()) {
+            endDate = startDate;
+          } else {
+            endDate = dayBefore;
+          }
+          break;
+        }
+      }
+    }
+
     return {
       ...step,
-      startDate: dates.length > 0 ? dates[0] : undefined,
-      endDate: dates.length > 0 ? dates[dates.length - 1] : undefined,
+      startDate,
+      endDate,
     };
   };
 
@@ -92,20 +122,20 @@ export default function ManualStepGrouper({
           ...step,
           segments: [...step.segments, segment]
         };
-        return updateStepDates(updatedStep);
+        return updateStepDates(updatedStep, prev, index);
       }
       return step;
     }));
   };
 
   const removeSegmentFromStep = (stepId: string, segmentId: string) => {
-    setManualSteps(prev => prev.map(step => {
+    setManualSteps(prev => prev.map((step, index) => {
       if (step.id === stepId) {
         const updatedStep = {
           ...step,
           segments: step.segments.filter(s => s.id !== segmentId)
         };
-        return updateStepDates(updatedStep);
+        return updateStepDates(updatedStep, prev, index);
       }
       return step;
     }));
@@ -204,20 +234,20 @@ export default function ManualStepGrouper({
   return (
     <div className="grid grid-cols-2 gap-6 h-[80vh]">
       {/* Segments disponibles - Colonne gauche */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-4">
+      <Card className="overflow-hidden flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
             <span>Segments disponibles</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-y-auto h-full space-y-4">
-          {/* Segments sans date */}
+        <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
+          {/* Section Informations générales */}
           {undatedSegments.length > 0 && (
             <div>
               <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center">
                 <FileText className="h-4 w-4 mr-1" />
-                Sans date ({undatedSegments.length})
+                Informations générales ({undatedSegments.length})
               </h4>
               <div className="space-y-2">
                 {undatedSegments.map(segment => (
@@ -292,8 +322,8 @@ export default function ManualStepGrouper({
       </Card>
 
       {/* Étapes créées - Colonne droite */}
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-4">
+      <Card className="overflow-hidden flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
               <Activity className="h-5 w-5" />
@@ -324,7 +354,7 @@ export default function ManualStepGrouper({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="overflow-y-auto h-full space-y-4">
+        <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
           {manualSteps.map((step, stepIndex) => (
             <Card key={step.id} className={`${stepIndex === manualSteps.length - 1 ? 'border-primary' : 'border-border'}`}>
               <CardHeader className="pb-2">
