@@ -89,32 +89,36 @@ export function StepTemplate({
 
                 const segmentDateStr = formatSegmentDate();
 
-                return <div key={segment.id} className="flex items-start gap-3 p-3 bg-background border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
-                      {segment.reference_number && <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded">
-                          {segment.reference_number}
-                        </span>}
+                return <div key={segment.id} className="relative p-3 bg-background border rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
+                        {segment.reference_number && <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded">
+                            {segment.reference_number}
+                          </span>}
+                      </div>
+
+                      {segment.provider && <p className="text-xs text-muted-foreground mb-1">{segment.provider}</p>}
+
+                      {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
+
+                      {segment.address && <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {segment.address}
+                        </p>}
                     </div>
 
-                    {segment.provider && <p className="text-xs text-muted-foreground mb-1">{segment.provider}</p>}
-
-                    {segmentDateStr && <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {segmentDateStr}
-                      </p>}
-
-                    {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
-
-                    {segment.address && <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {segment.address}
-                      </p>}
+                    <div className="text-right text-xs text-muted-foreground">
+                      {segmentDateStr && <p className="flex items-center gap-1 justify-end">
+                          <Calendar className="h-3 w-3" />
+                          {segmentDateStr}
+                        </p>}
+                    </div>
                   </div>
-
-                  <div className="text-right text-xs text-muted-foreground">
-                    <div>{formatSegmentType(segment.segment_type)}</div>
+                  
+                  <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
+                    {formatSegmentType(segment.segment_type)}
                   </div>
                 </div>;
               })}
