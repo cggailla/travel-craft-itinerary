@@ -182,30 +182,48 @@ async function generateStepAIContentWithRetry(
   return errorResult;
 }
 
-export async function enrichTimeline(tripId: string): Promise<{ success: boolean; enrichedSegments: number; recommendations: number; error?: string }> {
+export const enrichTimeline = async (tripId: string, onProgress?: (status: 'starting' | 'in_progress' | 'completed' | 'failed') => void): Promise<{
+  success: boolean;
+  enrichedSegments: number;
+  recommendations: number;
+  error?: string;
+}> => {
   try {
-    console.log('Enriching timeline for trip:', tripId);
+    onProgress?.('starting');
     
     const { data, error } = await supabase.functions.invoke('enrich-timeline', {
       body: { tripId }
     });
 
     if (error) {
-      console.error('Error calling enrich-timeline function:', error);
-      return { success: false, enrichedSegments: 0, recommendations: 0, error: error.message };
+      console.error('Error enriching timeline:', error);
+      onProgress?.('failed');
+      return {
+        success: false,
+        enrichedSegments: 0,
+        recommendations: 0,
+        error: error.message
+      };
     }
 
-    return data;
+    onProgress?.(data?.success ? 'completed' : 'failed');
+    
+    return {
+      success: data?.success || false,
+      enrichedSegments: data?.enrichedSegments || 0,
+      recommendations: data?.recommendations || 0
+    };
   } catch (error) {
-    console.error('Error in enrichTimeline:', error);
-    return { 
-      success: false, 
-      enrichedSegments: 0, 
-      recommendations: 0, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    console.error('Error calling enrich-timeline function:', error);
+    onProgress?.('failed');
+    return {
+      success: false,
+      enrichedSegments: 0,
+      recommendations: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
-}
+};
 
 /**
  * Generate AI content for all steps
@@ -213,7 +231,7 @@ export async function enrichTimeline(tripId: string): Promise<{ success: boolean
 export async function generateAllStepsAIContent(
   requests: AIContentRequest[],
   tripId: string,
-  onProgress?: (type: 'consolidation' | 'trip-summary' | 'enrichment' | 'step', stepId?: string, status?: 'generating' | 'completed' | 'error', error?: string, result?: AIContentResult) => void
+  onProgress?: (type: 'consolidation' | 'trip-summary' | 'enrichment' | 'step', stepId?: string, status?: 'generating' | 'completed' | 'error' | 'starting', error?: string, result?: AIContentResult) => void
 ): Promise<AIContentResult[]> {
   const results: AIContentResult[] = [];
 
@@ -223,21 +241,23 @@ export async function generateAllStepsAIContent(
     await consolidateStepSegments(tripId);
     onProgress?.('consolidation', undefined, 'completed');
 
-    // Step 1: Generate trip summary AND enrich timeline in parallel
+    // Step 1: Generate trip summary
     onProgress?.('trip-summary', undefined, 'generating');
-    onProgress?.('enrichment', undefined, 'generating');
-    
-    const [tripSummary, enrichmentResult] = await Promise.all([
-      generateTripSummary(tripId),
-      enrichTimeline(tripId)
-    ]);
-    
+    const tripSummary = await generateTripSummary(tripId);
     onProgress?.('trip-summary', undefined, 'completed');
-    onProgress?.('enrichment', undefined, enrichmentResult.success ? 'completed' : 'error', enrichmentResult.error);
 
-    console.log('Enrichment result:', enrichmentResult);
+    // Step 2: Enrich timeline with Perplexity - wait for completion
+    onProgress?.('enrichment', undefined, 'starting');
+    const enrichmentResult = await enrichTimeline(tripId, (status) => {
+      const mappedStatus = status === 'failed' ? 'error' : status;
+      onProgress?.('enrichment', undefined, mappedStatus as 'generating' | 'completed' | 'error' | 'starting');
+    });
+    
+    if (!enrichmentResult.success) {
+      console.warn('Timeline enrichment failed:', enrichmentResult.error);
+    }
 
-    // Process each step with trip summary context
+    // Step 3: Generate AI content for each step
     for (let i = 0; i < requests.length; i++) {
       const request = { ...requests[i], tripSummary };
       console.log(`Processing AI content for step ${i + 1}/${requests.length}: ${request.stepId}`);
