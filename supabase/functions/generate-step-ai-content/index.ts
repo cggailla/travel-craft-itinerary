@@ -31,12 +31,12 @@ serve(async (req) => {
       );
     }
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
+    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+    if (!perplexityApiKey) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'OpenAI API key not configured' 
+          error: 'Perplexity API key not configured' 
         }),
         { 
           status: 500, 
@@ -53,7 +53,14 @@ serve(async (req) => {
       return `${section.title} (${section.role}): ${segmentTitles.join(', ')}`;
     }).join('\n');
 
-    const prompt = `Génère du contenu descriptif pour cette étape de voyage en français.
+    const prompt = `Recherche et génère du contenu enrichi pour cette étape de voyage en français.
+
+RECHERCHE ET RÉDACTION DEMANDÉES:
+1. Recherche des informations actuelles sur ${primaryLocation}
+2. Trouve des détails historiques, culturels et pratiques spécifiques au lieu
+3. Identifie des conseils locaux authentiques et des anecdotes intéressantes
+4. Crée un contenu engageant style guide de voyage expert
+
 ${tripSummary ? `\nCONTEXTE DU VOYAGE COMPLET:\n${tripSummary}\n` : ''}
 ÉTAPE: ${stepTitle}
 LIEU: ${primaryLocation}
@@ -62,50 +69,54 @@ ${sectionsInfo}
 
 Réponds uniquement en JSON avec cette structure exacte:
 {
-  "overview": "Description générale de cette étape en 1 paragraphe",
-  "tips": ["Conseil pratique 1", "Conseil pratique 2", "Conseil pratique 3"],
-  "localContext": "Informations culturelles/historiques intéressantes sur le lieu (80-120 mots max, optionnel)"
+  "overview": "Description générale riche et engageante de cette étape (120-150 mots), incluant des détails spécifiques trouvés par recherche",
+  "tips": ["Conseil pratique local spécifique", "Astuce culturelle authentique", "Recommandation basée sur des infos récentes"],
+  "localContext": "Contexte historique, culturel ou anecdotique fascinant sur le lieu (100-120 mots), avec des détails précis trouvés par recherche"
 }
 
-CONSIGNES:
-- Overview: Description engageante et informative de l'étape${tripSummary ? ', en tenant compte du contexte du voyage complet' : ''}
-- Tips: 2-4 conseils pratiques et utiles pour cette étape
-- LocalContext: Contexte culturel/historique uniquement si pertinent
-- Ton: Informatif mais chaleureux, comme un guide de voyage
-${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres étapes si pertinent' : ''}`;
+CONSIGNES STRICTES:
+- Utilise tes capacités de recherche web pour enrichir le contenu
+- Overview: Intègre des détails spécifiques et récents sur le lieu
+- Tips: Base-toi sur des informations locales authentiques trouvées
+- LocalContext: Inclus des faits historiques/culturels précis et captivants
+- Ton: Narratif expert, style ADGENTES, informatif mais personnel
+- OBLIGATOIRE: Réponds en JSON pur sans backticks markdown
+${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyage' : ''}`;
 
-    console.log('Calling OpenAI for AI content generation...');
+    console.log('Calling Perplexity for AI content generation with web search...');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${perplexityApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'llama-3.1-sonar-small-128k-online',
         messages: [
           {
             role: 'system',
-            content: 'Tu es un expert en voyage qui génère du contenu descriptif concis et utile pour des carnets de voyage. Réponds uniquement en JSON valide.'
+            content: 'Tu es un expert en voyage avec accès à internet qui génère du contenu riche et authentique pour des carnets de voyage. Utilise tes capacités de recherche pour enrichir tes réponses avec des informations actuelles et spécifiques. Réponds uniquement en JSON valide sans backticks markdown.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 2000,
-        temperature: 0.7
+        max_tokens: 2500,
+        temperature: 0.7,
+        search_domain_filter: ['wikipedia.org', 'lonelyplanet.com', 'tripadvisor.com', 'officialwebsites'],
+        return_related_questions: false
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('Perplexity API error:', response.status, errorText);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: `OpenAI API error: ${response.status} - ${errorText}` 
+          error: `Perplexity API error: ${response.status} - ${errorText}` 
         }),
         { 
           status: 500, 
@@ -114,17 +125,17 @@ ${tripSummary ? '\n- Utilise le contexte pour créer des liens avec les autres �
       );
     }
 
-    const openaiData = await response.json();
-    console.log('OpenAI response received');
+    const perplexityData = await response.json();
+    console.log('Perplexity response received');
 
-    const content = openaiData.choices[0].message.content;
+    const content = perplexityData.choices[0].message.content;
     
     // Parse JSON response
     let aiContent;
     try {
       aiContent = JSON.parse(content);
     } catch (parseError) {
-      console.error('Error parsing OpenAI JSON response:', parseError);
+      console.error('Error parsing Perplexity JSON response:', parseError);
       console.error('Raw content:', content);
       return new Response(
         JSON.stringify({ 
