@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +15,11 @@ import {
   Loader2,
   Calendar,
   MapPin,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEnrichmentStatus } from "@/hooks/useEnrichmentStatus";
 import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
@@ -29,11 +31,41 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
+  const { isEnriching, enrichmentStatus } = useEnrichmentStatus(tripId);
+  const lastEnrichmentStatusRef = useRef<string>('pending');
 
   useEffect(() => {
     loadBookletData();
   }, [tripId]);
+
+  // Auto-refresh when enrichment completes
+  useEffect(() => {
+    if (
+      lastEnrichmentStatusRef.current !== 'completed' && 
+      enrichmentStatus === 'completed' &&
+      !isLoading
+    ) {
+      handleAutoRefresh();
+    }
+    lastEnrichmentStatusRef.current = enrichmentStatus;
+  }, [enrichmentStatus, isLoading]);
+
+  const handleAutoRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadBookletData();
+      toast({
+        title: "Données mises à jour",
+        description: "Les informations enrichies ont été chargées.",
+      });
+    } catch (error) {
+      console.error('Auto refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const loadBookletData = async () => {
     try {
@@ -166,19 +198,44 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       {/* Interface simplifiée */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Carnet de voyage</h3>
-          <Button 
-            onClick={handleGeneratePdf}
-            disabled={isGeneratingPdf}
-            className="flex items-center"
-          >
-            {isGeneratingPdf ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-semibold">Carnet de voyage</h3>
+            {isEnriching && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                Enrichissement en cours...
+              </div>
             )}
-            {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
-          </Button>
+            {isRefreshing && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                Actualisation...
+              </div>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={loadBookletData}
+              disabled={isLoading || isRefreshing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Actualiser
+            </Button>
+            <Button 
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
+            </Button>
+          </div>
         </div>
         
         <BookletPreview 

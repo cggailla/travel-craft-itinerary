@@ -22,9 +22,9 @@ export function useEnrichmentStatus(tripId: string): EnrichmentStatus {
       try {
         const { data: trip, error } = await supabase
           .from('trips')
-          .select('enrichment_status, updated_at')
+          .select('enrichment_status, updated_at, last_enriched_at')
           .eq('id', tripId)
-          .single();
+          .maybeSingle();
 
         if (error) {
           setStatus(prev => ({ 
@@ -35,10 +35,19 @@ export function useEnrichmentStatus(tripId: string): EnrichmentStatus {
           return;
         }
 
+        if (!trip) {
+          setStatus(prev => ({ 
+            ...prev, 
+            error: 'Voyage non trouvé',
+            isEnriching: false 
+          }));
+          return;
+        }
+
         setStatus({
           isEnriching: trip.enrichment_status === 'in_progress',
           enrichmentStatus: trip.enrichment_status || 'pending',
-          lastEnrichedAt: trip.updated_at ? new Date(trip.updated_at) : undefined,
+          lastEnrichedAt: trip.last_enriched_at ? new Date(trip.last_enriched_at) : undefined,
           error: undefined,
         });
       } catch (error) {
@@ -69,7 +78,7 @@ export function useEnrichmentStatus(tripId: string): EnrichmentStatus {
           setStatus({
             isEnriching: newTrip.enrichment_status === 'in_progress',
             enrichmentStatus: newTrip.enrichment_status || 'pending',
-            lastEnrichedAt: newTrip.updated_at ? new Date(newTrip.updated_at) : undefined,
+            lastEnrichedAt: newTrip.last_enriched_at ? new Date(newTrip.last_enriched_at) : undefined,
             error: undefined,
           });
         }
