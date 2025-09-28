@@ -21,6 +21,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { TravelSegment } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
+import { determinePrimaryLocation } from '@/services/locationService';
 
 interface ManualStep {
   id: string;
@@ -426,58 +427,7 @@ export default function ManualStepGrouper({
   );
 }
 
-// Helper function to determine the best primary_location using frequency analysis
-function determinePrimaryLocation(segments: TravelSegment[]): string {
-  if (segments.length === 0) return '';
-  
-  // Function to detect airport codes and invalid addresses
-  const isValidAddress = (address: string): boolean => {
-    if (!address || address.trim().length < 3) return false;
-    
-    // Exclude airport code patterns (LIS-RAI, RAI-VXE, etc.)
-    if (/^[A-Z]{3}-[A-Z]{3}$/.test(address.trim())) return false;
-    
-    // Exclude standalone IATA codes
-    if (/^[A-Z]{3}$/.test(address.trim())) return false;
-    
-    return true;
-  };
-  
-  // Collect all valid addresses
-  const validAddresses = segments
-    .map(s => s.address?.trim())
-    .filter((addr): addr is string => addr !== undefined && isValidAddress(addr));
-  
-  if (validAddresses.length === 0) {
-    // Fallback: return first segment's address even if potentially invalid
-    const fallback = segments.find(s => s.address?.trim());
-    return fallback?.address || '';
-  }
-  
-  // Count occurrences of each address
-  const addressFrequency = validAddresses.reduce((acc, address) => {
-    acc[address] = (acc[address] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  // Find the most frequent address
-  const mostFrequent = Object.entries(addressFrequency)
-    .sort(([,a], [,b]) => b - a) // Sort by frequency desc
-    .sort(([addrA], [addrB]) => {
-      // Secondary sort: prefer hotel/activity addresses if same frequency
-      const segmentA = segments.find(s => s.address?.trim() === addrA);
-      const segmentB = segments.find(s => s.address?.trim() === addrB);
-      
-      const priorityA = segmentA?.segment_type === 'hotel' ? 3 : 
-                       segmentA?.segment_type === 'activity' ? 2 : 1;
-      const priorityB = segmentB?.segment_type === 'hotel' ? 3 : 
-                       segmentB?.segment_type === 'activity' ? 2 : 1;
-      
-      return priorityB - priorityA;
-    })[0];
-  
-  return mostFrequent ? mostFrequent[0] : '';
-}
+// primary_location resolution now shared in services/locationService.ts
 
 // Service function to save manual steps
 async function saveManualSteps(tripId: string, steps: ManualStep[]) {

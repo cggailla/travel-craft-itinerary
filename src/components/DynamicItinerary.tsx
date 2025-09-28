@@ -8,6 +8,7 @@ import { generateAllStepsAIContent, generateStepAIContent } from '@/services/aiC
 import { AIContentResult } from '@/types/enrichedStep';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { StepTemplate } from '@/components/StepTemplate';
+import { determinePrimaryLocation } from '@/services/locationService';
 
 interface DynamicItineraryProps {
   data: BookletData;
@@ -40,24 +41,28 @@ export function DynamicItinerary({
     try {
       const stepsResult = await getManualSteps(tripId);
       if (stepsResult.success && stepsResult.steps && stepsResult.steps.length > 0) {
-        const updatedSteps = stepsResult.steps.map(step => ({
-          stepId: step.id,
-          stepTitle: step.step_title,
-          stepType: step.step_type || 'manual',
-          primaryLocation: step.primary_location || '',
-          startDate: step.start_date ? new Date(step.start_date) : new Date(),
-          endDate: step.end_date ? new Date(step.end_date) : new Date(),
-          sections: [{
-            title: "Segments",
-            segments: step.travel_step_segments
-              ?.sort((a, b) => a.position_in_step - b.position_in_step)
-              .map(tss => tss.travel_segments)
-              .filter(Boolean) || [],
-            role: 'services' as const,
-            icon: '📋'
-          }],
-          rawData: step
-        }));
+        const updatedSteps = stepsResult.steps.map(step => {
+          const segments = step.travel_step_segments
+            ?.sort((a, b) => a.position_in_step - b.position_in_step)
+            .map(tss => tss.travel_segments)
+            .filter(Boolean) || [];
+
+          return {
+            stepId: step.id,
+            stepTitle: step.step_title,
+            stepType: step.step_type || 'manual',
+            primaryLocation: determinePrimaryLocation(segments) || step.primary_location || '',
+            startDate: step.start_date ? new Date(step.start_date) : new Date(),
+            endDate: step.end_date ? new Date(step.end_date) : new Date(),
+            sections: [{
+              title: "Segments",
+              segments,
+              role: 'services' as const,
+              icon: '📋'
+            }],
+            rawData: step
+          };
+        });
         setEnrichedSteps(updatedSteps);
       }
     } catch (error) {
@@ -85,24 +90,28 @@ export function DynamicItinerary({
       }
 
       // Convertir les étapes manuelles au format EnrichedStep
-      const steps = stepsResult.steps.map(step => ({
-        stepId: step.id,
-        stepTitle: step.step_title,
-        stepType: step.step_type || 'manual',
-        primaryLocation: step.primary_location || '',
-        startDate: step.start_date ? new Date(step.start_date) : new Date(),
-        endDate: step.end_date ? new Date(step.end_date) : new Date(),
-        sections: [{
-          title: "Segments",
-          segments: step.travel_step_segments
-            ?.sort((a, b) => a.position_in_step - b.position_in_step)
-            .map(tss => tss.travel_segments)
-            .filter(Boolean) || [],
-          role: 'services' as const,
-          icon: '📋'
-        }],
-        rawData: step
-      }));
+      const steps = stepsResult.steps.map(step => {
+        const segments = step.travel_step_segments
+          ?.sort((a, b) => a.position_in_step - b.position_in_step)
+          .map(tss => tss.travel_segments)
+          .filter(Boolean) || [];
+
+        return {
+          stepId: step.id,
+          stepTitle: step.step_title,
+          stepType: step.step_type || 'manual',
+          primaryLocation: determinePrimaryLocation(segments) || step.primary_location || '',
+          startDate: step.start_date ? new Date(step.start_date) : new Date(),
+          endDate: step.end_date ? new Date(step.end_date) : new Date(),
+          sections: [{
+            title: "Segments",
+            segments,
+            role: 'services' as const,
+            icon: '📋'
+          }],
+          rawData: step
+        };
+      });
 
       setEnrichedSteps(steps);
       setProgress(50);
