@@ -1,2 +1,0 @@
--- Add enrichment status to trips table to track enrichment progress
-ALTER TABLE trips ADD COLUMN IF NOT EXISTS enrichment_status text DEFAULT 'pending' CHECK (enrichment_status IN ('pending', 'in_progress', 'completed', 'failed'));

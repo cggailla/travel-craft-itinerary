@@ -4,88 +4,6 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { formatSegmentType } from '@/services/bookletService';
-import { TravelSegment } from '@/types/travel';
-
-// Helper function to render all enriched fields that are not null/empty
-function renderEnrichedFields(segment: TravelSegment, excludeFields: string[] = []): JSX.Element | null {
-  const enrichedFields: { [key: string]: string } = {
-    phone: segment.phone || '',
-    website: segment.website && segment.website !== 'N/A' ? segment.website : '',
-    star_rating: segment.star_rating ? `${segment.star_rating}⭐` : '',
-    checkin_time: segment.checkin_time || '',
-    checkout_time: segment.checkout_time || '',
-    opening_hours: segment.opening_hours || '',
-    ticket_price: segment.ticket_price || '',
-    activity_price: segment.activity_price || '',
-    duration: segment.duration || '',
-    booking_required: segment.booking_required !== null ? (segment.booking_required ? 'Requise' : 'Non requise') : '',
-    route: segment.route || '',
-    iata_code: segment.iata_code || '',
-    icao_code: segment.icao_code || '',
-    main_exhibitions: segment.main_exhibitions && segment.main_exhibitions.length > 0 ? segment.main_exhibitions.join(', ') : '',
-    terminals: segment.terminals && segment.terminals.length > 0 ? segment.terminals.join(', ') : '',
-    facilities: segment.facilities && segment.facilities.length > 0 ? segment.facilities.join(', ') : '',
-    departure_times: segment.departure_times && segment.departure_times.length > 0 ? segment.departure_times.join(', ') : ''
-  };
-
-  const fieldLabels: { [key: string]: string } = {
-    phone: 'Tél',
-    website: 'Site web',
-    star_rating: 'Étoiles',
-    checkin_time: 'Check-in',
-    checkout_time: 'Check-out', 
-    opening_hours: 'Horaires',
-    ticket_price: 'Prix billet',
-    activity_price: 'Prix',
-    duration: 'Durée',
-    booking_required: 'Réservation',
-    route: 'Route',
-    iata_code: 'Code IATA',
-    icao_code: 'Code ICAO',
-    main_exhibitions: 'Expositions principales',
-    terminals: 'Terminaux',
-    facilities: 'Équipements',
-    departure_times: 'Horaires de départ'
-  };
-
-  // Filter out excluded fields and empty values
-  const fieldsToShow = Object.entries(enrichedFields)
-    .filter(([key, value]) => !excludeFields.includes(key) && value.trim() !== '')
-    .map(([key, value]) => ({ key, label: fieldLabels[key], value }));
-
-  if (fieldsToShow.length === 0) return null;
-
-  return (
-    <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-      <div className="grid grid-cols-2 gap-2">
-        {fieldsToShow.map(({ key, label, value }) => {
-          if (key === 'website') {
-            return (
-              <p key={key} className="col-span-2">
-                <strong>{label}:</strong>{' '}
-                <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                  {value}
-                </a>
-              </p>
-            );
-          }
-          if (key === 'opening_hours' || key === 'main_exhibitions' || key === 'terminals' || key === 'facilities' || key === 'departure_times') {
-            return (
-              <p key={key} className="col-span-2">
-                <strong>{label}:</strong> {value}
-              </p>
-            );
-          }
-          return (
-            <p key={key}>
-              <strong>{label}:</strong> {value}
-            </p>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 interface StepTemplateProps {
   step: EnrichedStep;
@@ -244,7 +162,19 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched hotel information */}
-                          {renderEnrichedFields(segment)}
+                          {(segment.phone || segment.website || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                                {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
+                                {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
+                                {segment.star_rating && <p><strong>Étoiles:</strong> {segment.star_rating}⭐</p>}
+                              </div>
+                              {segment.website && segment.website !== 'N/A' && (
+                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (
@@ -281,7 +211,22 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched activity information */}
-                          {renderEnrichedFields(segment)}
+                          {(segment.phone || segment.website || segment.activity_price || segment.duration || segment.opening_hours || segment.booking_required !== null) && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                                {segment.activity_price && <p><strong>Prix:</strong> {segment.activity_price}</p>}
+                                {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
+                                {segment.booking_required !== null && <p><strong>Réservation:</strong> {segment.booking_required ? 'Requise' : 'Non requise'}</p>}
+                              </div>
+                              {segment.opening_hours && (
+                                <p className="mt-1"><strong>Horaires:</strong> {segment.opening_hours}</p>
+                              )}
+                              {segment.website && segment.website !== 'N/A' && (
+                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (
@@ -318,7 +263,19 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched boat information */}
-                          {renderEnrichedFields(segment)}
+                          {(segment.phone || segment.website || segment.route || segment.ticket_price || segment.duration) && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                                {segment.route && <p><strong>Route:</strong> {segment.route}</p>}
+                                {segment.ticket_price && <p><strong>Prix:</strong> {segment.ticket_price}</p>}
+                                {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
+                              </div>
+                              {segment.website && segment.website !== 'N/A' && (
+                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (
@@ -355,7 +312,14 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched flight information */}
-                          {renderEnrichedFields(segment)}
+                          {(segment.iata_code || segment.icao_code) && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                {segment.iata_code && <p><strong>Code IATA:</strong> {segment.iata_code}</p>}
+                                {segment.icao_code && <p><strong>Code ICAO:</strong> {segment.icao_code}</p>}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (
@@ -393,7 +357,30 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched information for other segment types */}
-                          {renderEnrichedFields(segment)}
+                          {(segment.phone || segment.website || segment.iata_code || segment.icao_code || segment.duration || 
+                            segment.terminals?.length || segment.route || segment.ticket_price || segment.facilities?.length || 
+                            segment.departure_times?.length) && (
+                            <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                                {segment.iata_code && <p><strong>Code IATA:</strong> {segment.iata_code}</p>}
+                                {segment.icao_code && <p><strong>Code ICAO:</strong> {segment.icao_code}</p>}
+                                {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
+                                {segment.terminals && segment.terminals.length > 0 && <p><strong>Terminaux:</strong> {segment.terminals.join(', ')}</p>}
+                                {segment.route && <p><strong>Route:</strong> {segment.route}</p>}
+                                {segment.ticket_price && <p><strong>Prix billet:</strong> {segment.ticket_price}</p>}
+                              </div>
+                              {segment.facilities && segment.facilities.length > 0 && (
+                                <p className="mt-1"><strong>Services:</strong> {segment.facilities.join(', ')}</p>
+                              )}
+                              {segment.departure_times && segment.departure_times.length > 0 && (
+                                <p className="mt-1"><strong>Horaires:</strong> {segment.departure_times.join(', ')}</p>
+                              )}
+                              {segment.website && segment.website !== 'N/A' && (
+                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (

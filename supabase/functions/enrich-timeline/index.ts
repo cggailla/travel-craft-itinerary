@@ -18,23 +18,13 @@ serve(async (req) => {
 
   try {
     const { tripId } = await req.json();
-    
+    console.log('Enriching timeline for trip:', tripId);
+
     if (!tripId) {
-      return new Response(JSON.stringify({ error: 'Trip ID is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('tripId is required');
     }
 
-    console.log(`Enriching timeline for trip: ${tripId}`);
-    
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Mark trip as in progress
-    await supabase
-      .from('trips')
-      .update({ enrichment_status: 'in_progress' })
-      .eq('id', tripId);
 
     // Récupérer les travel_steps validés + leurs travel_segments
     const { data: steps, error: stepsError } = await supabase
@@ -123,12 +113,6 @@ serve(async (req) => {
       }
     }
 
-    // Mark trip as completed
-    await supabase
-      .from('trips')
-      .update({ enrichment_status: 'completed' })
-      .eq('id', tripId);
-
     return new Response(JSON.stringify({
       success: true,
       enrichedSegments: enrichedSegments.length,
@@ -141,21 +125,6 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error in enrich-timeline function:', errorMessage);
-    
-    // Mark trip as failed
-    try {
-      const { tripId: failedTripId } = await req.json().catch(() => ({}));
-      if (failedTripId) {
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-        await supabase
-          .from('trips')
-          .update({ enrichment_status: 'failed' })
-          .eq('id', failedTripId);
-      }
-    } catch (updateError) {
-      console.error('Failed to update trip status to failed:', updateError);
-    }
-    
     return new Response(JSON.stringify({ 
       success: false,
       error: errorMessage 
@@ -351,20 +320,12 @@ async function enrichSegmentWithPerplexity(segment: any) {
     
     console.log(`Perplexity returned data for segment ${segment.id}:`, newEnrichmentData);
     
-    // Filter out fields that already exist and are not null/empty (except address)
+    // Filter out fields that already exist and are not null/empty
     const fieldsToUpdate: any = {};
     Object.entries(newEnrichmentData).forEach(([key, value]) => {
       const existingValue = existingData[key as keyof typeof existingData];
-      
-      // Always allow address to be overwritten if we have a better value
-      if (key === 'address') {
-        if (!isEmpty(value)) {
-          fieldsToUpdate[key] = value;
-          console.log(`Will update ${key}: ${existingValue} -> ${value}`);
-        }
-      }
-      // For other fields, only update if existing value is empty/null
-      else if (isEmpty(existingValue) && !isEmpty(value)) {
+      // Only update if existing value is empty/null and new value is not empty
+      if (isEmpty(existingValue) && !isEmpty(value)) {
         fieldsToUpdate[key] = value;
         console.log(`Will update ${key}: ${existingValue} -> ${value}`);
       } else {

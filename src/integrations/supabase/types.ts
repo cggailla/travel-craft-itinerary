@@ -394,7 +394,6 @@ export type Database = {
       trips: {
         Row: {
           created_at: string
-          enrichment_status: string | null
           id: string
           status: string
           title: string | null
@@ -403,7 +402,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          enrichment_status?: string | null
           id?: string
           status?: string
           title?: string | null
@@ -412,7 +410,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          enrichment_status?: string | null
           id?: string
           status?: string
           title?: string | null

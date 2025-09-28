@@ -15,13 +15,9 @@ import {
   Loader2,
   Calendar,
   MapPin,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEnrichmentStatus } from "@/hooks/useEnrichmentStatus";
 import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
@@ -34,18 +30,10 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { toast } = useToast();
-  const { status: enrichmentStatus, isLoading: isStatusLoading } = useEnrichmentStatus(tripId);
 
   useEffect(() => {
     loadBookletData();
   }, [tripId]);
-
-  // Reload data when enrichment is completed
-  useEffect(() => {
-    if (enrichmentStatus === 'completed') {
-      loadBookletData();
-    }
-  }, [enrichmentStatus]);
 
   const loadBookletData = async () => {
     try {
@@ -111,7 +99,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   };
 
 
-  if (isLoading || isStatusLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center space-y-4">
@@ -120,56 +108,6 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         </div>
       </div>
     );
-  }
-
-  // Show enrichment status for non-completed states
-  if (enrichmentStatus !== 'completed') {
-    const getStatusDisplay = () => {
-      switch (enrichmentStatus) {
-        case 'pending':
-          return {
-            icon: <Clock className="h-8 w-8 text-amber-500" />,
-            title: "Enrichissement en attente",
-            description: "L'enrichissement des données n'a pas encore commencé. Lancez la génération du carnet pour commencer.",
-            action: null
-          };
-        case 'in_progress':
-          return {
-            icon: <RefreshCw className="h-8 w-8 text-blue-500 animate-spin" />,
-            title: "Enrichissement en cours...",
-            description: "Les données de voyage sont en cours d'enrichissement avec des informations détaillées.",
-            action: null
-          };
-        case 'failed':
-          return {
-            icon: <AlertCircle className="h-8 w-8 text-destructive" />,
-            title: "Enrichissement échoué",
-            description: "Une erreur s'est produite lors de l'enrichissement. Vous pouvez consulter les données de base en attendant.",
-            action: (
-              <Button onClick={loadBookletData} variant="outline">
-                Voir les données de base
-              </Button>
-            )
-          };
-        default:
-          return null;
-      }
-    };
-
-    const statusDisplay = getStatusDisplay();
-    
-    if (statusDisplay && enrichmentStatus !== 'failed') {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-4 max-w-md">
-            {statusDisplay.icon}
-            <h3 className="text-xl font-semibold">{statusDisplay.title}</h3>
-            <p className="text-muted-foreground">{statusDisplay.description}</p>
-            {statusDisplay.action}
-          </div>
-        </div>
-      );
-    }
   }
 
   if (!bookletData) {
@@ -192,18 +130,10 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       {/* En-tête avec informations du voyage */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center text-2xl">
-              <FileText className="mr-3 h-6 w-6 text-primary" />
-              {bookletData.tripTitle}
-            </CardTitle>
-            {enrichmentStatus === 'completed' && (
-              <Badge variant="default" className="flex items-center">
-                <CheckCircle className="mr-1 h-3 w-3" />
-                Enrichi
-              </Badge>
-            )}
-          </div>
+          <CardTitle className="flex items-center text-2xl">
+            <FileText className="mr-3 h-6 w-6 text-primary" />
+            {bookletData.tripTitle}
+          </CardTitle>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {bookletData.startDate && (
               <div className="flex items-center">
