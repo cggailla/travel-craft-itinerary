@@ -166,17 +166,24 @@ async function enrichSegmentWithPerplexity(segment: any) {
     ticket_price: segment.ticket_price
   };
 
+  // Function to check if a value is empty/null
+  const isEmpty = (value: any): boolean => {
+    return value === null || value === undefined || value === '' || 
+           (typeof value === 'string' && value.trim() === '');
+  };
+
   // Remove null/undefined values for cleaner prompt
   const cleanExistingData = Object.fromEntries(
-    Object.entries(existingData).filter(([_, value]) => value != null && value !== '')
+    Object.entries(existingData).filter(([_, value]) => !isEmpty(value))
   );
+
+  console.log(`Segment ${segment.id} existing data:`, cleanExistingData);
 
   let prompt = '';
   let requestBody: any = {
-    model: 'sonar',
-    web_search_options: {
-      "search_context_size": "medium"
-    }
+    model: 'llama-3.1-sonar-small-128k-online',
+    temperature: 0.2,
+    max_tokens: 800
   };
 
   switch (segmentType) {
@@ -311,16 +318,22 @@ async function enrichSegmentWithPerplexity(segment: any) {
     const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const newEnrichmentData = JSON.parse(cleanedContent);
     
+    console.log(`Perplexity returned data for segment ${segment.id}:`, newEnrichmentData);
+    
     // Filter out fields that already exist and are not null/empty
     const fieldsToUpdate: any = {};
     Object.entries(newEnrichmentData).forEach(([key, value]) => {
       const existingValue = existingData[key as keyof typeof existingData];
-      if (!existingValue && value) {
+      // Only update if existing value is empty/null and new value is not empty
+      if (isEmpty(existingValue) && !isEmpty(value)) {
         fieldsToUpdate[key] = value;
+        console.log(`Will update ${key}: ${existingValue} -> ${value}`);
+      } else {
+        console.log(`Skipping ${key}: existing=${existingValue}, new=${value}`);
       }
     });
     
-    console.log(`Found ${Object.keys(fieldsToUpdate).length} new fields to update for segment ${segment.id}`);
+    console.log(`Found ${Object.keys(fieldsToUpdate).length} new fields to update for segment ${segment.id}:`, Object.keys(fieldsToUpdate));
     return fieldsToUpdate;
   } catch (parseError) {
     console.error('Error parsing Perplexity JSON response:', parseError);
