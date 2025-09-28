@@ -33,6 +33,10 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState(0);
   const { toast } = useToast();
   const { status: enrichmentStatus, isLoading: isStatusLoading } = useEnrichmentStatus(tripId);
 
@@ -40,12 +44,13 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     loadBookletData();
   }, [tripId]);
 
-  // Reload data when enrichment is completed
+  // Show preview when enrichment is completed and we have data
   useEffect(() => {
-    if (enrichmentStatus === 'completed') {
-      loadBookletData();
+    if (enrichmentStatus === 'completed' && bookletData) {
+      setShowPreview(true);
+      loadBookletData(); // Reload to get enriched data
     }
-  }, [enrichmentStatus]);
+  }, [enrichmentStatus, bookletData]);
 
   const loadBookletData = async () => {
     try {
@@ -60,6 +65,90 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateBooklet = async () => {
+    if (!bookletData) {
+      toast({
+        title: "Erreur",
+        description: "Aucune donnée de voyage disponible",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    setProgress(0);
+    setCompletedSteps(0);
+    setShowPreview(false);
+
+    try {
+      console.log('Starting booklet generation for trip:', tripId);
+      
+      // Import the function here to avoid circular dependencies
+      const { generateAllStepsAIContent } = await import('@/services/aiContentService');
+      const { getEnrichedSteps } = await import('@/services/stepTemplateService');
+      
+      const { success, steps: stepsData } = await getEnrichedSteps(tripId);
+      
+      if (!success || !stepsData) {
+        throw new Error('Impossible de récupérer les données des étapes');
+      }
+      
+      const requests = stepsData.map(step => ({
+        stepId: step.stepId,
+        stepTitle: step.stepTitle,
+        primaryLocation: step.primaryLocation,
+        sections: step.sections
+      }));
+
+      await generateAllStepsAIContent(
+        requests, 
+        tripId, 
+        (type, stepId, status, error, result) => {
+          console.log(`Progress: ${type} ${stepId} - ${status}`, { error, result });
+          
+          if (type === 'step' && status === 'completed') {
+            setCompletedSteps(prev => prev + 1);
+            setProgress(prev => Math.min(prev + (85 / requests.length), 85));
+          }
+          
+          if (type === 'consolidation' && status === 'completed') {
+            setProgress(5);
+          }
+          
+          if (type === 'trip-summary' && status === 'completed') {
+            setProgress(10);
+          }
+          
+          if (type === 'enrichment') {
+            if (status === 'starting') {
+              setProgress(15);
+            } else if (status === 'completed') {
+              setProgress(90);
+            }
+          }
+        }
+      );
+
+      setProgress(100);
+      // Don't set showPreview here - wait for enrichment status to be 'completed'
+      
+      toast({
+        title: "Carnet de voyage généré !",
+        description: "Le contenu IA et l'enrichissement ont été générés avec succès"
+      });
+
+    } catch (error) {
+      console.error('Error generating booklet:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la génération du carnet",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -122,54 +211,30 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     );
   }
 
-  // Show enrichment status for non-completed states
-  if (enrichmentStatus !== 'completed') {
-    const getStatusDisplay = () => {
-      switch (enrichmentStatus) {
-        case 'pending':
-          return {
-            icon: <Clock className="h-8 w-8 text-amber-500" />,
-            title: "Enrichissement en attente",
-            description: "L'enrichissement des données n'a pas encore commencé. Lancez la génération du carnet pour commencer.",
-            action: null
-          };
-        case 'in_progress':
-          return {
-            icon: <RefreshCw className="h-8 w-8 text-blue-500 animate-spin" />,
-            title: "Enrichissement en cours...",
-            description: "Les données de voyage sont en cours d'enrichissement avec des informations détaillées.",
-            action: null
-          };
-        case 'failed':
-          return {
-            icon: <AlertCircle className="h-8 w-8 text-destructive" />,
-            title: "Enrichissement échoué",
-            description: "Une erreur s'est produite lors de l'enrichissement. Vous pouvez consulter les données de base en attendant.",
-            action: (
-              <Button onClick={loadBookletData} variant="outline">
-                Voir les données de base
-              </Button>
-            )
-          };
-        default:
-          return null;
-      }
-    };
-
-    const statusDisplay = getStatusDisplay();
-    
-    if (statusDisplay && enrichmentStatus !== 'failed') {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-4 max-w-md">
-            {statusDisplay.icon}
-            <h3 className="text-xl font-semibold">{statusDisplay.title}</h3>
-            <p className="text-muted-foreground">{statusDisplay.description}</p>
-            {statusDisplay.action}
+  // Show generation progress when AI generation is in progress
+  if (isGeneratingAI) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-full bg-secondary rounded-full h-2">
+            <div 
+              className="bg-primary h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-lg font-medium">Génération du carnet en cours...</p>
+            <p className="text-sm text-muted-foreground">
+              {progress < 5 && "Consolidation des segments..."}
+              {progress >= 5 && progress < 10 && "Génération du résumé du voyage..."}
+              {progress >= 10 && progress < 90 && `Enrichissement des données... (${progress.toFixed(0)}%)`}
+              {progress >= 90 && progress < 100 && `Génération du contenu IA... (${completedSteps} étapes complétées)`}
+              {progress === 100 && "Finalisation..."}
+            </p>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   if (!bookletData) {
@@ -183,6 +248,70 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         <Button onClick={loadBookletData} variant="outline">
           Réessayer
         </Button>
+      </div>
+    );
+  }
+
+  // Show generate button if enrichment is not completed and no generation in progress
+  if (enrichmentStatus !== 'completed' && !isGeneratingAI && !showPreview) {
+    return (
+      <div className="space-y-6">
+        {/* En-tête avec informations du voyage */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center text-2xl">
+                <FileText className="mr-3 h-6 w-6 text-primary" />
+                {bookletData.tripTitle}
+              </CardTitle>
+              <Badge variant="outline" className="flex items-center">
+                <Clock className="mr-1 h-3 w-3" />
+                En attente
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              {bookletData.startDate && (
+                <div className="flex items-center">
+                  <Calendar className="mr-1 h-4 w-4" />
+                  {bookletData.startDate.toLocaleDateString('fr-FR')}
+                  {bookletData.endDate && ` - ${bookletData.endDate.toLocaleDateString('fr-FR')}`}
+                </div>
+              )}
+              <div className="flex items-center">
+                <Clock className="mr-1 h-4 w-4" />
+                {bookletData.totalDays} jour{bookletData.totalDays > 1 ? 's' : ''}
+              </div>
+              <div className="flex items-center">
+                <MapPin className="mr-1 h-4 w-4" />
+                {bookletData.segments.length} segment{bookletData.segments.length > 1 ? 's' : ''}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(bookletData.segmentsByType).map(([type, segments]) => (
+                  <Badge key={type} variant="secondary">
+                    {type}: {segments.length}
+                  </Badge>
+                ))}
+              </div>
+              <div className="text-center">
+                <Button 
+                  onClick={handleGenerateBooklet}
+                  size="lg"
+                  className="flex items-center"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Générer le carnet de voyage avec IA
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Cette étape va enrichir vos données et générer le contenu IA
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -237,25 +366,39 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
-          <Button 
-            onClick={handleGeneratePdf}
-            disabled={isGeneratingPdf}
-            className="flex items-center"
-          >
-            {isGeneratingPdf ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
+          <div className="flex gap-2">
+            {enrichmentStatus !== 'completed' && (
+              <Button 
+                onClick={handleGenerateBooklet}
+                variant="outline"
+                className="flex items-center"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regénérer avec IA
+              </Button>
             )}
-            {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
-          </Button>
+            <Button 
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
+            </Button>
+          </div>
         </div>
         
-        <BookletPreview 
-          data={bookletData} 
-          options={options} 
-          tripId={tripId}
-        />
+        {showPreview && (
+          <BookletPreview 
+            data={bookletData} 
+            options={options} 
+            tripId={tripId}
+          />
+        )}
       </div>
     </div>
   );
