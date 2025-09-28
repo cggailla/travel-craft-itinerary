@@ -13,6 +13,9 @@ export interface ParsedStepInfo {
  * Parse trip summary text to extract step information using regex
  */
 export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
+  console.log('🔍 Starting to parse trip summary...');
+  console.log('Input text length:', tripSummary.length);
+  
   const steps: ParsedStepInfo[] = [];
   
   // Regex to match: "Etape X - [Title] (dates) {Location}"
@@ -20,6 +23,8 @@ export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
   
   // Split by lines to separate step titles from descriptions
   const lines = tripSummary.split('\n');
+  console.log('Total lines to process:', lines.length);
+  
   let currentStep: Partial<ParsedStepInfo> | null = null;
   let currentDescription: string[] = [];
   
@@ -32,12 +37,20 @@ export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
     const stepMatch = trimmedLine.match(/^Etape (\d+) - (.+?) \(([^)]+)\) \{([^}]+)\}/);
     
     if (stepMatch) {
+      console.log('✅ Found step header:', trimmedLine);
+      console.log('  - Step number:', stepMatch[1]);
+      console.log('  - Title:', stepMatch[2]);
+      console.log('  - Dates:', stepMatch[3]);
+      console.log('  - Location:', stepMatch[4]);
+      
       // Save previous step if exists
       if (currentStep) {
-        steps.push({
+        const completeStep = {
           ...currentStep,
           description: currentDescription.join(' ').trim()
-        } as ParsedStepInfo);
+        } as ParsedStepInfo;
+        steps.push(completeStep);
+        console.log('✅ Saved previous step:', completeStep.stepNumber, completeStep.title);
       }
       
       // Start new step
@@ -51,16 +64,24 @@ export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
     } else if (currentStep && trimmedLine) {
       // This is description content for the current step
       currentDescription.push(trimmedLine);
+      console.log('📝 Added description line to step', currentStep.stepNumber, ':', trimmedLine.substring(0, 50) + '...');
     }
   }
   
   // Don't forget the last step
   if (currentStep) {
-    steps.push({
+    const completeStep = {
       ...currentStep,
       description: currentDescription.join(' ').trim()
-    } as ParsedStepInfo);
+    } as ParsedStepInfo;
+    steps.push(completeStep);
+    console.log('✅ Saved last step:', completeStep.stepNumber, completeStep.title);
   }
+  
+  console.log('🎉 Parsing completed! Found', steps.length, 'steps:');
+  steps.forEach(step => {
+    console.log(`  Step ${step.stepNumber}: ${step.title} (${step.dates}) {${step.location}}`);
+  });
   
   return steps;
 }
@@ -116,7 +137,13 @@ export async function generateTripSummary(tripId: string): Promise<string> {
     return '';
   }
 
-  return data.tripSummary || '';
+  const tripSummary = data.tripSummary || '';
+  console.log('✅ Raw trip summary received:');
+  console.log('--- START TRIP SUMMARY ---');
+  console.log(tripSummary);
+  console.log('--- END TRIP SUMMARY ---');
+
+  return tripSummary;
 }
 
 /**
