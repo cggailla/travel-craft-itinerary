@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { formatSegmentType } from '@/services/bookletService';
+import { ParsedStepInfo } from '@/services/aiContentService';
 
 interface StepTemplateProps {
   step: EnrichedStep;
@@ -14,13 +15,15 @@ interface StepTemplateProps {
   };
   isLoading?: boolean;
   nextStepStartDate?: Date;
+  parsedStepInfo?: ParsedStepInfo; // New prop for parsed trip summary data
 }
 
 export function StepTemplate({
   step,
   aiContent,
   isLoading,
-  nextStepStartDate
+  nextStepStartDate,
+  parsedStepInfo
 }: StepTemplateProps) {
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
@@ -52,14 +55,21 @@ export function StepTemplate({
       <div className="mb-6 pr-32">
         <div className="flex items-center gap-2 mb-2">
           <Calendar className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">{step.stepTitle}</h2>
+          <h2 className="text-xl font-semibold text-foreground">
+            {parsedStepInfo?.title || step.stepTitle}
+          </h2>
         </div>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
             <MapPin className="h-4 w-4" />
-            {step.primaryLocation}
+            {parsedStepInfo?.location || step.primaryLocation}
           </span>
+          {parsedStepInfo?.dates && (
+            <span className="text-xs px-2 py-1 bg-muted/50 rounded">
+              {parsedStepInfo.dates}
+            </span>
+          )}
         </div>
       </div>
 
