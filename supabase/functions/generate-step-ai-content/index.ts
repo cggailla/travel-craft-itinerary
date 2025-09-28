@@ -92,7 +92,7 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
@@ -103,9 +103,9 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
             content: prompt
           }
         ],
-        max_tokens: 2500,
-        temperature: 0.7,
-        search_domain_filter: ['wikipedia.org', 'lonelyplanet.com', 'tripadvisor.com', 'officialwebsites'],
+        web_search_options: {
+          "search_context_size": "medium"
+        }
         return_related_questions: false
       }),
     });
