@@ -181,108 +181,44 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   let prompt = '';
   let requestBody: any = {
-    model: 'sonar',
-    web_search_options: {
-      "search_context_size": "low"
-    }
-
+    model: 'llama-3.1-sonar-small-128k-online',
+    temperature: 0.2,
+    max_tokens: 1000,
   };
 
   switch (segmentType) {
     case 'hotel':
-      prompt = `Fournis les informations officielles de l'hôtel "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
-      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
-      Fournis uniquement les informations manquantes.`;
+      prompt = `Fournis les informations officielles de l'hôtel "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}.
+      Données déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Retourne UNIQUEMENT un objet JSON valide (sans markdown) avec ces clés possibles: address, phone, website, checkin_time, checkout_time, star_rating.
+      N'inclus aucune autre clé ni texte. Fournis uniquement les informations manquantes.`;
       
-      requestBody.response_format = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'HotelInfo',
-          schema: {
-            type: 'object',
-            properties: {
-              address: { type: 'string' },
-              phone: { type: 'string' },
-              website: { type: 'string' },
-              checkin_time: { type: 'string' },
-              checkout_time: { type: 'string' },
-              star_rating: { type: 'number' }
-            }
-          }
-        }
-      };
       break;
 
     case 'activity':
-      prompt = `Fournis les informations officielles de l'activité "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
-      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
-      Fournis uniquement les informations manquantes.`;
+      prompt = `Fournis les informations officielles de l'activité "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}.
+      Données déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Retourne UNIQUEMENT un objet JSON valide (sans markdown) avec ces clés possibles: address, phone, website, opening_hours, duration, booking_required.
+      N'inclus aucune autre clé ni texte. Fournis uniquement les informations manquantes.`;
       
-      requestBody.response_format = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'ActivityInfo',
-          schema: {
-            type: 'object',
-            properties: {
-              address: { type: 'string' },
-              phone: { type: 'string' },
-              website: { type: 'string' },
-              opening_hours: { type: 'string' },
-              activity_price: { type: 'string' },
-              duration: { type: 'string' },
-              booking_required: { type: 'boolean' }
-            }
-          }
-        }
-      };
       break;
 
     case 'flight':
-      prompt = `Fournis les informations officielles de l'aéroport "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
-      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
-      Fournis uniquement les informations manquantes.`;
+      prompt = `Fournis les informations officielles de l'aéroport "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}.
+      Données déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Retourne UNIQUEMENT un objet JSON valide (sans markdown) avec ces clés possibles: address, iata_code, icao_code.
+      N'inclus aucune autre clé ni texte. Fournis uniquement les informations manquantes.`;
       
-      requestBody.response_format = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'AirportInfo',
-          schema: {
-            type: 'object',
-            properties: {
-              address: { type: 'string' },
-              iata_code: { type: 'string' },
-              icao_code: { type: 'string' },
-            }
-          }
-        }
-      };
       break;
       
             
 
     case 'boat':
-      prompt = `Fournis les informations officielles du service de bateau/ferry "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
-      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
-      Fournis uniquement les informations manquantes.`;
+      prompt = `Fournis les informations officielles du service de bateau/ferry "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}.
+      Données déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Retourne UNIQUEMENT un objet JSON valide (sans markdown) avec ces clés possibles: address, phone, website, route, duration.
+      N'inclus aucune autre clé ni texte. Fournis uniquement les informations manquantes.`;
       
-      requestBody.response_format = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'BoatInfo',
-          schema: {
-            type: 'object',
-            properties: {
-              address: { type: 'string' },
-              phone: { type: 'string' },
-              website: { type: 'string' },
-              route: { type: 'string' },
-              ticket_price: { type: 'string' },
-              duration: { type: 'string' }
-            }
-          }
-        }
-      };
       break;
 
     default:
@@ -291,10 +227,16 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   requestBody.messages = [
     {
+      role: 'system',
+      content: 'Be precise and concise. Retourne UNIQUEMENT un JSON valide sans markdown.'
+    },
+    {
       role: 'user',
       content: prompt
     }
   ];
+  console.log(`Perplexity request for segment ${segment.id} (${segmentType}) using model: ${requestBody.model}`);
+  console.log('Prompt (first 300 chars):', String(prompt).slice(0, 300));
 
   const response = await fetch('https://api.perplexity.ai/chat/completions', {
     method: 'POST',
@@ -306,20 +248,26 @@ async function enrichSegmentWithPerplexity(segment: any) {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Perplexity API error for segment ${segment.id}:`, response.status, errorText);
     throw new Error(`Perplexity API error: ${response.status}`);
   }
 
   const data = await response.json();
-  const content = data.choices[0]?.message?.content;
+  console.log(`Perplexity JSON received for segment ${segment.id}`);
+  const content = data.choices?.[0]?.message?.content;
 
   if (!content) {
+    console.error('No content returned from Perplexity API', data);
     throw new Error('No content returned from Perplexity API');
   }
 
   try {
-    const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    console.log('Content (raw, first 500 chars):', typeof content === 'string' ? content.slice(0, 500) : content);
+    const cleanedContent = String(content).replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    console.log('Cleaned content (first 500 chars):', cleanedContent.slice(0, 500));
     const newEnrichmentData = JSON.parse(cleanedContent);
-    
+
     console.log(`Perplexity returned data for segment ${segment.id}:`, newEnrichmentData);
     
     // Filter out fields that already exist and are not null/empty
