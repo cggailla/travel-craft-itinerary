@@ -69,8 +69,8 @@ ${sectionsInfo}
 
 Réponds uniquement en JSON avec cette structure exacte:
 {
-  "overview": "Description générale riche et engageante de cette étape (120-150 mots), incluant des détails spécifiques trouvés par recherche",
-  "tips": ["Conseil pratique local spécifique", "Astuce culturelle authentique", "Recommandation basée sur des infos récentes"],
+  "overview": "Description générale riche et engageante du déroulé de cette étape (100 - 300 mots), incluant des détails spécifiques trouvés par recherche. Tu dois forcément parlé de chacun des segments et utiliser un style narratif propre au voyage qu'emploierait un guide local.",
+  "tips": ["Conseil pratique local spécifique", "Astuce culturelle authentique", "Recommandation basée sur des infos récentes"] ATTENTION : lire attentivement les segments de l'étape pour ne pas faire de répétition ou de contre indication (ne pas recommender une activité déjà réservé),
   "localContext": "Contexte historique, culturel ou anecdotique fascinant sur le lieu (100-120 mots), avec des détails précis trouvés par recherche"
 }
 
