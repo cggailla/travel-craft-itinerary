@@ -236,7 +236,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
       };
       break;
 
-    case 'fly':
+    case 'flight':
       prompt = `Fournis les informations officielles de l'aéroport "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
       Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
       Fournis uniquement les informations manquantes.`;
