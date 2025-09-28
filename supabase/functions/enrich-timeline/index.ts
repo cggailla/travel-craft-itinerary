@@ -181,9 +181,11 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   let prompt = '';
   let requestBody: any = {
-    model: 'llama-3.1-sonar-small-128k-online',
-    temperature: 0.2,
-    max_tokens: 800
+    model: 'sonar',
+    web_search_options: {
+      "search_context_size": "low"
+    }
+
   };
 
   switch (segmentType) {
