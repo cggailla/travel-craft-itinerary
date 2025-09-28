@@ -141,6 +141,21 @@ export function StepTemplate({
                             <MapPin className="h-3 w-3" />
                             {segment.address}
                           </p>}
+                        
+                        {/* Enriched hotel information */}
+                        {segment.enriched && (
+                          <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                            <div className="grid grid-cols-2 gap-2">
+                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
+                              {segment.enriched.checkin_time && <p><strong>Check-in:</strong> {segment.enriched.checkin_time}</p>}
+                              {segment.enriched.checkout_time && <p><strong>Check-out:</strong> {segment.enriched.checkout_time}</p>}
+                              {segment.enriched.star_rating && <p><strong>Étoiles:</strong> {segment.enriched.star_rating}⭐</p>}
+                            </div>
+                            {segment.enriched.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
                         {segmentDateStr && <p className="flex items-center gap-1 justify-end mb-1">
@@ -169,6 +184,22 @@ export function StepTemplate({
                             <MapPin className="h-3 w-3" />
                             {segment.address}
                           </p>}
+                        
+                        {/* Enriched activity information */}
+                        {segment.enriched && (
+                          <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                            <div className="grid grid-cols-2 gap-2">
+                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
+                              {segment.enriched.opening_hours && <p><strong>Horaires:</strong> {segment.enriched.opening_hours}</p>}
+                              {segment.enriched.activity_price && <p><strong>Prix:</strong> {segment.enriched.activity_price}</p>}
+                              {segment.enriched.duration && <p><strong>Durée:</strong> {segment.enriched.duration}</p>}
+                              {segment.enriched.booking_required !== undefined && <p><strong>Réservation:</strong> {segment.enriched.booking_required ? 'Requise' : 'Non requise'}</p>}
+                            </div>
+                            {segment.enriched.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
                         {segmentDateStr && <p className="flex items-center gap-1 justify-end mb-1">
@@ -198,6 +229,30 @@ export function StepTemplate({
                             <MapPin className="h-3 w-3" />
                             {segment.address}
                           </p>}
+                        
+                        {/* Enriched information for airports, boats, etc. */}
+                        {segment.enriched && (
+                          <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
+                            <div className="grid grid-cols-2 gap-2">
+                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
+                              {segment.enriched.iata_code && <p><strong>Code IATA:</strong> {segment.enriched.iata_code}</p>}
+                              {segment.enriched.icao_code && <p><strong>Code ICAO:</strong> {segment.enriched.icao_code}</p>}
+                              {segment.enriched.duration && <p><strong>Durée:</strong> {segment.enriched.duration}</p>}
+                              {segment.enriched.terminals && segment.enriched.terminals.length > 0 && <p><strong>Terminaux:</strong> {segment.enriched.terminals.join(', ')}</p>}
+                              {segment.enriched.route && <p><strong>Route:</strong> {segment.enriched.route}</p>}
+                              {segment.enriched.boat_ticket_price && <p><strong>Prix billet:</strong> {segment.enriched.boat_ticket_price}</p>}
+                            </div>
+                            {segment.enriched.facilities && segment.enriched.facilities.length > 0 && (
+                              <p className="mt-1"><strong>Services:</strong> {segment.enriched.facilities.join(', ')}</p>
+                            )}
+                            {segment.enriched.departure_times && segment.enriched.departure_times.length > 0 && (
+                              <p className="mt-1"><strong>Horaires:</strong> {segment.enriched.departure_times.join(', ')}</p>
+                            )}
+                            {segment.enriched.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
                         {segmentDateStr && <p className="flex items-center gap-1 justify-end mb-1">
