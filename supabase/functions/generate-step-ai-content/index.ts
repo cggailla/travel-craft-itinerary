@@ -105,7 +105,7 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         ],
         web_search_options: {
           "search_context_size": "medium"
-        }
+        },
         return_related_questions: false
       }),
     });
