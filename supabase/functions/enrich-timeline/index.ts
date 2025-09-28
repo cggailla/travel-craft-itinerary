@@ -58,7 +58,7 @@ serve(async (req) => {
         }
 
         const segmentType = segment.segment_type?.toLowerCase();
-        if (!['hotel', 'museum', 'airport', 'boat', 'activity'].includes(segmentType)) {
+        if (!['hotel', 'fly', 'boat', 'activity'].includes(segmentType)) {
           console.log(`Skipping segment ${segment.id}: type ${segmentType} not supported for enrichment`);
           continue;
         }
@@ -181,34 +181,8 @@ async function enrichSegmentWithPerplexity(segment: any) {
               website: { type: 'string' },
               checkin_time: { type: 'string' },
               checkout_time: { type: 'string' },
-              amenities: { type: 'array', items: { type: 'string' } },
               star_rating: { type: 'number' },
               description: { type: 'string' }
-            }
-          }
-        }
-      };
-      break;
-
-    case 'museum':
-      prompt = `Fournis les informations officielles du musée "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
-      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
-      Fournis uniquement les informations manquantes.`;
-      
-      requestBody.response_format = {
-        type: 'json_schema',
-        json_schema: {
-          name: 'MuseumInfo',
-          schema: {
-            type: 'object',
-            properties: {
-              address: { type: 'string' },
-              phone: { type: 'string' },
-              website: { type: 'string' },
-              opening_hours: { type: 'string' },
-              museum_ticket_price: { type: 'string' },
-              description: { type: 'string' },
-              main_exhibitions: { type: 'array', items: { type: 'string' } }
             }
           }
         }
@@ -241,7 +215,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
       };
       break;
 
-    case 'airport':
+    case 'fly':
       prompt = `Fournis les informations officielles de l'aéroport "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
       Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
       Fournis uniquement les informations manquantes.`;
@@ -254,17 +228,15 @@ async function enrichSegmentWithPerplexity(segment: any) {
             type: 'object',
             properties: {
               address: { type: 'string' },
-              phone: { type: 'string' },
-              website: { type: 'string' },
               iata_code: { type: 'string' },
               icao_code: { type: 'string' },
-              terminals: { type: 'array', items: { type: 'string' } },
-              facilities: { type: 'array', items: { type: 'string' } }
             }
           }
         }
       };
       break;
+      
+            
 
     case 'boat':
       prompt = `Fournis les informations officielles du service de bateau/ferry "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
@@ -280,11 +252,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
             properties: {
               address: { type: 'string' },
               phone: { type: 'string' },
-              website: { type: 'string' },
-              departure_times: { type: 'array', items: { type: 'string' } },
-              route: { type: 'string' },
               duration: { type: 'string' },
-              boat_ticket_price: { type: 'string' }
             }
           }
         }
