@@ -105,6 +105,63 @@ export type Database = {
           },
         ]
       }
+      travel_recommendations: {
+        Row: {
+          address: string | null
+          coordinates: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          opening_hours: string | null
+          phone: string | null
+          price_level: number | null
+          rating: number | null
+          recommendation_type: string
+          source_data: Json | null
+          step_id: string
+          trip_id: string
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          coordinates?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          opening_hours?: string | null
+          phone?: string | null
+          price_level?: number | null
+          rating?: number | null
+          recommendation_type: string
+          source_data?: Json | null
+          step_id: string
+          trip_id: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          coordinates?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          opening_hours?: string | null
+          phone?: string | null
+          price_level?: number | null
+          rating?: number | null
+          recommendation_type?: string
+          source_data?: Json | null
+          step_id?: string
+          trip_id?: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       travel_segments: {
         Row: {
           address: string | null
@@ -113,6 +170,7 @@ export type Database = {
           description: string | null
           document_id: string
           end_date: string | null
+          enriched: Json | null
           id: string
           is_multi_day: boolean | null
           parent_segment_id: string | null
@@ -136,6 +194,7 @@ export type Database = {
           description?: string | null
           document_id: string
           end_date?: string | null
+          enriched?: Json | null
           id?: string
           is_multi_day?: boolean | null
           parent_segment_id?: string | null
@@ -159,6 +218,7 @@ export type Database = {
           description?: string | null
           document_id?: string
           end_date?: string | null
+          enriched?: Json | null
           id?: string
           is_multi_day?: boolean | null
           parent_segment_id?: string | null
