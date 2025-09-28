@@ -16,6 +16,7 @@ export interface TravelSegment {
   confidence: number;
   raw_data?: any;
   validated: boolean;
+  enriched?: EnrichedSegmentData; // New enriched data from Perplexity
   created_at: string;
   updated_at: string;
   // Related data
@@ -29,6 +30,60 @@ export interface TravelSegment {
     status: string;
     error_message?: string;
   }[];
+}
+
+// Enriched data structure for different segment types
+export interface EnrichedSegmentData {
+  // Common fields
+  address?: string;
+  phone?: string;
+  website?: string;
+  description?: string;
+  
+  // Hotel-specific
+  checkin_time?: string;
+  checkout_time?: string;
+  amenities?: string[];
+  star_rating?: number;
+  
+  // Museum-specific
+  opening_hours?: string;
+  museum_ticket_price?: string;
+  main_exhibitions?: string[];
+  
+  // Airport-specific
+  terminals?: string[];
+  facilities?: string[];
+  iata_code?: string;
+  icao_code?: string;
+  
+  // Boat-specific
+  departure_times?: string[];
+  route?: string;
+  duration?: string;
+  boat_ticket_price?: string;
+}
+
+export interface TravelRecommendation {
+  id: string;
+  step_id: string;
+  trip_id: string;
+  recommendation_type: 'restaurant' | 'activity' | 'site';
+  name: string;
+  description?: string;
+  address?: string;
+  rating?: number;
+  price_level?: number; // 1-4 scale
+  opening_hours?: string;
+  website?: string;
+  phone?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  source_data?: any; // raw Perplexity response
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Document {

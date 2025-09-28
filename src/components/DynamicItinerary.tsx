@@ -85,13 +85,21 @@ export function DynamicItinerary({
       const results = await generateAllStepsAIContent(
         aiRequests, 
         tripId,
-        (stepId, status, error, result) => {
-          console.log(`Step ${stepId} status: ${status}`, error || result);
-          setProgress(prev => prev + 1);
+        (type, stepId, status, error, result) => {
+          console.log(`${type} ${stepId || ''} status: ${status}`, error || result);
           
-          if (stepId === 'trip-summary') {
+          if (type === 'consolidation') {
             if (status === 'generating') {
-              setCurrentStep(-1); // Special index for trip summary
+              setStepStatus('Consolidation des segments en cours...');
+            } else if (status === 'completed') {
+              setStepStatus('Segments consolidés avec succès');
+            }
+            return;
+          }
+          
+          if (type === 'trip-summary') {
+            if (status === 'generating') {
+              setCurrentStep(-1);
               setStepStatus('Génération du résumé du voyage...');
             } else if (status === 'completed') {
               setStepStatus('Résumé du voyage généré');
@@ -99,21 +107,34 @@ export function DynamicItinerary({
             return;
           }
           
-          const stepIndex = steps.findIndex(s => s.stepId === stepId);
-          setCurrentStep(stepIndex);
-          setProgress(50 + ((stepIndex + 1) / steps.length * 50));
+          if (type === 'enrichment') {
+            if (status === 'generating') {
+              setStepStatus('Enrichissement des données en cours...');
+            } else if (status === 'completed') {
+              setStepStatus('Données enrichies avec Perplexity');
+            } else if (status === 'error') {
+              setStepStatus('Erreur lors de l\'enrichissement des données');
+            }
+            return;
+          }
           
-          if (status === 'generating') {
-            setStepStatus(`Génération du contenu pour l'étape ${stepIndex + 1}/${steps.length}...`);
-          } else if (status === 'completed' && result) {
-            setStepStatus(`Contenu généré pour l'étape ${stepIndex + 1}`);
-            setAiContents(prev => {
-              const m = new Map(prev);
-              m.set(stepId, result);
-              return m;
-            });
-          } else if (status === 'error') {
-            console.error(`Error generating content for step ${stepId}:`, error);
+          if (type === 'step' && stepId) {
+            const stepIndex = steps.findIndex(s => s.stepId === stepId);
+            setCurrentStep(stepIndex);
+            setProgress(50 + ((stepIndex + 1) / steps.length * 50));
+            
+            if (status === 'generating') {
+              setStepStatus(`Génération du contenu pour l'étape ${stepIndex + 1}/${steps.length}...`);
+            } else if (status === 'completed' && result) {
+              setStepStatus(`Contenu généré pour l'étape ${stepIndex + 1}`);
+              setAiContents(prev => {
+                const m = new Map(prev);
+                m.set(stepId, result);
+                return m;
+              });
+            } else if (status === 'error') {
+              console.error(`Error generating content for step ${stepId}:`, error);
+            }
           }
         }
       );

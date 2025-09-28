@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.consolidate-step-segments]
 verify_jwt = false
+
+[functions.enrich-timeline]
+verify_jwt = false

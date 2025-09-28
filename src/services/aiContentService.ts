@@ -182,45 +182,82 @@ async function generateStepAIContentWithRetry(
   return errorResult;
 }
 
+export async function enrichTimeline(tripId: string): Promise<{ success: boolean; enrichedSegments: number; recommendations: number; error?: string }> {
+  try {
+    console.log('Enriching timeline for trip:', tripId);
+    
+    const { data, error } = await supabase.functions.invoke('enrich-timeline', {
+      body: { tripId }
+    });
+
+    if (error) {
+      console.error('Error calling enrich-timeline function:', error);
+      return { success: false, enrichedSegments: 0, recommendations: 0, error: error.message };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in enrichTimeline:', error);
+    return { 
+      success: false, 
+      enrichedSegments: 0, 
+      recommendations: 0, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
 /**
  * Generate AI content for all steps
  */
 export async function generateAllStepsAIContent(
   requests: AIContentRequest[],
   tripId: string,
-  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', error?: string, result?: AIContentResult) => void
+  onProgress?: (type: 'consolidation' | 'trip-summary' | 'enrichment' | 'step', stepId?: string, status?: 'generating' | 'completed' | 'error', error?: string, result?: AIContentResult) => void
 ): Promise<AIContentResult[]> {
   const results: AIContentResult[] = [];
 
-  // Step 0: Consolidate duplicate segments first
-  onProgress?.('consolidation', 'generating');
   try {
+    // Step 0: Consolidate duplicate segments first
+    onProgress?.('consolidation', undefined, 'generating');
     await consolidateStepSegments(tripId);
-    onProgress?.('consolidation', 'completed');
-  } catch (error) {
-    console.warn('Failed to consolidate segments:', error);
-    onProgress?.('consolidation', 'error', error instanceof Error ? error.message : 'Unknown consolidation error');
-    // Continue with generation even if consolidation fails
-  }
+    onProgress?.('consolidation', undefined, 'completed');
 
-  // Step 1: Generate trip summary for context (with consolidated segments)
-  onProgress?.('trip-summary', 'generating');
-  const tripSummary = await generateTripSummary(tripId);
-  onProgress?.('trip-summary', 'completed');
+    // Step 1: Generate trip summary AND enrich timeline in parallel
+    onProgress?.('trip-summary', undefined, 'generating');
+    onProgress?.('enrichment', undefined, 'generating');
+    
+    const [tripSummary, enrichmentResult] = await Promise.all([
+      generateTripSummary(tripId),
+      enrichTimeline(tripId)
+    ]);
+    
+    onProgress?.('trip-summary', undefined, 'completed');
+    onProgress?.('enrichment', undefined, enrichmentResult.success ? 'completed' : 'error', enrichmentResult.error);
 
-  // Process each step with trip summary context
-  for (let i = 0; i < requests.length; i++) {
-    const request = { ...requests[i], tripSummary };
-    console.log(`Processing AI content for step ${i + 1}/${requests.length}: ${request.stepId}`);
-    
-    const result = await generateStepAIContentWithRetry(request, 3, onProgress);
-    results.push(result);
-    
-    // Small delay between requests to avoid overwhelming the API
-    if (i < requests.length - 1) {
-      await delay(0.5);
+    console.log('Enrichment result:', enrichmentResult);
+
+    // Process each step with trip summary context
+    for (let i = 0; i < requests.length; i++) {
+      const request = { ...requests[i], tripSummary };
+      console.log(`Processing AI content for step ${i + 1}/${requests.length}: ${request.stepId}`);
+      
+      const result = await generateStepAIContentWithRetry(
+        request, 
+        3, 
+        (stepId, status, error, result) => onProgress?.('step', stepId, status, error, result)
+      );
+      results.push(result);
+      
+      // Small delay between requests to avoid overwhelming the API
+      if (i < requests.length - 1) {
+        await delay(0.5);
+      }
     }
-  }
 
-  return results;
+    return results;
+  } catch (error) {
+    console.error('Error in generateAllStepsAIContent:', error);
+    throw error;
+  }
 }
