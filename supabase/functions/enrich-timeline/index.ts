@@ -159,8 +159,10 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   let prompt = '';
   let requestBody: any = {
-    model: 'sonar-small-chat',
-    search_context_size: 'small',
+    model: 'sonar',
+    web_search_options: {
+      "search_context_size": "medium"
+    }
   };
 
   switch (segmentType) {
