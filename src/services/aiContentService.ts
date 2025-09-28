@@ -1,6 +1,78 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AIContentRequest, AIContentResult } from '@/types/enrichedStep';
 
+export interface ParsedStepInfo {
+  stepNumber: number;
+  title: string;
+  dates: string;
+  location: string;
+  description: string;
+}
+
+/**
+ * Parse trip summary text to extract step information using regex
+ */
+export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
+  const steps: ParsedStepInfo[] = [];
+  
+  // Regex to match: "Etape X - [Title] (dates) {Location}"
+  const stepRegex = /^Etape (\d+) - (.+?) \(([^)]+)\) \{([^}]+)\}/gm;
+  
+  // Split by lines to separate step titles from descriptions
+  const lines = tripSummary.split('\n');
+  let currentStep: Partial<ParsedStepInfo> | null = null;
+  let currentDescription: string[] = [];
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    if (!trimmedLine) continue;
+    
+    // Check if this line is a step header
+    const stepMatch = trimmedLine.match(/^Etape (\d+) - (.+?) \(([^)]+)\) \{([^}]+)\}/);
+    
+    if (stepMatch) {
+      // Save previous step if exists
+      if (currentStep) {
+        steps.push({
+          ...currentStep,
+          description: currentDescription.join(' ').trim()
+        } as ParsedStepInfo);
+      }
+      
+      // Start new step
+      currentStep = {
+        stepNumber: parseInt(stepMatch[1]),
+        title: stepMatch[2].trim(),
+        dates: stepMatch[3].trim(),
+        location: stepMatch[4].trim()
+      };
+      currentDescription = [];
+    } else if (currentStep && trimmedLine) {
+      // This is description content for the current step
+      currentDescription.push(trimmedLine);
+    }
+  }
+  
+  // Don't forget the last step
+  if (currentStep) {
+    steps.push({
+      ...currentStep,
+      description: currentDescription.join(' ').trim()
+    } as ParsedStepInfo);
+  }
+  
+  return steps;
+}
+
+/**
+ * Generate and parse trip summary in one operation
+ */
+export async function generateAndParseTripSummary(tripId: string): Promise<ParsedStepInfo[]> {
+  const tripSummary = await generateTripSummary(tripId);
+  return parseTripSummary(tripSummary);
+}
+
 /**
  * Consolidate duplicate segments within trip steps
  */
@@ -27,7 +99,7 @@ async function consolidateStepSegments(tripId: string): Promise<void> {
 /**
  * Generate trip summary for context
  */
-async function generateTripSummary(tripId: string): Promise<string> {
+export async function generateTripSummary(tripId: string): Promise<string> {
   console.log(`Generating trip summary for trip: ${tripId}`);
   
   const { data, error } = await supabase.functions.invoke('generate-trip-summary', {

@@ -84,15 +84,11 @@ serve(async (req) => {
         / (1000 * 60 * 60 * 24)
       );
 
-      // Analyze segments to determine majority location
-      const segments = step.travel_step_segments
+      // Keep timeline of segments ordered by position_in_step
+      const timeline = step.travel_step_segments
         .sort((a: any, b: any) => a.position_in_step - b.position_in_step)
         .map((tss: any) => {
           const seg = tss.travel_segments;
-          const segmentDuration = seg.end_date && seg.start_date 
-            ? Math.ceil((new Date(seg.end_date).getTime() - new Date(seg.start_date).getTime()) / (1000 * 60 * 60 * 24))
-            : 1;
-          
           return {
             type: seg.segment_type,
             title: seg.title,
@@ -100,41 +96,9 @@ serve(async (req) => {
             address: seg.address,
             start_date: seg.start_date,
             end_date: seg.end_date,
-            duration: segmentDuration,
-            role: tss.role,
-            // Weight for location priority: accommodation > activities > transport
-            locationWeight: seg.segment_type === 'hotel' || seg.segment_type === 'accommodation' ? 3 
-                          : seg.segment_type === 'activity' || seg.segment_type === 'restaurant' ? 2
-                          : seg.segment_type === 'flight' || seg.segment_type === 'transport' ? 1 
-                          : 1
+            role: tss.role
           };
         });
-
-      // Find majority location based on duration and weight
-      const locationAnalysis = segments
-        .filter((seg: any) => seg.address && seg.address.trim() !== '')
-        .map((seg: any) => ({
-          location: seg.address,
-          weight: seg.duration * seg.locationWeight,
-          type: seg.type
-        }))
-        .reduce((acc: any, curr: any) => {
-          const key = curr.location;
-          if (!acc[key]) {
-            acc[key] = { weight: 0, types: [] };
-          }
-          acc[key].weight += curr.weight;
-          if (!acc[key].types.includes(curr.type)) {
-            acc[key].types.push(curr.type);
-          }
-          return acc;
-        }, {});
-
-      const majorityLocation = Object.keys(locationAnalysis).length > 0 
-        ? Object.keys(locationAnalysis).reduce((a, b) => 
-            locationAnalysis[a].weight > locationAnalysis[b].weight ? a : b
-          )
-        : step.primary_location || 'Localisation inconnue';
 
       return {
         position: index + 1,
@@ -143,8 +107,7 @@ serve(async (req) => {
         startDate,
         endDate,
         duration,
-        segments,
-        majorityLocation
+        timeline
       };
     });
 
@@ -166,9 +129,8 @@ serve(async (req) => {
 
 ${stepsInfo.map(step => 
   `Étape ${step.position} : ${step.stepTitle} (${step.startDate} → ${step.endDate}, ${step.duration} jour${step.duration > 1 ? 's' : ''})
-Localisation majoritaire détectée : ${step.majorityLocation}
 Timeline :
-${step.segments.map((seg: any) => `- ${seg.type} : ${seg.title}${seg.description ? " (" + seg.description + ")" : ""} [Durée: ${seg.duration} jour${seg.duration > 1 ? 's' : ''}]`).join('\n')}`
+${step.timeline.map((seg: any) => `- ${seg.type} : ${seg.title}${seg.description ? " (" + seg.description + ")" : ""}${seg.address ? " [" + seg.address + "]" : ""}`).join('\n')}`
 ).join('\n\n')}
 
 Crée un résumé chronologique avec le format EXACT suivant :
@@ -177,13 +139,13 @@ Crée un résumé chronologique avec le format EXACT suivant :
 
 Règles pour le titre :
 - Titre court et général avec la localisation principale (ex: "Séjour sur l'île Santiago", "Safari au Parc Tsavo East")
-- Utiliser la localisation majoritaire fournie mais l'adapter en ville/endroit (pas d'adresse précise)
 - Dates au format JJ/MM seulement
 
 Règles pour la localisation majoritaire entre {} :
-- Utiliser un nom de ville ou d'endroit, pas une adresse complète
+- Analyser les segments pour déterminer la ville/endroit principal
 - Se baser sur les hébergements plutôt que les transports/aéroports
-- Extraire le nom principal de la localisation majoritaire détectée
+- Utiliser un nom de ville ou d'endroit, pas une adresse complète
+- Regarder les adresses des segments pour extraire le lieu principal
 
 Ton neutre et factuel, ne pas inventer d'informations touristiques.`;
 
