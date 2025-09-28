@@ -4,7 +4,7 @@ import { BookletData, BookletOptions } from '@/services/bookletService';
 import { groupTravelSegments } from '@/services/stepGroupingService';
 import { getEnrichedSteps, createAIContentRequest } from '@/services/stepTemplateService';
 import { getManualSteps } from '@/services/manualStepsService';
-import { generateAllStepsAIContent, generateStepAIContent } from '@/services/aiContentService';
+import { generateAllStepsAIContent, generateStepAIContent, generateAndParseTripSummary, ParsedStepInfo } from '@/services/aiContentService';
 import { AIContentResult } from '@/types/enrichedStep';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { StepTemplate } from '@/components/StepTemplate';
@@ -25,6 +25,8 @@ export function DynamicItinerary({
 }: DynamicItineraryProps) {
   const [enrichedSteps, setEnrichedSteps] = useState<EnrichedStep[]>([]);
   const [aiContents, setAiContents] = useState<Map<string, AIContentResult>>(new Map());
+  const [parsedSteps, setParsedSteps] = useState<ParsedStepInfo[]>([]);
+  const [parsedStepsMap, setParsedStepsMap] = useState<Map<number, ParsedStepInfo>>(new Map());
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<number>(-1);
@@ -115,6 +117,27 @@ export function DynamicItinerary({
 
       setEnrichedSteps(steps);
       setProgress(50);
+
+      // Parse trip summary to extract titles and locations
+      console.log('🧩 Starting trip summary parsing...');
+      try {
+        const parsedInfo = await generateAndParseTripSummary(tripId);
+        setParsedSteps(parsedInfo);
+        
+        // Create a map by step number for quick lookup
+        const stepMap = new Map<number, ParsedStepInfo>();
+        parsedInfo.forEach(info => {
+          stepMap.set(info.stepNumber, info);
+        });
+        setParsedStepsMap(stepMap);
+        
+        console.log(`🧩 Parsed steps received (${parsedInfo.length}):`);
+        parsedInfo.forEach((info, index) => {
+          console.log(`  Step ${index + 1} -> parsed Etape ${info.stepNumber}: ${info.title} {${info.location}}`);
+        });
+      } catch (error) {
+        console.error('Error parsing trip summary:', error);
+      }
 
       setStepStatus('Génération du contenu enrichi...');
       setAiContents(new Map());
@@ -226,6 +249,7 @@ export function DynamicItinerary({
         const aiContent = aiContents.get(step.stepId);
         const isStepGenerating = isGenerating && currentStep === index;
         const nextStep = visibleSteps[index + 1];
+        const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
 
         return (
           <div key={step.stepId}>
@@ -238,6 +262,7 @@ export function DynamicItinerary({
               } : undefined}
               isLoading={isStepGenerating}
               nextStepStartDate={nextStep?.startDate}
+              parsedStepInfo={parsedStepInfo}
             />
           </div>
         );
