@@ -44,72 +44,149 @@ serve(async (req) => {
 
     console.log(`Found ${steps?.length || 0} steps to enrich`);
 
-    const enrichedSegments: any[] = [];
-    const allRecommendations: any[] = [];
-
-    // Enrichir les segments par type
+    // Collecter tous les segments à enrichir
+    const segmentsToEnrich: any[] = [];
+    const stepsForRecommendations: any[] = [];
+    
     for (const step of steps || []) {
       const segments = step.travel_step_segments?.map((tss: any) => tss.travel_segments) || [];
       
       for (const segment of segments) {
-        if (!segment) {
-          console.log(`Skipping null segment`);
-          continue;
-        }
+        if (!segment) continue;
 
         const segmentType = segment.segment_type?.toLowerCase();
-        if (!['hotel', 'flight', 'boat', 'activity'].includes(segmentType)) {
+        if (['hotel', 'flight', 'boat', 'activity'].includes(segmentType)) {
+          segmentsToEnrich.push(segment);
+        } else {
           console.log(`Skipping segment ${segment.id}: type ${segmentType} not supported for enrichment`);
-          continue;
         }
+      }
+      
+      stepsForRecommendations.push(step);
+    }
 
+    console.log(`Found ${segmentsToEnrich.length} segments to enrich and ${stepsForRecommendations.length} steps for recommendations`);
+
+    // Paralléliser l'enrichissement des segments par batches de 35
+    const BATCH_SIZE = 35;
+    const enrichedSegments: any[] = [];
+    
+    for (let i = 0; i < segmentsToEnrich.length; i += BATCH_SIZE) {
+      const batch = segmentsToEnrich.slice(i, i + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(segmentsToEnrich.length/BATCH_SIZE)} with ${batch.length} segments`);
+      
+      const enrichmentPromises = batch.map(async (segment) => {
         try {
           const enrichedData = await enrichSegmentWithPerplexity(segment);
-          
-          if (Object.keys(enrichedData).length > 0) {
-            const { error: updateError } = await supabase
-              .from('travel_segments')
-              .update(enrichedData)
-              .eq('id', segment.id);
-
-            if (updateError) {
-              console.error(`Error updating segment ${segment.id}:`, updateError);
-            } else {
-              enrichedSegments.push({ ...segment, ...enrichedData });
-              console.log(`Successfully enriched segment ${segment.id}`);
-            }
-          }
-        } catch (segmentError) {
-          const errorMessage = segmentError instanceof Error ? segmentError.message : 'Unknown error';
+          return { segment, enrichedData, success: true };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           console.error(`Error enriching segment ${segment.id}:`, errorMessage);
+          return { segment, error: errorMessage, success: false };
+        }
+      });
+
+      const results = await Promise.allSettled(enrichmentPromises);
+      
+      // Traiter les résultats et préparer les updates en batch
+      const segmentUpdates: any[] = [];
+      
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.success) {
+          const { segment, enrichedData } = result.value;
+          if (Object.keys(enrichedData).length > 0) {
+            segmentUpdates.push({ id: segment.id, ...enrichedData });
+            enrichedSegments.push({ ...segment, ...enrichedData });
+          }
         }
       }
 
-      // Générer des recommandations pour chaque step
-      try {
-        const recommendations = await generateStepRecommendations(step);
-        
-        if (recommendations.length > 0) {
-          const { error: recError } = await supabase
-            .from('travel_recommendations')
-            .insert(
-              recommendations.map(rec => ({
-                ...rec,
-                step_id: step.id,
-                trip_id: tripId
-              }))
-            );
+      // Update segments en batch si il y en a
+      if (segmentUpdates.length > 0) {
+        try {
+          for (const update of segmentUpdates) {
+            const { id, ...updateData } = update;
+            const { error: updateError } = await supabase
+              .from('travel_segments')
+              .update(updateData)
+              .eq('id', id);
 
-          if (recError) {
-            console.error(`Error inserting recommendations for step ${step.id}:`, recError);
-          } else {
+            if (updateError) {
+              console.error(`Error updating segment ${id}:`, updateError);
+            } else {
+              console.log(`Successfully enriched segment ${id}`);
+            }
+          }
+        } catch (updateError) {
+          console.error('Error batch updating segments:', updateError);
+        }
+      }
+
+      // Petite pause entre les batches pour éviter la surcharge
+      if (i + BATCH_SIZE < segmentsToEnrich.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    // Paralléliser la génération des recommandations par batches
+    const allRecommendations: any[] = [];
+    const REC_BATCH_SIZE = 30;
+    
+    for (let i = 0; i < stepsForRecommendations.length; i += REC_BATCH_SIZE) {
+      const batch = stepsForRecommendations.slice(i, i + REC_BATCH_SIZE);
+      console.log(`Processing recommendations batch ${Math.floor(i/REC_BATCH_SIZE) + 1}/${Math.ceil(stepsForRecommendations.length/REC_BATCH_SIZE)} with ${batch.length} steps`);
+      
+      const recommendationPromises = batch.map(async (step) => {
+        try {
+          const recommendations = await generateStepRecommendations(step);
+          return { step, recommendations, success: true };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`Error generating recommendations for step ${step.id}:`, errorMessage);
+          return { step, error: errorMessage, success: false };
+        }
+      });
+
+      const results = await Promise.allSettled(recommendationPromises);
+      
+      // Collecter toutes les recommandations de ce batch
+      const batchRecommendations: any[] = [];
+      
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.success) {
+          const { step, recommendations } = result.value;
+          if (recommendations && recommendations.length > 0) {
+            const stepsRecs = recommendations.map(rec => ({
+              ...rec,
+              step_id: step.id,
+              trip_id: tripId
+            }));
+            batchRecommendations.push(...stepsRecs);
             allRecommendations.push(...recommendations);
-            console.log(`Successfully added ${recommendations.length} recommendations for step ${step.id}`);
           }
         }
-      } catch (recError) {
-        const errorMessage = recError instanceof Error ? recError.message : 'Unknown error';
-        console.error(`Error generating recommendations for step ${step.id}:`, errorMessage);
+      }
+
+      // Insérer toutes les recommandations de ce batch en une fois
+      if (batchRecommendations.length > 0) {
+        try {
+          const { error: recError } = await supabase
+            .from('travel_recommendations')
+            .insert(batchRecommendations);
+
+          if (recError) {
+            console.error('Error batch inserting recommendations:', recError);
+          } else {
+            console.log(`Successfully added ${batchRecommendations.length} recommendations for batch`);
+          }
+        } catch (insertError) {
+          console.error('Error inserting recommendations batch:', insertError);
+        }
+      }
+
+      // Petite pause entre les batches
+      if (i + REC_BATCH_SIZE < stepsForRecommendations.length) {
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
 
