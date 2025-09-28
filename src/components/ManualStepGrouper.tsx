@@ -426,29 +426,57 @@ export default function ManualStepGrouper({
   );
 }
 
-// Helper function to determine the best primary_location
+// Helper function to determine the best primary_location using frequency analysis
 function determinePrimaryLocation(segments: TravelSegment[]): string {
   if (segments.length === 0) return '';
   
-  // Priority 1: Hotel/accommodation segments
-  const hotel = segments.find(s => s.segment_type === 'hotel' && s.address?.trim());
-  if (hotel?.address) return hotel.address;
+  // Function to detect airport codes and invalid addresses
+  const isValidAddress = (address: string): boolean => {
+    if (!address || address.trim().length < 3) return false;
+    
+    // Exclude airport code patterns (LIS-RAI, RAI-VXE, etc.)
+    if (/^[A-Z]{3}-[A-Z]{3}$/.test(address.trim())) return false;
+    
+    // Exclude standalone IATA codes
+    if (/^[A-Z]{3}$/.test(address.trim())) return false;
+    
+    return true;
+  };
   
-  // Priority 2: Activity segments
-  const activity = segments.find(s => s.segment_type === 'activity' && s.address?.trim());
-  if (activity?.address) return activity.address;
+  // Collect all valid addresses
+  const validAddresses = segments
+    .map(s => s.address?.trim())
+    .filter((addr): addr is string => addr !== undefined && isValidAddress(addr));
   
-  // Priority 3: Any non-transport segment with a valid address
-  const nonTransport = segments.find(s => 
-    s.segment_type !== 'flight' && 
-    s.segment_type !== 'car' && 
-    s.address?.trim()
-  );
-  if (nonTransport?.address) return nonTransport.address;
+  if (validAddresses.length === 0) {
+    // Fallback: return first segment's address even if potentially invalid
+    const fallback = segments.find(s => s.address?.trim());
+    return fallback?.address || '';
+  }
   
-  // Fallback: First segment with any address
-  const fallback = segments.find(s => s.address?.trim());
-  return fallback?.address || '';
+  // Count occurrences of each address
+  const addressFrequency = validAddresses.reduce((acc, address) => {
+    acc[address] = (acc[address] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Find the most frequent address
+  const mostFrequent = Object.entries(addressFrequency)
+    .sort(([,a], [,b]) => b - a) // Sort by frequency desc
+    .sort(([addrA], [addrB]) => {
+      // Secondary sort: prefer hotel/activity addresses if same frequency
+      const segmentA = segments.find(s => s.address?.trim() === addrA);
+      const segmentB = segments.find(s => s.address?.trim() === addrB);
+      
+      const priorityA = segmentA?.segment_type === 'hotel' ? 3 : 
+                       segmentA?.segment_type === 'activity' ? 2 : 1;
+      const priorityB = segmentB?.segment_type === 'hotel' ? 3 : 
+                       segmentB?.segment_type === 'activity' ? 2 : 1;
+      
+      return priorityB - priorityA;
+    })[0];
+  
+  return mostFrequent ? mostFrequent[0] : '';
 }
 
 // Service function to save manual steps
