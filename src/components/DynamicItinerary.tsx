@@ -36,6 +36,35 @@ export function DynamicItinerary({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.segments, tripId]);
 
+  const refreshEnrichedSteps = async () => {
+    try {
+      const stepsResult = await getManualSteps(tripId);
+      if (stepsResult.success && stepsResult.steps && stepsResult.steps.length > 0) {
+        const updatedSteps = stepsResult.steps.map(step => ({
+          stepId: step.id,
+          stepTitle: step.step_title,
+          stepType: step.step_type || 'manual',
+          primaryLocation: step.primary_location || '',
+          startDate: step.start_date ? new Date(step.start_date) : new Date(),
+          endDate: step.end_date ? new Date(step.end_date) : new Date(),
+          sections: [{
+            title: "Segments",
+            segments: step.travel_step_segments
+              ?.sort((a, b) => a.position_in_step - b.position_in_step)
+              .map(tss => tss.travel_segments)
+              .filter(Boolean) || [],
+            role: 'services' as const,
+            icon: '📋'
+          }],
+          rawData: step
+        }));
+        setEnrichedSteps(updatedSteps);
+      }
+    } catch (error) {
+      console.error('Error refreshing enriched steps:', error);
+    }
+  };
+
   const generateContent = async () => {
     if (data.segments.length === 0 || !tripId) return;
 
@@ -112,6 +141,8 @@ export function DynamicItinerary({
               setStepStatus('Enrichissement des données en cours...');
             } else if (status === 'completed') {
               setStepStatus('Données enrichies avec Perplexity');
+              // Re-fetch enriched data
+              refreshEnrichedSteps();
             } else if (status === 'error') {
               setStepStatus('Erreur lors de l\'enrichissement des données');
             }

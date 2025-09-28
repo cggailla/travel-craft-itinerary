@@ -58,7 +58,7 @@ serve(async (req) => {
         }
 
         const segmentType = segment.segment_type?.toLowerCase();
-        if (!['hotel', 'fly', 'boat', 'activity'].includes(segmentType)) {
+        if (!['hotel', 'flight', 'boat', 'activity'].includes(segmentType)) {
           console.log(`Skipping segment ${segment.id}: type ${segmentType} not supported for enrichment`);
           continue;
         }

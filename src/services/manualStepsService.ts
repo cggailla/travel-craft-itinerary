@@ -22,6 +22,19 @@ export async function getManualSteps(tripId: string) {
             end_date,
             confidence,
             validated,
+            phone,
+            website,
+            star_rating,
+            checkin_time,
+            checkout_time,
+            opening_hours,
+            activity_price,
+            duration,
+            booking_required,
+            iata_code,
+            icao_code,
+            route,
+            ticket_price,
             documents (
               file_name
             )

@@ -211,11 +211,10 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched activity information */}
-                          {(segment.phone || segment.website || segment.activity_price || segment.duration || segment.opening_hours || segment.booking_required !== null) && (
+                          {(segment.phone || segment.website || segment.duration || segment.opening_hours || segment.booking_required !== null) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
-                                {segment.activity_price && <p><strong>Prix:</strong> {segment.activity_price}</p>}
                                 {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
                                 {segment.booking_required !== null && <p><strong>Réservation:</strong> {segment.booking_required ? 'Requise' : 'Non requise'}</p>}
                               </div>
@@ -263,12 +262,11 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched boat information */}
-                          {(segment.phone || segment.website || segment.route || segment.ticket_price || segment.duration) && (
+                          {(segment.phone || segment.website || segment.route || segment.duration) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
                                 {segment.route && <p><strong>Route:</strong> {segment.route}</p>}
-                                {segment.ticket_price && <p><strong>Prix:</strong> {segment.ticket_price}</p>}
                                 {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
                               </div>
                               {segment.website && segment.website !== 'N/A' && (
