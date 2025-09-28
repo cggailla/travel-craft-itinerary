@@ -164,76 +164,127 @@ export type Database = {
       }
       travel_segments: {
         Row: {
+          activity_price: string | null
           address: string | null
+          booking_required: boolean | null
+          checkin_time: string | null
+          checkout_time: string | null
           confidence: number
           created_at: string
+          departure_times: string[] | null
           description: string | null
           document_id: string
+          duration: string | null
           end_date: string | null
           enriched: Json | null
+          facilities: string[] | null
+          iata_code: string | null
+          icao_code: string | null
           id: string
           is_multi_day: boolean | null
+          main_exhibitions: string[] | null
+          opening_hours: string | null
           parent_segment_id: string | null
+          phone: string | null
           provider: string | null
           raw_data: Json | null
           reference_number: string | null
+          route: string | null
           segment_group_id: string | null
           segment_type: string
           sequence_order: number | null
+          star_rating: number | null
           start_date: string | null
+          terminals: string[] | null
+          ticket_price: string | null
           title: string
           trip_id: string | null
           updated_at: string
           user_id: string | null
           validated: boolean
+          website: string | null
         }
         Insert: {
+          activity_price?: string | null
           address?: string | null
+          booking_required?: boolean | null
+          checkin_time?: string | null
+          checkout_time?: string | null
           confidence?: number
           created_at?: string
+          departure_times?: string[] | null
           description?: string | null
           document_id: string
+          duration?: string | null
           end_date?: string | null
           enriched?: Json | null
+          facilities?: string[] | null
+          iata_code?: string | null
+          icao_code?: string | null
           id?: string
           is_multi_day?: boolean | null
+          main_exhibitions?: string[] | null
+          opening_hours?: string | null
           parent_segment_id?: string | null
+          phone?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
+          route?: string | null
           segment_group_id?: string | null
           segment_type: string
           sequence_order?: number | null
+          star_rating?: number | null
           start_date?: string | null
+          terminals?: string[] | null
+          ticket_price?: string | null
           title: string
           trip_id?: string | null
           updated_at?: string
           user_id?: string | null
           validated?: boolean
+          website?: string | null
         }
         Update: {
+          activity_price?: string | null
           address?: string | null
+          booking_required?: boolean | null
+          checkin_time?: string | null
+          checkout_time?: string | null
           confidence?: number
           created_at?: string
+          departure_times?: string[] | null
           description?: string | null
           document_id?: string
+          duration?: string | null
           end_date?: string | null
           enriched?: Json | null
+          facilities?: string[] | null
+          iata_code?: string | null
+          icao_code?: string | null
           id?: string
           is_multi_day?: boolean | null
+          main_exhibitions?: string[] | null
+          opening_hours?: string | null
           parent_segment_id?: string | null
+          phone?: string | null
           provider?: string | null
           raw_data?: Json | null
           reference_number?: string | null
+          route?: string | null
           segment_group_id?: string | null
           segment_type?: string
           sequence_order?: number | null
+          star_rating?: number | null
           start_date?: string | null
+          terminals?: string[] | null
+          ticket_price?: string | null
           title?: string
           trip_id?: string | null
           updated_at?: string
           user_id?: string | null
           validated?: boolean
+          website?: string | null
         }
         Relationships: [
           {

@@ -66,16 +66,18 @@ serve(async (req) => {
         try {
           const enrichedData = await enrichSegmentWithPerplexity(segment);
           
-          const { error: updateError } = await supabase
-            .from('travel_segments')
-            .update({ enriched: enrichedData })
-            .eq('id', segment.id);
+          if (Object.keys(enrichedData).length > 0) {
+            const { error: updateError } = await supabase
+              .from('travel_segments')
+              .update(enrichedData)
+              .eq('id', segment.id);
 
-          if (updateError) {
-            console.error(`Error updating segment ${segment.id}:`, updateError);
-          } else {
-            enrichedSegments.push({ ...segment, enriched: enrichedData });
-            console.log(`Successfully enriched segment ${segment.id}`);
+            if (updateError) {
+              console.error(`Error updating segment ${segment.id}:`, updateError);
+            } else {
+              enrichedSegments.push({ ...segment, ...enrichedData });
+              console.log(`Successfully enriched segment ${segment.id}`);
+            }
           }
         } catch (segmentError) {
           const errorMessage = segmentError instanceof Error ? segmentError.message : 'Unknown error';
@@ -140,7 +142,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   const segmentType = segment.segment_type?.toLowerCase();
   
-  // Gather existing data from the segment
+  // Gather existing data from the segment including enriched fields
   const existingData = {
     title: segment.title,
     address: segment.address,
@@ -149,7 +151,19 @@ async function enrichSegmentWithPerplexity(segment: any) {
     reference_number: segment.reference_number,
     start_date: segment.start_date,
     end_date: segment.end_date,
-    ...segment.enriched // Include any existing enriched data
+    phone: segment.phone,
+    website: segment.website,
+    star_rating: segment.star_rating,
+    checkin_time: segment.checkin_time,
+    checkout_time: segment.checkout_time,
+    opening_hours: segment.opening_hours,
+    activity_price: segment.activity_price,
+    duration: segment.duration,
+    booking_required: segment.booking_required,
+    iata_code: segment.iata_code,
+    icao_code: segment.icao_code,
+    route: segment.route,
+    ticket_price: segment.ticket_price
   };
 
   // Remove null/undefined values for cleaner prompt
@@ -183,8 +197,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
               website: { type: 'string' },
               checkin_time: { type: 'string' },
               checkout_time: { type: 'string' },
-              star_rating: { type: 'number' },
-              description: { type: 'string' }
+              star_rating: { type: 'number' }
             }
           }
         }
@@ -208,7 +221,6 @@ async function enrichSegmentWithPerplexity(segment: any) {
               website: { type: 'string' },
               opening_hours: { type: 'string' },
               activity_price: { type: 'string' },
-              description: { type: 'string' },
               duration: { type: 'string' },
               booking_required: { type: 'boolean' }
             }
@@ -254,7 +266,10 @@ async function enrichSegmentWithPerplexity(segment: any) {
             properties: {
               address: { type: 'string' },
               phone: { type: 'string' },
-              duration: { type: 'string' },
+              website: { type: 'string' },
+              route: { type: 'string' },
+              ticket_price: { type: 'string' },
+              duration: { type: 'string' }
             }
           }
         }
@@ -296,17 +311,17 @@ async function enrichSegmentWithPerplexity(segment: any) {
     const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const newEnrichmentData = JSON.parse(cleanedContent);
     
-    // Merge with existing enriched data, prioritizing existing values
-    const existingEnriched = segment.enriched || {};
-    const mergedEnrichment = { ...existingEnriched, ...newEnrichmentData };
+    // Filter out fields that already exist and are not null/empty
+    const fieldsToUpdate: any = {};
+    Object.entries(newEnrichmentData).forEach(([key, value]) => {
+      const existingValue = existingData[key as keyof typeof existingData];
+      if (!existingValue && value) {
+        fieldsToUpdate[key] = value;
+      }
+    });
     
-    // Only return if we have new data to add
-    if (Object.keys(newEnrichmentData).length === 0) {
-      console.log(`No new enrichment data found for segment ${segment.id}`);
-      return existingEnriched;
-    }
-    
-    return mergedEnrichment;
+    console.log(`Found ${Object.keys(fieldsToUpdate).length} new fields to update for segment ${segment.id}`);
+    return fieldsToUpdate;
   } catch (parseError) {
     console.error('Error parsing Perplexity JSON response:', parseError);
     console.error('Raw content:', content);

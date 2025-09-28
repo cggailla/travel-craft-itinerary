@@ -16,7 +16,24 @@ export interface TravelSegment {
   confidence: number;
   raw_data?: any;
   validated: boolean;
-  enriched?: EnrichedSegmentData; // New enriched data from Perplexity
+  // Enriched fields stored directly in table
+  phone?: string;
+  website?: string;
+  star_rating?: number;
+  checkin_time?: string;
+  checkout_time?: string;
+  opening_hours?: string;
+  ticket_price?: string;
+  main_exhibitions?: string[];
+  activity_price?: string;
+  duration?: string;
+  booking_required?: boolean;
+  terminals?: string[];
+  facilities?: string[];
+  iata_code?: string;
+  icao_code?: string;
+  departure_times?: string[];
+  route?: string;
   created_at: string;
   updated_at: string;
   // Related data

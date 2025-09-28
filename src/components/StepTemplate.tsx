@@ -143,16 +143,16 @@ export function StepTemplate({
                           </p>}
                         
                         {/* Enriched hotel information */}
-                        {segment.enriched && (
+                        {(segment.phone || segment.website || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
                           <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                             <div className="grid grid-cols-2 gap-2">
-                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
-                              {segment.enriched.checkin_time && <p><strong>Check-in:</strong> {segment.enriched.checkin_time}</p>}
-                              {segment.enriched.checkout_time && <p><strong>Check-out:</strong> {segment.enriched.checkout_time}</p>}
-                              {segment.enriched.star_rating && <p><strong>Étoiles:</strong> {segment.enriched.star_rating}⭐</p>}
+                              {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                              {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
+                              {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
+                              {segment.star_rating && <p><strong>Étoiles:</strong> {segment.star_rating}⭐</p>}
                             </div>
-                            {segment.enriched.website && (
-                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            {segment.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
                             )}
                           </div>
                         )}
@@ -186,17 +186,17 @@ export function StepTemplate({
                           </p>}
                         
                         {/* Enriched activity information */}
-                        {segment.enriched && (
+                        {(segment.phone || segment.website || segment.opening_hours || segment.activity_price || segment.duration || segment.booking_required !== undefined) && (
                           <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                             <div className="grid grid-cols-2 gap-2">
-                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
-                              {segment.enriched.opening_hours && <p><strong>Horaires:</strong> {segment.enriched.opening_hours}</p>}
-                              {segment.enriched.activity_price && <p><strong>Prix:</strong> {segment.enriched.activity_price}</p>}
-                              {segment.enriched.duration && <p><strong>Durée:</strong> {segment.enriched.duration}</p>}
-                              {segment.enriched.booking_required !== undefined && <p><strong>Réservation:</strong> {segment.enriched.booking_required ? 'Requise' : 'Non requise'}</p>}
+                              {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                              {segment.opening_hours && <p><strong>Horaires:</strong> {segment.opening_hours}</p>}
+                              {segment.activity_price && <p><strong>Prix:</strong> {segment.activity_price}</p>}
+                              {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
+                              {segment.booking_required !== undefined && <p><strong>Réservation:</strong> {segment.booking_required ? 'Requise' : 'Non requise'}</p>}
                             </div>
-                            {segment.enriched.website && (
-                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            {segment.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
                             )}
                           </div>
                         )}
@@ -231,25 +231,27 @@ export function StepTemplate({
                           </p>}
                         
                         {/* Enriched information for airports, boats, etc. */}
-                        {segment.enriched && (
+                        {(segment.phone || segment.website || segment.iata_code || segment.icao_code || segment.duration || 
+                          segment.terminals?.length || segment.route || segment.ticket_price || segment.facilities?.length || 
+                          segment.departure_times?.length) && (
                           <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                             <div className="grid grid-cols-2 gap-2">
-                              {segment.enriched.phone && <p><strong>Tél:</strong> {segment.enriched.phone}</p>}
-                              {segment.enriched.iata_code && <p><strong>Code IATA:</strong> {segment.enriched.iata_code}</p>}
-                              {segment.enriched.icao_code && <p><strong>Code ICAO:</strong> {segment.enriched.icao_code}</p>}
-                              {segment.enriched.duration && <p><strong>Durée:</strong> {segment.enriched.duration}</p>}
-                              {segment.enriched.terminals && segment.enriched.terminals.length > 0 && <p><strong>Terminaux:</strong> {segment.enriched.terminals.join(', ')}</p>}
-                              {segment.enriched.route && <p><strong>Route:</strong> {segment.enriched.route}</p>}
-                              {segment.enriched.boat_ticket_price && <p><strong>Prix billet:</strong> {segment.enriched.boat_ticket_price}</p>}
+                              {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                              {segment.iata_code && <p><strong>Code IATA:</strong> {segment.iata_code}</p>}
+                              {segment.icao_code && <p><strong>Code ICAO:</strong> {segment.icao_code}</p>}
+                              {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
+                              {segment.terminals && segment.terminals.length > 0 && <p><strong>Terminaux:</strong> {segment.terminals.join(', ')}</p>}
+                              {segment.route && <p><strong>Route:</strong> {segment.route}</p>}
+                              {segment.ticket_price && <p><strong>Prix billet:</strong> {segment.ticket_price}</p>}
                             </div>
-                            {segment.enriched.facilities && segment.enriched.facilities.length > 0 && (
-                              <p className="mt-1"><strong>Services:</strong> {segment.enriched.facilities.join(', ')}</p>
+                            {segment.facilities && segment.facilities.length > 0 && (
+                              <p className="mt-1"><strong>Services:</strong> {segment.facilities.join(', ')}</p>
                             )}
-                            {segment.enriched.departure_times && segment.enriched.departure_times.length > 0 && (
-                              <p className="mt-1"><strong>Horaires:</strong> {segment.enriched.departure_times.join(', ')}</p>
+                            {segment.departure_times && segment.departure_times.length > 0 && (
+                              <p className="mt-1"><strong>Horaires:</strong> {segment.departure_times.join(', ')}</p>
                             )}
-                            {segment.enriched.website && (
-                              <p className="mt-1"><strong>Site:</strong> <a href={segment.enriched.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.enriched.website}</a></p>
+                            {segment.website && (
+                              <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
                             )}
                           </div>
                         )}
