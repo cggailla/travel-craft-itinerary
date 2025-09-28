@@ -426,6 +426,31 @@ export default function ManualStepGrouper({
   );
 }
 
+// Helper function to determine the best primary_location
+function determinePrimaryLocation(segments: TravelSegment[]): string {
+  if (segments.length === 0) return '';
+  
+  // Priority 1: Hotel/accommodation segments
+  const hotel = segments.find(s => s.segment_type === 'hotel' && s.address?.trim());
+  if (hotel?.address) return hotel.address;
+  
+  // Priority 2: Activity segments
+  const activity = segments.find(s => s.segment_type === 'activity' && s.address?.trim());
+  if (activity?.address) return activity.address;
+  
+  // Priority 3: Any non-transport segment with a valid address
+  const nonTransport = segments.find(s => 
+    s.segment_type !== 'flight' && 
+    s.segment_type !== 'car' && 
+    s.address?.trim()
+  );
+  if (nonTransport?.address) return nonTransport.address;
+  
+  // Fallback: First segment with any address
+  const fallback = segments.find(s => s.address?.trim());
+  return fallback?.address || '';
+}
+
 // Service function to save manual steps
 async function saveManualSteps(tripId: string, steps: ManualStep[]) {
   const { supabase } = await import('@/integrations/supabase/client');
@@ -455,7 +480,7 @@ async function saveManualSteps(tripId: string, steps: ManualStep[]) {
         step_id: `step-${i + 1}`,
         step_title: step.title,
         step_type: 'manual',
-        primary_location: step.segments[0]?.address || '',
+        primary_location: determinePrimaryLocation(step.segments),
         start_date: step.startDate?.toISOString().split('T')[0],
         end_date: step.endDate?.toISOString().split('T')[0],
       })
