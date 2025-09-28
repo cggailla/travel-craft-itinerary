@@ -181,9 +181,10 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   let prompt = '';
   let requestBody: any = {
-    model: 'llama-3.1-sonar-small-128k-online',
-    temperature: 0.2,
-    max_tokens: 1000,
+    model: "sonar",
+    web_search_options: {
+      "search_context_size": "low"
+    }
   };
 
   switch (segmentType) {
@@ -309,7 +310,7 @@ async function generateStepRecommendations(step: any) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.1-sonar-small-128k-online',
+      model: 'sonar',
       messages: [
         {
           role: 'system',
@@ -318,10 +319,11 @@ async function generateStepRecommendations(step: any) {
         {
           role: 'user',
           content: prompt
-        }
+        },
       ],
-      temperature: 0.3,
-      max_tokens: 1500,
+      web_search_options: {
+        "search_context_size": "medium"
+      }
     }),
   });
 
