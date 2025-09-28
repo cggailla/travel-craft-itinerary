@@ -51,6 +51,11 @@ export interface EnrichedSegmentData {
   museum_ticket_price?: string;
   main_exhibitions?: string[];
   
+  // Activity-specific
+  activity_price?: string;
+  duration?: string;
+  booking_required?: boolean;
+  
   // Airport-specific
   terminals?: string[];
   facilities?: string[];
@@ -60,7 +65,6 @@ export interface EnrichedSegmentData {
   // Boat-specific
   departure_times?: string[];
   route?: string;
-  duration?: string;
   boat_ticket_price?: string;
 }
 

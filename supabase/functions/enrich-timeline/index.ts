@@ -52,13 +52,13 @@ serve(async (req) => {
       const segments = step.travel_step_segments?.map((tss: any) => tss.travel_segments) || [];
       
       for (const segment of segments) {
-        if (!segment || segment.enriched) {
-          console.log(`Skipping segment ${segment?.id}: already enriched or null`);
+        if (!segment) {
+          console.log(`Skipping null segment`);
           continue;
         }
 
         const segmentType = segment.segment_type?.toLowerCase();
-        if (!['hotel', 'museum', 'airport', 'boat'].includes(segmentType)) {
+        if (!['hotel', 'museum', 'airport', 'boat', 'activity'].includes(segmentType)) {
           console.log(`Skipping segment ${segment.id}: type ${segmentType} not supported for enrichment`);
           continue;
         }
@@ -139,28 +139,77 @@ async function enrichSegmentWithPerplexity(segment: any) {
   }
 
   const segmentType = segment.segment_type?.toLowerCase();
+  
+  // Gather existing data from the segment
+  const existingData = {
+    title: segment.title,
+    address: segment.address,
+    description: segment.description,
+    provider: segment.provider,
+    reference_number: segment.reference_number,
+    start_date: segment.start_date,
+    end_date: segment.end_date,
+    ...segment.enriched // Include any existing enriched data
+  };
+
+  // Remove null/undefined values for cleaner prompt
+  const cleanExistingData = Object.fromEntries(
+    Object.entries(existingData).filter(([_, value]) => value != null && value !== '')
+  );
+
   let prompt = '';
+  let targetFields = [];
 
   switch (segmentType) {
     case 'hotel':
-      prompt = `Find detailed information about this hotel: "${segment.title}" ${segment.address ? `at ${segment.address}` : ''}. 
-      Return ONLY a valid JSON object with: address, phone, checkin_time, checkout_time, amenities (array), star_rating, website, description.
-      If information is not available, use null for that field.`;
+      targetFields = ['address', 'phone', 'checkin_time', 'checkout_time', 'amenities', 'star_rating', 'website', 'description'];
+      prompt = `I have this hotel information: ${JSON.stringify(cleanExistingData)}
+      
+      Find and return ONLY the missing information for: "${segment.title}". 
+      Target fields: ${targetFields.join(', ')}
+      
+      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, checkin_time, checkout_time, amenities (array), star_rating, website, description.
+      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
       break;
     case 'museum':
-      prompt = `Find detailed information about this museum: "${segment.title}" ${segment.address ? `at ${segment.address}` : ''}. 
-      Return ONLY a valid JSON object with: address, phone, opening_hours, museum_ticket_price, website, description, main_exhibitions (array).
-      If information is not available, use null for that field.`;
+      targetFields = ['address', 'phone', 'opening_hours', 'museum_ticket_price', 'website', 'description', 'main_exhibitions'];
+      prompt = `I have this museum information: ${JSON.stringify(cleanExistingData)}
+      
+      Find and return ONLY the missing information for: "${segment.title}".
+      Target fields: ${targetFields.join(', ')}
+      
+      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, opening_hours, museum_ticket_price, website, description, main_exhibitions (array).
+      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      break;
+    case 'activity':
+      targetFields = ['address', 'phone', 'opening_hours', 'activity_price', 'website', 'description', 'duration', 'booking_required'];
+      prompt = `I have this activity information: ${JSON.stringify(cleanExistingData)}
+      
+      Find and return ONLY the missing information for: "${segment.title}".
+      Target fields: ${targetFields.join(', ')}
+      
+      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, opening_hours, activity_price, website, description, duration, booking_required.
+      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
       break;
     case 'airport':
-      prompt = `Find detailed information about this airport: "${segment.title}" ${segment.address ? `at ${segment.address}` : ''}. 
-      Return ONLY a valid JSON object with: address, phone, terminals (array), facilities (array), website, iata_code, icao_code.
-      If information is not available, use null for that field.`;
+      targetFields = ['address', 'phone', 'terminals', 'facilities', 'website', 'iata_code', 'icao_code'];
+      prompt = `I have this airport information: ${JSON.stringify(cleanExistingData)}
+      
+      Find and return ONLY the missing information for: "${segment.title}".
+      Target fields: ${targetFields.join(', ')}
+      
+      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, terminals (array), facilities (array), website, iata_code, icao_code.
+      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
       break;
     case 'boat':
-      prompt = `Find detailed information about this boat/ferry service: "${segment.title}" ${segment.address ? `at ${segment.address}` : ''}. 
-      Return ONLY a valid JSON object with: address, phone, departure_times (array), route, duration, boat_ticket_price, website.
-      If information is not available, use null for that field.`;
+      targetFields = ['address', 'phone', 'departure_times', 'route', 'duration', 'boat_ticket_price', 'website'];
+      prompt = `I have this boat/ferry information: ${JSON.stringify(cleanExistingData)}
+      
+      Find and return ONLY the missing information for: "${segment.title}".
+      Target fields: ${targetFields.join(', ')}
+      
+      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, departure_times (array), route, duration, boat_ticket_price, website.
+      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
       break;
     default:
       throw new Error(`Unsupported segment type: ${segmentType}`);
@@ -177,7 +226,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
       messages: [
         {
           role: 'system',
-          content: 'You are a travel information assistant. Return ONLY valid JSON objects without any markdown formatting or additional text.'
+          content: 'You are a travel information assistant. Return ONLY valid JSON objects without any markdown formatting or additional text. Only include fields that are missing or empty in the provided data.'
         },
         {
           role: 'user',
@@ -202,7 +251,19 @@ async function enrichSegmentWithPerplexity(segment: any) {
 
   try {
     const cleanedContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(cleanedContent);
+    const newEnrichmentData = JSON.parse(cleanedContent);
+    
+    // Merge with existing enriched data, prioritizing existing values
+    const existingEnriched = segment.enriched || {};
+    const mergedEnrichment = { ...existingEnriched, ...newEnrichmentData };
+    
+    // Only return if we have new data to add
+    if (Object.keys(newEnrichmentData).length === 0) {
+      console.log(`No new enrichment data found for segment ${segment.id}`);
+      return existingEnriched;
+    }
+    
+    return mergedEnrichment;
   } catch (parseError) {
     console.error('Error parsing Perplexity JSON response:', parseError);
     console.error('Raw content:', content);
