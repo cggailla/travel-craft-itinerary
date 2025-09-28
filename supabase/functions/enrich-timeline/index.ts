@@ -158,62 +158,149 @@ async function enrichSegmentWithPerplexity(segment: any) {
   );
 
   let prompt = '';
-  let targetFields = [];
+  let requestBody: any = {
+    model: 'sonar-small-chat',
+    search_context_size: 'small',
+  };
 
   switch (segmentType) {
     case 'hotel':
-      targetFields = ['address', 'phone', 'checkin_time', 'checkout_time', 'amenities', 'star_rating', 'website', 'description'];
-      prompt = `I have this hotel information: ${JSON.stringify(cleanExistingData)}
+      prompt = `Fournis les informations officielles de l'hôtel "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
+      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Fournis uniquement les informations manquantes.`;
       
-      Find and return ONLY the missing information for: "${segment.title}". 
-      Target fields: ${targetFields.join(', ')}
-      
-      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, checkin_time, checkout_time, amenities (array), star_rating, website, description.
-      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      requestBody.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'HotelInfo',
+          schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              phone: { type: 'string' },
+              website: { type: 'string' },
+              checkin_time: { type: 'string' },
+              checkout_time: { type: 'string' },
+              amenities: { type: 'array', items: { type: 'string' } },
+              star_rating: { type: 'number' },
+              description: { type: 'string' }
+            }
+          }
+        }
+      };
       break;
+
     case 'museum':
-      targetFields = ['address', 'phone', 'opening_hours', 'museum_ticket_price', 'website', 'description', 'main_exhibitions'];
-      prompt = `I have this museum information: ${JSON.stringify(cleanExistingData)}
+      prompt = `Fournis les informations officielles du musée "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
+      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Fournis uniquement les informations manquantes.`;
       
-      Find and return ONLY the missing information for: "${segment.title}".
-      Target fields: ${targetFields.join(', ')}
-      
-      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, opening_hours, museum_ticket_price, website, description, main_exhibitions (array).
-      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      requestBody.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'MuseumInfo',
+          schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              phone: { type: 'string' },
+              website: { type: 'string' },
+              opening_hours: { type: 'string' },
+              museum_ticket_price: { type: 'string' },
+              description: { type: 'string' },
+              main_exhibitions: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        }
+      };
       break;
+
     case 'activity':
-      targetFields = ['address', 'phone', 'opening_hours', 'activity_price', 'website', 'description', 'duration', 'booking_required'];
-      prompt = `I have this activity information: ${JSON.stringify(cleanExistingData)}
+      prompt = `Fournis les informations officielles de l'activité "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
+      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Fournis uniquement les informations manquantes.`;
       
-      Find and return ONLY the missing information for: "${segment.title}".
-      Target fields: ${targetFields.join(', ')}
-      
-      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, opening_hours, activity_price, website, description, duration, booking_required.
-      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      requestBody.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'ActivityInfo',
+          schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              phone: { type: 'string' },
+              website: { type: 'string' },
+              opening_hours: { type: 'string' },
+              activity_price: { type: 'string' },
+              description: { type: 'string' },
+              duration: { type: 'string' },
+              booking_required: { type: 'boolean' }
+            }
+          }
+        }
+      };
       break;
+
     case 'airport':
-      targetFields = ['address', 'phone', 'terminals', 'facilities', 'website', 'iata_code', 'icao_code'];
-      prompt = `I have this airport information: ${JSON.stringify(cleanExistingData)}
+      prompt = `Fournis les informations officielles de l'aéroport "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
+      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Fournis uniquement les informations manquantes.`;
       
-      Find and return ONLY the missing information for: "${segment.title}".
-      Target fields: ${targetFields.join(', ')}
-      
-      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, terminals (array), facilities (array), website, iata_code, icao_code.
-      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      requestBody.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'AirportInfo',
+          schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              phone: { type: 'string' },
+              website: { type: 'string' },
+              iata_code: { type: 'string' },
+              icao_code: { type: 'string' },
+              terminals: { type: 'array', items: { type: 'string' } },
+              facilities: { type: 'array', items: { type: 'string' } }
+            }
+          }
+        }
+      };
       break;
+
     case 'boat':
-      targetFields = ['address', 'phone', 'departure_times', 'route', 'duration', 'boat_ticket_price', 'website'];
-      prompt = `I have this boat/ferry information: ${JSON.stringify(cleanExistingData)}
+      prompt = `Fournis les informations officielles du service de bateau/ferry "${segment.title}" ${segment.address ? `à ${segment.address}` : ''}. 
+      Informations déjà disponibles: ${JSON.stringify(cleanExistingData)}
+      Fournis uniquement les informations manquantes.`;
       
-      Find and return ONLY the missing information for: "${segment.title}".
-      Target fields: ${targetFields.join(', ')}
-      
-      Return ONLY a valid JSON object with ONLY the missing fields from: address, phone, departure_times (array), route, duration, boat_ticket_price, website.
-      Do not include fields that already have values. If no missing information is found, return an empty object {}.`;
+      requestBody.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'BoatInfo',
+          schema: {
+            type: 'object',
+            properties: {
+              address: { type: 'string' },
+              phone: { type: 'string' },
+              website: { type: 'string' },
+              departure_times: { type: 'array', items: { type: 'string' } },
+              route: { type: 'string' },
+              duration: { type: 'string' },
+              boat_ticket_price: { type: 'string' }
+            }
+          }
+        }
+      };
       break;
+
     default:
       throw new Error(`Unsupported segment type: ${segmentType}`);
   }
+
+  requestBody.messages = [
+    {
+      role: 'user',
+      content: prompt
+    }
+  ];
 
   const response = await fetch('https://api.perplexity.ai/chat/completions', {
     method: 'POST',
@@ -221,21 +308,7 @@ async function enrichSegmentWithPerplexity(segment: any) {
       'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'llama-3.1-sonar-small-128k-online',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a travel information assistant. Return ONLY valid JSON objects without any markdown formatting or additional text. Only include fields that are missing or empty in the provided data.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 1000,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
