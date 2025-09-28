@@ -26,12 +26,6 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Set enrichment status to in_progress
-    await supabase
-      .from('trips')
-      .update({ enrichment_status: 'in_progress' })
-      .eq('id', tripId);
-
     // Récupérer les travel_steps validés + leurs travel_segments
     const { data: steps, error: stepsError } = await supabase
       .from('travel_steps')
@@ -119,15 +113,6 @@ serve(async (req) => {
       }
     }
 
-    // Set enrichment status to completed
-    await supabase
-      .from('trips')
-      .update({ 
-        enrichment_status: 'completed',
-        last_enriched_at: new Date().toISOString()
-      })
-      .eq('id', tripId);
-
     return new Response(JSON.stringify({
       success: true,
       enrichedSegments: enrichedSegments.length,
@@ -140,22 +125,6 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error in enrich-timeline function:', errorMessage);
-    
-    // Set enrichment status to error on failure
-    try {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const body = await req.text();
-      const { tripId } = JSON.parse(body);
-      if (tripId) {
-        await supabase
-          .from('trips')
-          .update({ enrichment_status: 'error' })
-          .eq('id', tripId);
-      }
-    } catch (updateError) {
-      console.error('Failed to update error status:', updateError);
-    }
-    
     return new Response(JSON.stringify({ 
       success: false,
       error: errorMessage 
