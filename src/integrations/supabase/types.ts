@@ -493,6 +493,7 @@ export type Database = {
           enrichment_status: string | null
           id: string
           last_enriched_at: string | null
+          local_correspondent_phone: string | null
           status: string
           title: string | null
           updated_at: string
@@ -504,6 +505,7 @@ export type Database = {
           enrichment_status?: string | null
           id?: string
           last_enriched_at?: string | null
+          local_correspondent_phone?: string | null
           status?: string
           title?: string | null
           updated_at?: string
@@ -515,6 +517,7 @@ export type Database = {
           enrichment_status?: string | null
           id?: string
           last_enriched_at?: string | null
+          local_correspondent_phone?: string | null
           status?: string
           title?: string | null
           updated_at?: string

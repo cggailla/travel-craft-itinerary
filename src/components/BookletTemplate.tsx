@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { Calendar, Clock, FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
 import { GeneralInfoSection } from "./GeneralInfoSection";
+import { EmergencyContactsSection } from "./EmergencyContactsSection";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
 
@@ -121,6 +122,11 @@ export function BookletTemplate({
         </h2>
 
         <GeneralInfoSection tripId={tripId} options={options} />
+      </div>
+
+      {/* Contacts d'urgence */}
+      <div className="page-break mb-12">
+        <EmergencyContactsSection tripId={tripId} />
       </div>
 
       {/* Documents de référence */}
