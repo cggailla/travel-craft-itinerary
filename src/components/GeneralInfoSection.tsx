@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Globe, 
   MapPin, 
@@ -19,7 +21,8 @@ import {
   Shield,
   CloudSun,
   Gift,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react";
 import { BookletOptions } from "@/services/bookletService";
 
@@ -105,29 +108,66 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   const [info, setInfo] = useState<GeneralInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
+
+  const fetchGeneralInfo = async () => {
+    console.log('🔍 Fetching general info for trip:', tripId);
+    const { data, error } = await supabase
+      .from("trip_general_info")
+      .select("*")
+      .eq("trip_id", tripId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("❌ Error fetching general info:", error);
+      return false;
+    } else if (data) {
+      console.log('✅ General info data fetched:', data);
+      setInfo(data as unknown as GeneralInfo);
+      return true;
+    } else {
+      console.log('⚠️ No general info data found');
+      return false;
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const success = await fetchGeneralInfo();
+    setIsRefreshing(false);
+    
+    if (success) {
+      toast({
+        title: "Informations mises à jour",
+        description: "Les informations générales ont été rechargées.",
+      });
+    } else {
+      toast({
+        title: "Aucune information disponible",
+        description: "Les informations générales ne sont pas encore générées.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
-    const fetchGeneralInfo = async () => {
-      console.log('🔍 Fetching general info for trip:', tripId);
-      const { data, error } = await supabase
-        .from("trip_general_info")
-        .select("*")
-        .eq("trip_id", tripId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("❌ Error fetching general info:", error);
-      } else if (data) {
-        console.log('✅ General info data fetched:', data);
-        setInfo(data as unknown as GeneralInfo);
-      } else {
-        console.log('⚠️ No general info data found');
-      }
+    // Initial fetch
+    const initialFetch = async () => {
+      await fetchGeneralInfo();
       setLoading(false);
     };
-
-    fetchGeneralInfo();
-  }, [tripId]);
+    initialFetch();
+    
+    // Poll every 5 seconds for new data if none is loaded
+    const interval = setInterval(async () => {
+      if (!info) {
+        await fetchGeneralInfo();
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [tripId, info]);
 
   const DeleteButton = ({ cardId }: { cardId: string }) => (
     <button
@@ -149,9 +189,18 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
 
   if (!info) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Info className="mx-auto h-12 w-12 mb-4 opacity-50" />
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-4">
+        <Info className="h-12 w-12 mb-2 opacity-50" />
         <p>Les informations générales sont en cours de génération.</p>
+        <Button 
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Chargement...' : 'Rafraîchir'}
+        </Button>
       </div>
     );
   }
