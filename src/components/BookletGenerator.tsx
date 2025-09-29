@@ -15,9 +15,11 @@ import {
   Loader2,
   Calendar,
   MapPin,
-  Clock
+  Clock,
+  Link
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
@@ -29,6 +31,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -107,6 +110,41 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
+  const handleGenerateShareableLink = async () => {
+    try {
+      setIsGeneratingLink(true);
+      
+      toast({
+        title: "Génération en cours",
+        description: "Création du lien partageable...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-static-booklet', {
+        body: { tripId },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        await navigator.clipboard.writeText(data.url);
+        
+        toast({
+          title: "Lien généré avec succès!",
+          description: "Le lien a été copié dans votre presse-papiers",
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error generating shareable link:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le lien partageable",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -176,18 +214,33 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
-          <Button 
-            onClick={handleGeneratePdf}
-            disabled={isGeneratingPdf}
-            className="flex items-center"
-          >
-            {isGeneratingPdf ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
+            </Button>
+            <Button 
+              onClick={handleGenerateShareableLink}
+              disabled={isGeneratingLink}
+              variant="secondary"
+              className="flex items-center"
+            >
+              {isGeneratingLink ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Link className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingLink ? 'Génération...' : 'Générer lien'}
+            </Button>
+          </div>
         </div>
         
         <BookletPreview 
