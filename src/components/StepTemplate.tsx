@@ -150,7 +150,14 @@ export function StepTemplate({
                       <div className="flex items-start gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium text-sm text-foreground">{segment.title}</h4>
+                            <h4 className="font-medium text-sm text-foreground">
+                              {segment.title}
+                              {segment.star_rating && (
+                                <span className="ml-2">
+                                  {'⭐'.repeat(Number(segment.star_rating) || 0)}
+                                </span>
+                              )}
+                            </h4>
                             {segment.reference_number && (
                               <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
                                 Rés. {segment.reference_number}
@@ -167,19 +174,16 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched hotel information */}
-                          {(segment.phone || segment.website || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
+                          {(segment.phone || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
                                 {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
                                 {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
                                 {segment.star_rating && <p><strong>Étoiles:</strong> {segment.star_rating}⭐</p>}
-                              </div>
-                              {segment.website && segment.website !== 'N/A' && (
-                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
-                              )}
-                            </div>
-                          )}
+                               </div>
+                             </div>
+                           )}
                         </div>
                         <div className="text-right text-xs text-muted-foreground">
                           {segmentDateStr && (
