@@ -251,7 +251,7 @@ export function enrichStep(rawStep: any): EnrichedStep {
     stepId: rawStep.step_id,
     stepTitle: rawStep.step_title,
     stepType: rawStep.step_type,
-    primaryLocation: determinePrimaryLocation(segments) || rawStep.primary_location || '',
+    primaryLocation: rawStep.primary_location || determinePrimaryLocation(segments) || '',
     startDate: new Date(rawStep.start_date),
     endDate: new Date(rawStep.end_date),
     sections,
