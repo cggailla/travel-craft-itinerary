@@ -159,12 +159,16 @@ export function StepTemplate({
                               </span>
                             )}
                           </div>
-                          {segment.star_rating && (
+                          {segment.provider && (
                             <p className="text-xs text-muted-foreground mb-1">
-                              {'⭐'.repeat(Number(segment.star_rating) || 0)}
+                              🏨 {segment.provider}
+                              {segment.star_rating && (
+                                <span className="ml-2">
+                                  {'⭐'.repeat(Number(segment.star_rating) || 0)}
+                                </span>
+                              )}
                             </p>
                           )}
-                          {segment.provider && <p className="text-xs text-muted-foreground mb-1">🏨 {segment.provider}</p>}
                           {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
                           {segment.address && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
