@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, Clock, FileText, RefreshCw } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
+import { ThankYouSection } from "./ThankYouSection";
 import { GeneralInfoSection } from "./GeneralInfoSection";
 import { EmergencyContactsSection } from "./EmergencyContactsSection";
 import { useState, useEffect } from "react";
@@ -172,6 +173,11 @@ export function BookletTemplate({
           options={options}
           tripId={tripId}
         />
+      </div>
+
+      {/* Section de remerciement */}
+      <div className="mb-12">
+        <ThankYouSection />
       </div>
 
       {/* Informations générales */}
