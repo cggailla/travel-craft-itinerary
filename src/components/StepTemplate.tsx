@@ -65,11 +65,6 @@ export function StepTemplate({
             <MapPin className="h-4 w-4" />
             {parsedStepInfo?.location || step.primaryLocation}
           </span>
-          {parsedStepInfo?.dates && (
-            <span className="text-xs px-2 py-1 bg-muted/50 rounded">
-              {parsedStepInfo.dates}
-            </span>
-          )}
         </div>
       </div>
 
