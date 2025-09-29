@@ -107,6 +107,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
 
   useEffect(() => {
     const fetchGeneralInfo = async () => {
+      console.log('🔍 Fetching general info for trip:', tripId);
       const { data, error } = await supabase
         .from("trip_general_info")
         .select("*")
@@ -114,9 +115,12 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching general info:", error);
+        console.error("❌ Error fetching general info:", error);
       } else if (data) {
+        console.log('✅ General info data fetched:', data);
         setInfo(data as unknown as GeneralInfo);
+      } else {
+        console.log('⚠️ No general info data found');
       }
       setLoading(false);
     };
