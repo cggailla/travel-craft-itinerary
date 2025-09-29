@@ -9,6 +9,11 @@ export interface ParsedStepInfo {
   description: string;
 }
 
+export interface TripMetadata {
+  title: string;
+  destinationZone: string;
+}
+
 /**
  * Parse trip summary text to extract step information using regex
  */
@@ -87,10 +92,54 @@ export function parseTripSummary(tripSummary: string): ParsedStepInfo[] {
 }
 
 /**
+ * Parse trip metadata (title and destination zone) from trip summary
+ */
+export function parseTripMetadata(tripSummary: string): TripMetadata | null {
+  console.log('🔍 Extracting trip metadata...');
+  
+  const titleRegex = /^Titre du voyage\s*:\s*(.+?)$/m;
+  const zoneRegex = /^Zone \/ Pays\s*:\s*(.+?)$/m;
+  
+  const titleMatch = tripSummary.match(titleRegex);
+  const zoneMatch = tripSummary.match(zoneRegex);
+  
+  if (titleMatch && zoneMatch) {
+    const metadata = {
+      title: titleMatch[1].trim(),
+      destinationZone: zoneMatch[1].trim()
+    };
+    console.log('✅ Metadata extracted:', metadata);
+    return metadata;
+  }
+  
+  console.warn('⚠️ Could not extract metadata from trip summary');
+  return null;
+}
+
+/**
  * Generate and parse trip summary in one operation
  */
 export async function generateAndParseTripSummary(tripId: string): Promise<ParsedStepInfo[]> {
   const tripSummary = await generateTripSummary(tripId);
+  
+  // Extract and save metadata (title + destination zone)
+  const metadata = parseTripMetadata(tripSummary);
+  if (metadata) {
+    const { error } = await supabase
+      .from('trips')
+      .update({
+        title: metadata.title,
+        destination_zone: metadata.destinationZone
+      })
+      .eq('id', tripId);
+    
+    if (error) {
+      console.error('❌ Failed to save trip metadata:', error);
+    } else {
+      console.log('✅ Trip metadata saved to database');
+    }
+  }
+  
   return parseTripSummary(tripSummary);
 }
 

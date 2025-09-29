@@ -125,7 +125,12 @@ serve(async (req) => {
     }
 
     // Create AI prompt
-    const prompt = `Voici les étapes du voyage avec leurs informations détaillées et chronologiques :
+    const prompt = `Commence par générer un titre court et évocateur pour ce voyage, ainsi que la zone/pays principal(e).
+Format EXACT :
+Titre du voyage : [titre court]
+Zone / Pays : [pays ou zone]
+
+Puis, voici les étapes du voyage avec leurs informations détaillées et chronologiques :
 
 ${stepsInfo.map(step => 
   `Étape ${step.position} : ${step.stepTitle} (${step.startDate} → ${step.endDate}, ${step.duration} jour${step.duration > 1 ? 's' : ''})
@@ -163,7 +168,7 @@ Ton neutre et factuel, ne pas inventer d'informations touristiques.`;
         messages: [
           {
             role: 'system',
-            content: 'Tu es un assistant spécialisé dans la préparation de carnets de voyage. Ton rôle est de transformer des étapes de voyage (avec segments chronologiques) en un résumé lisible et factuel. Règles STRICTES : Le résumé doit suivre l\'ordre chronologique des étapes. Format de titre OBLIGATOIRE : "Etape X - [Titre court et général] (dates JJ/MM) {Localisation majoritaire}". Le titre doit être court et général avec la localisation principale (ex: "Séjour sur l\'île Santiago", "Safari au Parc Tsavo East"). La localisation majoritaire entre {} doit être un nom de ville ou d\'endroit, pas une adresse complète. Sous chaque titre, écrire un court descriptif factuel basé sur la chronologie (exemple : vol, puis transfert, puis check-in hôtel). Le ton doit être neutre et factuel. Ne pas inventer d\'informations touristiques. L\'objectif est de donner un contexte clair et compact avec un format parseable par regex.'
+            content: 'Tu es un assistant spécialisé dans la préparation de carnets de voyage. AVANT TOUT, tu dois commencer ta réponse par :\n"Titre du voyage : [titre court et évocateur du voyage basé sur la destination principale]"\n"Zone / Pays : [nom du pays ou de la zone géographique principale]"\n\nPuis ton rôle est de transformer des étapes de voyage (avec segments chronologiques) en un résumé lisible et factuel. Règles STRICTES : Le résumé doit suivre l\'ordre chronologique des étapes. Format de titre OBLIGATOIRE : "Etape X - [Titre court et général] (dates JJ/MM) {Localisation majoritaire}". Le titre doit être court et général avec la localisation principale (ex: "Séjour sur l\'île Santiago", "Safari au Parc Tsavo East"). La localisation majoritaire entre {} doit être un nom de ville ou d\'endroit, pas une adresse complète. Sous chaque titre, écrire un court descriptif factuel basé sur la chronologie (exemple : vol, puis transfert, puis check-in hôtel). Le ton doit être neutre et factuel. Ne pas inventer d\'informations touristiques. L\'objectif est de donner un contexte clair et compact avec un format parseable par regex.'
           },
           {
             role: 'user',
