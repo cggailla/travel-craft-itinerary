@@ -21,7 +21,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { TravelSegment } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
-import { determinePrimaryLocation } from '@/services/locationService';
+
 
 interface ManualStep {
   id: string;
@@ -458,7 +458,7 @@ async function saveManualSteps(tripId: string, steps: ManualStep[]) {
         step_id: `step-${i + 1}`,
         step_title: step.title,
         step_type: 'manual',
-        primary_location: determinePrimaryLocation(step.segments),
+        primary_location: null,
         start_date: step.startDate?.toISOString().split('T')[0],
         end_date: step.endDate?.toISOString().split('T')[0],
       })

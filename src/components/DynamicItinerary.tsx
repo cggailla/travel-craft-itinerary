@@ -8,7 +8,7 @@ import { generateAllStepsAIContent, generateStepAIContent, generateAndParseTripS
 import { AIContentResult } from '@/types/enrichedStep';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { StepTemplate } from '@/components/StepTemplate';
-import { determinePrimaryLocation } from '@/services/locationService';
+
 
 interface DynamicItineraryProps {
   data: BookletData;
@@ -53,7 +53,7 @@ export function DynamicItinerary({
             stepId: step.id,
             stepTitle: step.step_title,
             stepType: step.step_type || 'manual',
-            primaryLocation: determinePrimaryLocation(segments) || step.primary_location || '',
+            primaryLocation: step.primary_location || '',
             startDate: step.start_date ? new Date(step.start_date) : new Date(),
             endDate: step.end_date ? new Date(step.end_date) : new Date(),
             sections: [{
@@ -102,7 +102,7 @@ export function DynamicItinerary({
           stepId: step.id,
           stepTitle: step.step_title,
           stepType: step.step_type || 'manual',
-          primaryLocation: determinePrimaryLocation(segments) || step.primary_location || '',
+          primaryLocation: step.primary_location || '',
           startDate: step.start_date ? new Date(step.start_date) : new Date(),
           endDate: step.end_date ? new Date(step.end_date) : new Date(),
           sections: [{

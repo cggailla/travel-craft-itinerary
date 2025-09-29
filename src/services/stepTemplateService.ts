@@ -1,7 +1,7 @@
 import { TravelSegment } from '@/types/travel';
 import { EnrichedStep, StepSection, StepTemplate, TemplateSectionConfig, AIContentRequest } from '@/types/enrichedStep';
 import { supabase } from "@/integrations/supabase/client";
-import { determinePrimaryLocation } from './locationService';
+
 
 /**
  * Calculate text similarity using normalized word overlap
@@ -251,7 +251,7 @@ export function enrichStep(rawStep: any): EnrichedStep {
     stepId: rawStep.step_id,
     stepTitle: rawStep.step_title,
     stepType: rawStep.step_type,
-    primaryLocation: rawStep.primary_location || determinePrimaryLocation(segments) || '',
+    primaryLocation: rawStep.primary_location || '',
     startDate: new Date(rawStep.start_date),
     endDate: new Date(rawStep.end_date),
     sections,
