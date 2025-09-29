@@ -5,6 +5,7 @@ import { Calendar, Clock, FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
 import { GeneralInfoSection } from "./GeneralInfoSection";
 import { useState, useEffect } from "react";
+import logoAdgentes from "@/assets/logo-adgentes.png";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -52,9 +53,11 @@ export function BookletTemplate({
       <div className="mb-8">
         {/* Barre de header avec logo Adgentes */}
         <div className="theme-bg p-6 rounded-t-lg flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
-          <div className="w-32 h-12 bg-white/20 rounded flex items-center justify-center text-white text-xs">
-            Logo Adgentes
-          </div>
+          <img 
+            src={logoAdgentes} 
+            alt="Adgentes" 
+            className="h-10 object-contain"
+          />
           <h1 className="text-2xl font-bold text-white">{data.tripTitle}</h1>
           <div className="w-32"></div>
         </div>
