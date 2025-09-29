@@ -349,11 +349,18 @@ async function enrichSegmentWithPerplexity(segment: any) {
     console.log(`Perplexity returned data for segment ${segment.id}:`, newEnrichmentData);
     
     // Filter out fields that already exist and are not null/empty
+    // Exception: address is always updated if Perplexity returns a new one
     const fieldsToUpdate: any = {};
     Object.entries(newEnrichmentData).forEach(([key, value]) => {
       const existingValue = existingData[key as keyof typeof existingData];
-      // Only update if existing value is empty/null and new value is not empty
-      if (isEmpty(existingValue) && !isEmpty(value)) {
+      
+      // Special case for address: always update if we have a new value
+      if (key === 'address' && !isEmpty(value)) {
+        fieldsToUpdate[key] = value;
+        console.log(`Will always update address: ${existingValue} -> ${value}`);
+      }
+      // For other fields: only update if existing value is empty/null and new value is not empty
+      else if (key !== 'address' && isEmpty(existingValue) && !isEmpty(value)) {
         fieldsToUpdate[key] = value;
         console.log(`Will update ${key}: ${existingValue} -> ${value}`);
       } else {
