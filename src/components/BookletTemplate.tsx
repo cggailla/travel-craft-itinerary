@@ -1,13 +1,15 @@
 import { BookletData, BookletOptions } from "@/services/bookletService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Clock, FileText } from "lucide-react";
+import { Calendar, Clock, FileText, RefreshCw } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
 import { GeneralInfoSection } from "./GeneralInfoSection";
 import { EmergencyContactsSection } from "./EmergencyContactsSection";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -21,22 +23,55 @@ export function BookletTemplate({
   tripId,
 }: BookletTemplateProps) {
   const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
+
+  const fetchCoverImages = async () => {
+    const { data: generalInfo, error } = await supabase
+      .from('trip_general_info')
+      .select('cover_images')
+      .eq('trip_id', tripId)
+      .maybeSingle();
+    
+    if (!error && generalInfo?.cover_images) {
+      setCoverImages(generalInfo.cover_images);
+      return true;
+    }
+    return false;
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const success = await fetchCoverImages();
+    setIsRefreshing(false);
+    
+    if (success) {
+      toast({
+        title: "Images mises à jour",
+        description: "Les images de couverture ont été rechargées.",
+      });
+    } else {
+      toast({
+        title: "Aucune image disponible",
+        description: "Les images de couverture ne sont pas encore générées.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
-    const fetchCoverImages = async () => {
-      const { data: generalInfo, error } = await supabase
-        .from('trip_general_info')
-        .select('cover_images')
-        .eq('trip_id', tripId)
-        .maybeSingle();
-      
-      if (!error && generalInfo?.cover_images) {
-        setCoverImages(generalInfo.cover_images);
-      }
-    };
-    
+    // Initial fetch
     fetchCoverImages();
-  }, [tripId]);
+    
+    // Poll every 5 seconds for new images if none are loaded
+    const interval = setInterval(async () => {
+      if (coverImages.length === 0) {
+        await fetchCoverImages();
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [tripId, coverImages.length]);
 
   // Couleur fixe Adgentes
   const colors = { primary: "#822a62", secondary: "#c084ab", accent: "#f5e6f0" };
@@ -73,7 +108,7 @@ export function BookletTemplate({
         </div>
 
         {/* Images de destination - pleine largeur, sans espaces, sans arrondis */}
-        {coverImages.length > 0 && (
+        {coverImages.length > 0 ? (
           <div className="flex flex-col">
             {coverImages.map((imageUrl, index) => (
               <div key={index} className="relative h-80 w-full overflow-hidden">
@@ -84,6 +119,21 @@ export function BookletTemplate({
                 />
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-80 bg-muted/20 gap-4">
+            <p className="text-muted-foreground text-sm">
+              Les images de couverture seront affichées une fois générées
+            </p>
+            <Button 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Chargement...' : 'Rafraîchir'}
+            </Button>
           </div>
         )}
 
