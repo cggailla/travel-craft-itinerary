@@ -151,8 +151,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {(info.capital || info.population || info.surface_area) && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Globe className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Globe className="h-4 w-4" />
               Informations de base
             </CardTitle>
           </CardHeader>
@@ -180,8 +180,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.timezone_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Calendar className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Calendar className="h-4 w-4" />
               Décalage horaire
             </CardTitle>
           </CardHeader>
@@ -200,8 +200,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.entry_requirements && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <MapPin className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <MapPin className="h-4 w-4" />
               Formalités d'entrée
             </CardTitle>
           </CardHeader>
@@ -223,8 +223,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.health_requirements && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Heart className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Heart className="h-4 w-4" />
               Santé
             </CardTitle>
           </CardHeader>
@@ -257,8 +257,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.clothing_advice && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Shirt className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Shirt className="h-4 w-4" />
               Vêtements conseillés
             </CardTitle>
           </CardHeader>
@@ -291,8 +291,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.food_specialties && info.food_specialties.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <UtensilsCrossed className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <UtensilsCrossed className="h-4 w-4" />
               Nourriture
             </CardTitle>
           </CardHeader>
@@ -313,8 +313,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {(info.currency || info.exchange_rate) && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Coins className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Coins className="h-4 w-4" />
               Monnaie
             </CardTitle>
           </CardHeader>
@@ -335,8 +335,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.budget_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Wallet className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Wallet className="h-4 w-4" />
               Budget sur place
             </CardTitle>
           </CardHeader>
@@ -364,8 +364,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.tipping_culture && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Gift className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Gift className="h-4 w-4" />
               Pourboires
             </CardTitle>
           </CardHeader>
@@ -401,8 +401,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.electricity_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Lightbulb className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Lightbulb className="h-4 w-4" />
               Électricité
             </CardTitle>
           </CardHeader>
@@ -432,8 +432,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.religion_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Building2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Building2 className="h-4 w-4" />
               Religion
             </CardTitle>
           </CardHeader>
@@ -447,8 +447,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.shopping_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Gift className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Gift className="h-4 w-4" />
               Achats / Shopping
             </CardTitle>
           </CardHeader>
@@ -462,8 +462,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.phone_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Phone className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Phone className="h-4 w-4" />
               Poste & Téléphone
             </CardTitle>
           </CardHeader>
@@ -489,8 +489,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.languages && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Languages className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Languages className="h-4 w-4" />
               Langue
             </CardTitle>
           </CardHeader>
@@ -518,8 +518,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.cultural_sites && info.cultural_sites.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Building2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Building2 className="h-4 w-4" />
               Sites historiques & culturels
             </CardTitle>
           </CardHeader>
@@ -540,8 +540,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.natural_attractions && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Trees className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Trees className="h-4 w-4" />
               Nature & paysages
             </CardTitle>
           </CardHeader>
@@ -555,8 +555,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.safety_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <Shield className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <Shield className="h-4 w-4" />
               Sécurité
             </CardTitle>
           </CardHeader>
@@ -570,8 +570,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       {info.climate_info && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text">
-              <CloudSun className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 theme-text text-base">
+              <CloudSun className="h-4 w-4" />
               Climat
             </CardTitle>
           </CardHeader>
