@@ -51,7 +51,7 @@ export function StepTemplate({
   const isSingleDay = step.startDate.toDateString() === endDate.toDateString();
 
   return (
-    <div className="mb-8 p-6 bg-card rounded-lg border relative">
+    <div className="step-container mb-8 p-6 bg-card rounded-lg border relative">
       {/* Date in top right corner */}
       <div className="absolute top-6 right-6 text-base font-medium text-foreground">
         {formatDate(step.startDate)}
@@ -98,7 +98,7 @@ export function StepTemplate({
             {aiContent.images
               .filter(imageUrl => !deletedImages.has(imageUrl))
               .map((imageUrl, index) => (
-              <div key={imageUrl} className="relative rounded-lg overflow-hidden bg-muted/30 group">
+              <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group">
                 <img
                   src={imageUrl}
                   alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
@@ -160,7 +160,7 @@ export function StepTemplate({
                 // Travel segments (flight, car, train, transfer) - vertical dotted line style
                 if (['flight', 'car', 'train', 'transfer'].includes(segment.segment_type)) {
                   return (
-                    <div key={segment.id} className="relative flex items-center my-3 group">
+                    <div key={segment.id} className="segment-card relative flex items-center my-3 group">
                       {/* Vertical dotted line */}
                       <div className="w-px h-12 border-l-2 border-dotted border-muted-foreground/40 flex-shrink-0"></div>
                       
@@ -207,7 +207,7 @@ export function StepTemplate({
 
                 // Main segments (hotel, activity, etc.) - keep boxed style
                 return (
-                  <div key={segment.id} className="relative p-3 bg-background border rounded-lg group">
+                  <div key={segment.id} className="segment-card relative p-3 bg-background border rounded-lg group">
                     {segment.segment_type === 'hotel' && (
                        <div className="flex items-start gap-3">
                         <div className="flex-1">

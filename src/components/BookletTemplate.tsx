@@ -86,8 +86,38 @@ export function BookletTemplate({
         dangerouslySetInnerHTML={{
           __html: `
           @media print {
-            .page-break { page-break-before: always; }
-            .no-print { display: none !important; }
+            /* Anti-coupures pour éléments critiques */
+            .segment-card,
+            .step-container,
+            .image-container,
+            .keep-together {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            
+            /* Nouvelles pages obligatoires aux sections */
+            .section-break {
+              page-break-before: always !important;
+              break-before: always !important;
+            }
+            
+            /* Éviter orphelins et veuves */
+            p, div {
+              orphans: 3;
+              widows: 3;
+            }
+            
+            /* Qualité images */
+            img {
+              max-height: 400px;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              page-break-inside: avoid;
+            }
+            
+            .no-print { 
+              display: none !important; 
+            }
           }
           .theme-bg { background-color: ${colors.accent}; }
           .theme-border { border-color: ${colors.primary}; }
@@ -171,7 +201,7 @@ export function BookletTemplate({
       </div>
 
       {/* Itinéraire */}
-      <div className="page-break mb-12">
+      <div className="section-break mb-12">
         <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
           Itinéraire détaillé
         </h2>
@@ -184,12 +214,12 @@ export function BookletTemplate({
       </div>
 
       {/* Section de remerciement */}
-      <div className="mb-12">
+      <div className="section-break mb-12">
         <ThankYouSection />
       </div>
 
       {/* Informations générales */}
-      <div className="page-break mb-12">
+      <div className="section-break mb-12">
         <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
           Informations complémentaires
         </h2>
@@ -198,13 +228,13 @@ export function BookletTemplate({
       </div>
 
       {/* Contacts d'urgence */}
-      <div className="page-break mb-12">
+      <div className="section-break mb-12">
         <EmergencyContactsSection tripId={tripId} />
       </div>
 
       {/* Documents de référence */}
       {options.includeDocuments && (
-        <div className="page-break mb-12">
+        <div className="section-break mb-12">
           <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
             Documents de référence
           </h2>
@@ -240,7 +270,7 @@ export function BookletTemplate({
       )}
 
       {/* Notes */}
-      <div className="page-break">
+      <div className="section-break">
         <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
           Notes personnelles
         </h2>

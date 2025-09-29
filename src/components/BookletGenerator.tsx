@@ -63,20 +63,29 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         throw new Error('Contenu du carnet introuvable');
       }
 
-      // Configuration PDF
+      // Configuration PDF optimisée
       const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
+        margin: [15, 12, 15, 12] as [number, number, number, number],
         filename: `carnet-voyage-${bookletData.tripTitle.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 1.0 },
         html2canvas: { 
-          scale: 2,
+          scale: 3,
           useCORS: true,
-          logging: false
+          logging: false,
+          letterRendering: true,
+          allowTaint: false,
+          imageTimeout: 15000
         },
         jsPDF: { 
           unit: 'mm', 
           format: 'a4', 
-          orientation: 'portrait' as const
+          orientation: 'portrait' as const,
+          compress: true
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.section-break',
+          avoid: ['.segment-card', '.step-container', '.image-container', '.keep-together']
         }
       };
 
