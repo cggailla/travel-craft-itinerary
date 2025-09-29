@@ -147,16 +147,11 @@ export function StepTemplate({
                 return (
                   <div key={segment.id} className="relative p-3 bg-background border rounded-lg">
                     {segment.segment_type === 'hotel' && (
-                      <div className="flex items-start gap-3">
+                       <div className="flex items-start gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium text-sm text-foreground">
                               {segment.title}
-                              {segment.star_rating && (
-                                <span className="ml-2">
-                                  {'⭐'.repeat(Number(segment.star_rating) || 0)}
-                                </span>
-                              )}
                             </h4>
                             {segment.reference_number && (
                               <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
@@ -164,6 +159,11 @@ export function StepTemplate({
                               </span>
                             )}
                           </div>
+                          {segment.star_rating && (
+                            <p className="text-xs text-muted-foreground mb-1">
+                              {'⭐'.repeat(Number(segment.star_rating) || 0)}
+                            </p>
+                          )}
                           {segment.provider && <p className="text-xs text-muted-foreground mb-1">🏨 {segment.provider}</p>}
                           {segment.description && <p className="text-xs text-muted-foreground mb-2">{segment.description}</p>}
                           {segment.address && (
@@ -174,12 +174,14 @@ export function StepTemplate({
                           )}
                           
                           {/* Enriched hotel information */}
-                          {(segment.phone || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
+                          {(segment.phone || segment.checkin_time || segment.checkout_time) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-                               <div className="grid grid-cols-2 gap-2">
+                               <div className="flex gap-4">
                                  {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
-                                 {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
-                                 {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
+                                 <div className="flex flex-col gap-1">
+                                   {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
+                                   {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
+                                 </div>
                                </div>
                              </div>
                            )}
@@ -218,8 +220,8 @@ export function StepTemplate({
                             </p>
                           )}
                           
-                          {/* Enriched activity information */}
-                          {(segment.phone || segment.website || segment.duration || segment.opening_hours || segment.booking_required !== null) && (
+                           {/* Enriched activity information */}
+                          {(segment.phone || segment.duration || segment.opening_hours || segment.booking_required !== null) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
@@ -228,9 +230,6 @@ export function StepTemplate({
                               </div>
                               {segment.opening_hours && (
                                 <p className="mt-1"><strong>Horaires:</strong> {segment.opening_hours}</p>
-                              )}
-                              {segment.website && segment.website !== 'N/A' && (
-                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
                               )}
                             </div>
                           )}
@@ -269,17 +268,14 @@ export function StepTemplate({
                             </p>
                           )}
                           
-                          {/* Enriched boat information */}
-                          {(segment.phone || segment.website || segment.route || segment.duration) && (
+                           {/* Enriched boat information */}
+                          {(segment.phone || segment.route || segment.duration) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
                               <div className="grid grid-cols-2 gap-2">
                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
                                 {segment.route && <p><strong>Route:</strong> {segment.route}</p>}
                                 {segment.duration && <p><strong>Durée:</strong> {segment.duration}</p>}
                               </div>
-                              {segment.website && segment.website !== 'N/A' && (
-                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
-                              )}
                             </div>
                           )}
                         </div>
@@ -362,8 +358,8 @@ export function StepTemplate({
                             </p>
                           )}
                           
-                          {/* Enriched information for other segment types */}
-                          {(segment.phone || segment.website || segment.iata_code || segment.icao_code || segment.duration || 
+                           {/* Enriched information for other segment types */}
+                          {(segment.phone || segment.iata_code || segment.icao_code || segment.duration || 
                             segment.terminals?.length || segment.route || segment.ticket_price || segment.facilities?.length || 
                             segment.departure_times?.length) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
@@ -381,9 +377,6 @@ export function StepTemplate({
                               )}
                               {segment.departure_times && segment.departure_times.length > 0 && (
                                 <p className="mt-1"><strong>Horaires:</strong> {segment.departure_times.join(', ')}</p>
-                              )}
-                              {segment.website && segment.website !== 'N/A' && (
-                                <p className="mt-1"><strong>Site:</strong> <a href={segment.website} target="_blank" rel="noopener noreferrer" className="text-primary underline">{segment.website}</a></p>
                               )}
                             </div>
                           )}
