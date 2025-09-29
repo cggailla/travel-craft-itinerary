@@ -154,12 +154,22 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     
     if (perplexityData.images && perplexityData.images.length > 0) {
       console.log('🖼️ Images found in response:');
+      console.log('  - Images count:', perplexityData.images.length);
+      
+      // Log the complete structure of the first image for debugging
+      console.log('📊 First image complete structure:');
+      console.log(JSON.stringify(perplexityData.images[0], null, 2));
+      
       perplexityData.images.forEach((img: any, index: number) => {
         console.log(`  Image ${index + 1}:`);
-        console.log(`    - URL: ${img.url}`);
         console.log(`    - Title: ${img.title || 'N/A'}`);
-        console.log(`    - Format: ${img.format || 'N/A'}`);
+        console.log(`    - URL (url field): ${img.url}`);
+        console.log(`    - URL (imageUrl field): ${img.imageUrl}`);
+        console.log(`    - OriginUrl: ${img.originUrl || 'N/A'}`);
         console.log(`    - Source: ${img.source || 'N/A'}`);
+        console.log(`    - Format: ${img.format || 'N/A'}`);
+        console.log(`    - Width: ${img.width || 'N/A'}`);
+        console.log(`    - Height: ${img.height || 'N/A'}`);
       });
     } else {
       console.log('⚠️ No images found in Perplexity response');
@@ -168,16 +178,47 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     const content = perplexityData.choices[0].message.content;
     console.log('📄 Content length:', content?.length || 0);
     
-    // Extract images from Perplexity response (first 2 only)
-    const images = perplexityData.images 
-      ? perplexityData.images.slice(0, 2).map((img: any) => img.url).filter(Boolean)
-      : [];
+    // Extract up to 2 image URLs, trying multiple possible URL fields
+    const validImages = (perplexityData.images || [])
+      .filter((img: any) => {
+        // Try different possible URL fields
+        const imageUrl = img.imageUrl || img.url || img.src || img.href;
+        if (!imageUrl) {
+          console.log(`❌ No valid URL found for image: ${JSON.stringify(img)}`);
+          return false;
+        }
+        
+        // Filter by format - check the URL extension
+        const allowedFormats = ['jpeg', 'jpg', 'png', 'webp'];
+        const hasValidFormat = allowedFormats.some(format => 
+          imageUrl.toLowerCase().includes(`.${format}`)
+        );
+        
+        // Filter out stock photo sites
+        const blockedDomains = ['-gettyimages.com', '-shutterstock.com', '-istockphoto.com'];
+        const isFromBlockedDomain = blockedDomains.some(domain => 
+          imageUrl.includes(domain)
+        );
+        
+        console.log(`🔍 Image validation for "${img.title}":`, {
+          url: imageUrl,
+          hasValidFormat,
+          isFromBlockedDomain,
+          passed: hasValidFormat && !isFromBlockedDomain
+        });
+        
+        return hasValidFormat && !isFromBlockedDomain;
+      })
+      .slice(0, 2)
+      .map((img: any) => img.imageUrl || img.url || img.src || img.href);
     
     console.log('🎯 Final extracted images URLs:');
-    images.forEach((url: string, index: number) => {
+    validImages.forEach((url: string, index: number) => {
       console.log(`  ${index + 1}. ${url}`);
     });
-    console.log(`📈 Total images selected: ${images.length}/2`);
+    console.log(`📈 Total images selected: ${validImages.length}/2`);
+    
+    const images = validImages;
     
     // Parse JSON response
     let aiContent;
