@@ -12,6 +12,7 @@ interface StepTemplateProps {
     overview: string;
     tips: string[];
     localContext?: string;
+    images?: string[];
   };
   isLoading?: boolean;
   nextStepStartDate?: Date;
@@ -73,6 +74,27 @@ export function StepTemplate({
         <div className="mb-6 p-4 bg-muted/50 rounded-lg">
           <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
+        </div>
+      )}
+
+      {/* Images */}
+      {aiContent?.images && aiContent.images.length > 0 && (
+        <div className="mb-6">
+          <div className="grid grid-cols-2 gap-3">
+            {aiContent.images.map((imageUrl, index) => (
+              <div key={index} className="relative rounded-lg overflow-hidden bg-muted/30">
+                <img
+                  src={imageUrl}
+                  alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
+                  className="w-full h-32 object-cover"
+                  onError={(e) => {
+                    // Hard rule: hide the image if it fails to load
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

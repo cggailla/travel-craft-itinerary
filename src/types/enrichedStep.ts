@@ -12,6 +12,7 @@ export interface EnrichedStep {
     overview: string;
     tips: string[];
     localContext?: string;
+    images?: string[];
   };
   rawData: any; // Original step data from DB
 }
@@ -54,6 +55,7 @@ export interface AIContentResult {
   overview: string;
   tips: string[];
   localContext?: string;
+  images?: string[];
   success: boolean;
   error?: string;
 }

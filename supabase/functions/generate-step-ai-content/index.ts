@@ -79,6 +79,7 @@ CONSIGNES STRICTES:
 - Overview: Intègre des détails spécifiques et récents sur le lieu
 - Tips: Base-toi sur des informations locales authentiques trouvées
 - LocalContext: Inclus des faits historiques/culturels précis et captivants
+- Trouve et sélectionne des images de paysages, vie locale, et bâtiments emblématiques de ${primaryLocation}
 - Ton: Narratif expert, style ADGENTES, informatif mais personnel
 - OBLIGATOIRE: Réponds en JSON pur sans backticks markdown
 ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyage' : ''}`;
@@ -106,7 +107,10 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         web_search_options: {
           "search_context_size": "medium"
         },
-        return_related_questions: false
+        return_related_questions: false,
+        return_images: true,
+        image_domain_filter: ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"],
+        image_format_filter: ["jpg", "png", "webp"]
       }),
     });
 
@@ -129,6 +133,11 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     console.log('Perplexity response received');
 
     const content = perplexityData.choices[0].message.content;
+    
+    // Extract images from Perplexity response (first 2 only)
+    const images = perplexityData.images 
+      ? perplexityData.images.slice(0, 2).map((img: any) => img.url).filter(Boolean)
+      : [];
     
     // Parse JSON response
     let aiContent;
@@ -172,7 +181,8 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         stepId,
         overview: aiContent.overview,
         tips: aiContent.tips,
-        localContext: aiContent.localContext || null
+        localContext: aiContent.localContext || null,
+        images: images
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
