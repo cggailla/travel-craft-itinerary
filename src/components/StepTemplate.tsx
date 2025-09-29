@@ -92,12 +92,14 @@ export function StepTemplate({
       )}
 
       {/* Images */}
-      {aiContent?.images && aiContent.images.length > 0 && (
-        <div className="mb-6">
-          <div className="grid grid-cols-1 gap-3">
-            {aiContent.images
-              .filter(imageUrl => !deletedImages.has(imageUrl))
-              .map((imageUrl, index) => (
+      {aiContent?.images && aiContent.images.length > 0 && (() => {
+        const visibleImages = aiContent.images.filter(imageUrl => !deletedImages.has(imageUrl));
+        if (visibleImages.length === 0) return null;
+        
+        return (
+          <div className="mb-6">
+            <div className="grid grid-cols-1 gap-3">
+              {visibleImages.map((imageUrl, index) => (
               <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group">
                 <img
                   src={imageUrl}
@@ -121,10 +123,11 @@ export function StepTemplate({
                   <span className="text-white text-sm font-light">×</span>
                 </button>
               </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Sections */}
       {step.sections.map((section, sectionIndex) => {
