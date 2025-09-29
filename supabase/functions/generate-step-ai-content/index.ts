@@ -110,7 +110,7 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         return_related_questions: false,
         return_images: true,
         image_domain_filter: ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"],
-        image_format_filter: ["jpg", "png", "webp"]
+        image_format_filter: ["jpeg", "png", "webp"]
       }),
     });
 
