@@ -269,6 +269,11 @@ CONSIGNES:
       }
     }
 
+    // Remove 'images' field from generalInfo if it exists (we use cover_images instead)
+    if (generalInfo && typeof generalInfo === 'object' && 'images' in generalInfo) {
+      delete generalInfo.images;
+    }
+
     // Check if general info already exists
     const { data: existing } = await supabase
       .from("trip_general_info")

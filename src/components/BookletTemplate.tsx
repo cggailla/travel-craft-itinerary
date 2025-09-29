@@ -28,7 +28,7 @@ export function BookletTemplate({
         .from('trip_general_info')
         .select('cover_images')
         .eq('trip_id', tripId)
-        .single();
+        .maybeSingle();
       
       if (!error && generalInfo?.cover_images) {
         setCoverImages(generalInfo.cover_images);
