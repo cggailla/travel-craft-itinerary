@@ -176,11 +176,10 @@ export function StepTemplate({
                           {/* Enriched hotel information */}
                           {(segment.phone || segment.checkin_time || segment.checkout_time || segment.star_rating) && (
                             <div className="mt-2 p-2 bg-muted/30 rounded text-xs">
-                              <div className="grid grid-cols-2 gap-2">
-                                {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
-                                {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
-                                {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
-                                {segment.star_rating && <p><strong>Étoiles:</strong> {segment.star_rating}⭐</p>}
+                               <div className="grid grid-cols-2 gap-2">
+                                 {segment.phone && <p><strong>Tél:</strong> {segment.phone}</p>}
+                                 {segment.checkin_time && <p><strong>Check-in:</strong> {segment.checkin_time}</p>}
+                                 {segment.checkout_time && <p><strong>Check-out:</strong> {segment.checkout_time}</p>}
                                </div>
                              </div>
                            )}
