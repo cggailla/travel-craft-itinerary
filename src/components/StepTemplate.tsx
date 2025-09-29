@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -26,6 +26,9 @@ export function StepTemplate({
   nextStepStartDate,
   parsedStepInfo
 }: StepTemplateProps) {
+  // Gérer les images supprimées localement
+  const [deletedImages, setDeletedImages] = useState<Set<string>>(new Set());
+  
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
   });
@@ -81,8 +84,10 @@ export function StepTemplate({
       {aiContent?.images && aiContent.images.length > 0 && (
         <div className="mb-6">
           <div className="grid grid-cols-1 gap-3">
-            {aiContent.images.map((imageUrl, index) => (
-              <div key={index} className="relative rounded-lg overflow-hidden bg-muted/30 group">
+            {aiContent.images
+              .filter(imageUrl => !deletedImages.has(imageUrl))
+              .map((imageUrl, index) => (
+              <div key={imageUrl} className="relative rounded-lg overflow-hidden bg-muted/30 group">
                 <img
                   src={imageUrl}
                   alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
@@ -96,8 +101,8 @@ export function StepTemplate({
                 {/* Bouton de suppression au survol */}
                 <button
                   onClick={() => {
-                    // TODO: Implémenter la suppression de l'image
-                    console.log('Supprimer l\'image:', imageUrl);
+                    setDeletedImages(prev => new Set(prev).add(imageUrl));
+                    console.log('Image supprimée du booklet:', imageUrl);
                   }}
                   className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   aria-label="Supprimer l'image"
