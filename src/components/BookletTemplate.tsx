@@ -135,7 +135,15 @@ export function BookletTemplate({
         <h2 className="text-2xl font-bold mb-6 theme-text border-b-2 theme-border pb-2">
           Notes personnelles
         </h2>
-        {/* ... inchangé ... */}
+        <div className="space-y-6 mt-8">
+          {Array.from({ length: 24 }).map((_, index) => (
+            <div 
+              key={index} 
+              className="border-b border-gray-300 h-8"
+              style={{ pageBreakInside: 'avoid' }}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="text-center text-sm text-gray-500 mt-8 pt-4 border-t">
