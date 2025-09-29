@@ -25,6 +25,7 @@ export function BookletTemplate({
 }: BookletTemplateProps) {
   const [coverImages, setCoverImages] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(data.tripTitle);
   const { toast } = useToast();
 
   const fetchCoverImages = async () => {
@@ -104,7 +105,14 @@ export function BookletTemplate({
             alt="Adgentes" 
             className="h-10 object-contain"
           />
-          <h1 className="text-2xl font-bold text-white">{data.tripTitle}</h1>
+          <h1 
+            className="text-2xl font-bold text-white outline-none"
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => setEditableTitle(e.currentTarget.textContent || data.tripTitle)}
+          >
+            {editableTitle}
+          </h1>
           <div className="w-32"></div>
         </div>
 
