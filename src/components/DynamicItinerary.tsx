@@ -260,6 +260,7 @@ export function DynamicItinerary({
         const isStepGenerating = isGenerating && currentStep === index;
         const nextStep = visibleSteps[index + 1];
         const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
+        const isLastStep = index === visibleSteps.length - 1;
 
         return (
           <div key={step.stepId}>
@@ -275,6 +276,11 @@ export function DynamicItinerary({
               nextStepStartDate={nextStep?.startDate}
               parsedStepInfo={parsedStepInfo}
             />
+            {isLastStep && (
+              <div className="mt-8 text-center">
+                <h3 className="text-xl font-bold text-foreground">Fin de nos services</h3>
+              </div>
+            )}
           </div>
         );
       })}
