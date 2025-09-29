@@ -397,6 +397,7 @@ export type Database = {
           capital: string | null
           climate_info: Json | null
           clothing_advice: Json | null
+          cover_images: string[] | null
           created_at: string | null
           cultural_sites: Json | null
           currency: string | null
@@ -425,6 +426,7 @@ export type Database = {
           capital?: string | null
           climate_info?: Json | null
           clothing_advice?: Json | null
+          cover_images?: string[] | null
           created_at?: string | null
           cultural_sites?: Json | null
           currency?: string | null
@@ -453,6 +455,7 @@ export type Database = {
           capital?: string | null
           climate_info?: Json | null
           clothing_advice?: Json | null
+          cover_images?: string[] | null
           created_at?: string | null
           cultural_sites?: Json | null
           currency?: string | null

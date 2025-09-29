@@ -7,6 +7,7 @@ import { GeneralInfoSection } from "./GeneralInfoSection";
 import { EmergencyContactsSection } from "./EmergencyContactsSection";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -21,13 +22,21 @@ export function BookletTemplate({
 }: BookletTemplateProps) {
   const [coverImages, setCoverImages] = useState<string[]>([]);
 
-  // On utilisera les images qui seront récupérées via le composant DynamicItinerary
-  // Pour l'instant, on va juste créer un placeholder
   useEffect(() => {
-    // Les images seront récupérées via l'AI content dans DynamicItinerary
-    // On va créer un callback pour les récupérer
-    setCoverImages([]);
-  }, [data.segments]);
+    const fetchCoverImages = async () => {
+      const { data: generalInfo, error } = await supabase
+        .from('trip_general_info')
+        .select('cover_images')
+        .eq('trip_id', tripId)
+        .single();
+      
+      if (!error && generalInfo?.cover_images) {
+        setCoverImages(generalInfo.cover_images);
+      }
+    };
+    
+    fetchCoverImages();
+  }, [tripId]);
 
   // Couleur fixe Adgentes
   const colors = { primary: "#822a62", secondary: "#c084ab", accent: "#f5e6f0" };
@@ -63,11 +72,11 @@ export function BookletTemplate({
           <div className="w-32"></div>
         </div>
 
-        {/* Images de destination */}
+        {/* Images de destination - pleine largeur, sans espaces, sans arrondis */}
         {coverImages.length > 0 && (
-          <div className="grid grid-cols-2 gap-0">
+          <div className="flex flex-col">
             {coverImages.map((imageUrl, index) => (
-              <div key={index} className="relative h-64 overflow-hidden">
+              <div key={index} className="relative h-80 w-full overflow-hidden">
                 <img
                   src={imageUrl}
                   alt={`Destination ${index + 1}`}
