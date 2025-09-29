@@ -80,13 +80,13 @@ export function StepTemplate({
       {/* Images */}
       {aiContent?.images && aiContent.images.length > 0 && (
         <div className="mb-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {aiContent.images.map((imageUrl, index) => (
               <div key={index} className="relative rounded-lg overflow-hidden bg-muted/30">
                 <img
                   src={imageUrl}
                   alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
-                  className="w-full h-32 object-cover"
+                  className="w-full h-48 object-cover"
                   onError={(e) => {
                     // Hard rule: hide the image if it fails to load
                     console.warn('Failed to load image:', imageUrl);
