@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 
 interface ThankYouSectionProps {
   greeting?: string;
@@ -11,15 +10,17 @@ export function ThankYouSection({ greeting = "Chers voyageurs" }: ThankYouSectio
   return (
     <div className="my-8 p-6 bg-accent/30 rounded-lg border-l-4 border-primary">
       <div className="space-y-4 text-base leading-relaxed">
-        <div className="flex items-center gap-2">
-          <Input
-            value={editableGreeting}
-            onChange={(e) => setEditableGreeting(e.target.value.slice(0, 100))}
-            className="font-medium max-w-xs"
-            placeholder="Formule de politesse"
-          />
-          <span className="font-medium">,</span>
-        </div>
+        <p className="font-medium">
+          <span
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => setEditableGreeting(e.currentTarget.textContent?.slice(0, 100) || greeting)}
+            className="outline-none"
+          >
+            {editableGreeting}
+          </span>
+          ,
+        </p>
         
         <p>
           Je tiens à vous remercier sincèrement d'avoir fait confiance à notre agence pour 
