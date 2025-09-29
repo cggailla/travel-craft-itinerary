@@ -82,7 +82,7 @@ export function StepTemplate({
         <div className="mb-6">
           <div className="grid grid-cols-1 gap-3">
             {aiContent.images.map((imageUrl, index) => (
-              <div key={index} className="relative rounded-lg overflow-hidden bg-muted/30">
+              <div key={index} className="relative rounded-lg overflow-hidden bg-muted/30 group">
                 <img
                   src={imageUrl}
                   alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
@@ -93,6 +93,17 @@ export function StepTemplate({
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
+                {/* Bouton de suppression au survol */}
+                <button
+                  onClick={() => {
+                    // TODO: Implémenter la suppression de l'image
+                    console.log('Supprimer l\'image:', imageUrl);
+                  }}
+                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  aria-label="Supprimer l'image"
+                >
+                  <span className="text-white text-sm font-light">×</span>
+                </button>
               </div>
             ))}
           </div>
