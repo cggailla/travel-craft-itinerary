@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, Clock, FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
+import { GeneralInfoSection } from "./GeneralInfoSection";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -81,6 +82,15 @@ export function BookletTemplate({
           options={options}
           tripId={tripId}
         />
+      </div>
+
+      {/* Informations générales */}
+      <div className="page-break mb-12">
+        <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
+          Informations complémentaires
+        </h2>
+
+        <GeneralInfoSection tripId={tripId} options={options} />
       </div>
 
       {/* Documents de référence */}

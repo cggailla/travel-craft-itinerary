@@ -350,6 +350,31 @@ async function generateStepAIContentWithRetry(
   return errorResult;
 }
 
+/**
+ * Generate general travel information for a trip using Perplexity AI
+ */
+export async function generateTripGeneralInfo(tripId: string): Promise<void> {
+  console.log(`🌍 Generating general info for trip ${tripId}`);
+  
+  const { data, error } = await supabase.functions.invoke('generate-trip-general-info', {
+    body: { tripId }
+  });
+  
+  if (error) {
+    console.error('Error generating trip general info:', error);
+    throw new Error(`Failed to generate general info: ${error.message}`);
+  }
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Unknown error generating general info');
+  }
+  
+  console.log('✅ Trip general info generated successfully');
+}
+
+/**
+ * Enrich timeline with location data and recommendations
+ */
 export async function enrichTimeline(tripId: string): Promise<{ success: boolean; enrichedSegments: number; recommendations: number; error?: string }> {
   try {
     console.log('Enriching timeline for trip:', tripId);
@@ -391,21 +416,31 @@ export async function generateAllStepsAIContent(
     await consolidateStepSegments(tripId);
     onProgress?.('consolidation', undefined, 'completed');
 
-    // Step 1: Generate trip summary AND enrich timeline in parallel
+    // Step 1: Generate trip summary first
     onProgress?.('trip-summary', undefined, 'generating');
-    onProgress?.('enrichment', undefined, 'generating');
-    
-    const [tripSummary, enrichmentResult] = await Promise.all([
-      generateTripSummary(tripId),
-      enrichTimeline(tripId)
-    ]);
-    
+    const tripSummary = await generateTripSummary(tripId);
     onProgress?.('trip-summary', undefined, 'completed');
+
+    // Step 2: Generate trip general information
+    console.log('🌍 Step 2: Generating general information for destination...');
+    try {
+      await generateTripGeneralInfo(tripId);
+      console.log('✅ General information generated');
+    } catch (error) {
+      console.error('Error generating general info:', error);
+      // Continue even if this fails - it's not critical
+    }
+
+    // Step 3: Enrich timeline with location data
+    console.log('📍 Step 3: Enriching timeline with location data...');
+    onProgress?.('enrichment', undefined, 'generating');
+    const enrichmentResult = await enrichTimeline(tripId);
     onProgress?.('enrichment', undefined, enrichmentResult.success ? 'completed' : 'error', enrichmentResult.error);
 
     console.log('Enrichment result:', enrichmentResult);
 
-    // Process each step with trip summary context
+    // Step 4: Process each step with trip summary context
+    console.log(`🎨 Step 4: Generating AI content for ${requests.length} steps...`);
     for (let i = 0; i < requests.length; i++) {
       const request = { ...requests[i], tripSummary };
       console.log(`Processing AI content for step ${i + 1}/${requests.length}: ${request.stepId}`);

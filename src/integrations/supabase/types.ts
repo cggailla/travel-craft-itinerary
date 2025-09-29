@@ -391,6 +391,101 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_general_info: {
+        Row: {
+          budget_info: Json | null
+          capital: string | null
+          climate_info: Json | null
+          clothing_advice: Json | null
+          created_at: string | null
+          cultural_sites: Json | null
+          currency: string | null
+          destination_country: string
+          electricity_info: Json | null
+          entry_requirements: Json | null
+          exchange_rate: string | null
+          food_specialties: Json | null
+          health_requirements: Json | null
+          id: string
+          languages: Json | null
+          natural_attractions: string | null
+          phone_info: Json | null
+          population: string | null
+          religion_info: string | null
+          safety_info: string | null
+          shopping_info: string | null
+          surface_area: string | null
+          timezone_info: Json | null
+          tipping_culture: Json | null
+          trip_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget_info?: Json | null
+          capital?: string | null
+          climate_info?: Json | null
+          clothing_advice?: Json | null
+          created_at?: string | null
+          cultural_sites?: Json | null
+          currency?: string | null
+          destination_country: string
+          electricity_info?: Json | null
+          entry_requirements?: Json | null
+          exchange_rate?: string | null
+          food_specialties?: Json | null
+          health_requirements?: Json | null
+          id?: string
+          languages?: Json | null
+          natural_attractions?: string | null
+          phone_info?: Json | null
+          population?: string | null
+          religion_info?: string | null
+          safety_info?: string | null
+          shopping_info?: string | null
+          surface_area?: string | null
+          timezone_info?: Json | null
+          tipping_culture?: Json | null
+          trip_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget_info?: Json | null
+          capital?: string | null
+          climate_info?: Json | null
+          clothing_advice?: Json | null
+          created_at?: string | null
+          cultural_sites?: Json | null
+          currency?: string | null
+          destination_country?: string
+          electricity_info?: Json | null
+          entry_requirements?: Json | null
+          exchange_rate?: string | null
+          food_specialties?: Json | null
+          health_requirements?: Json | null
+          id?: string
+          languages?: Json | null
+          natural_attractions?: string | null
+          phone_info?: Json | null
+          population?: string | null
+          religion_info?: string | null
+          safety_info?: string | null
+          shopping_info?: string | null
+          surface_area?: string | null
+          timezone_info?: Json | null
+          tipping_culture?: Json | null
+          trip_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_general_info_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           created_at: string
