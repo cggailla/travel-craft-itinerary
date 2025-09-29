@@ -18,7 +18,15 @@ serve(async (req) => {
     
     const { stepId, stepTitle, primaryLocation, sections, tripSummary } = await req.json();
     
+    console.log('📍 Input parameters:');
+    console.log(`  - Step ID: ${stepId}`);
+    console.log(`  - Step Title: ${stepTitle}`);
+    console.log(`  - Primary Location: ${primaryLocation}`);
+    console.log(`  - Sections count: ${sections?.length || 0}`);
+    console.log(`  - Trip Summary provided: ${!!tripSummary}`);
+    
     if (!stepId || !stepTitle || !sections) {
+      console.error('❌ Missing required fields:', { stepId: !!stepId, stepTitle: !!stepTitle, sections: !!sections });
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -45,7 +53,12 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
+    console.log(`🚀 Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
+    console.log('🌐 Perplexity API request configuration:');
+    console.log('  - Model: sonar');
+    console.log('  - Return images: true');
+    console.log('  - Image domain filter:', ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"]);
+    console.log('  - Image format filter:', ["jpeg", "png", "webp"]);
 
     // Create structured prompt for targeted content generation
     const sectionsInfo = sections.map((section: any) => {
@@ -84,7 +97,10 @@ CONSIGNES STRICTES:
 - OBLIGATOIRE: Réponds en JSON pur sans backticks markdown
 ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyage' : ''}`;
 
-    console.log('Calling Perplexity for AI content generation with web search...');
+    console.log('📝 Prompt sections info:');
+    console.log(sectionsInfo);
+    
+    console.log('🔄 Calling Perplexity for AI content generation with web search...');
 
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -116,7 +132,7 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Perplexity API error:', response.status, errorText);
+      console.error('❌ Perplexity API error:', response.status, errorText);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -130,22 +146,51 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     }
 
     const perplexityData = await response.json();
-    console.log('Perplexity response received');
+    console.log('✅ Perplexity response received');
+    console.log('📊 Full Perplexity response structure:');
+    console.log('  - Choices:', perplexityData.choices?.length || 0);
+    console.log('  - Images field present:', !!perplexityData.images);
+    console.log('  - Images count:', perplexityData.images?.length || 0);
+    
+    if (perplexityData.images && perplexityData.images.length > 0) {
+      console.log('🖼️ Images found in response:');
+      perplexityData.images.forEach((img: any, index: number) => {
+        console.log(`  Image ${index + 1}:`);
+        console.log(`    - URL: ${img.url}`);
+        console.log(`    - Title: ${img.title || 'N/A'}`);
+        console.log(`    - Format: ${img.format || 'N/A'}`);
+        console.log(`    - Source: ${img.source || 'N/A'}`);
+      });
+    } else {
+      console.log('⚠️ No images found in Perplexity response');
+    }
 
     const content = perplexityData.choices[0].message.content;
+    console.log('📄 Content length:', content?.length || 0);
     
     // Extract images from Perplexity response (first 2 only)
     const images = perplexityData.images 
       ? perplexityData.images.slice(0, 2).map((img: any) => img.url).filter(Boolean)
       : [];
     
+    console.log('🎯 Final extracted images URLs:');
+    images.forEach((url: string, index: number) => {
+      console.log(`  ${index + 1}. ${url}`);
+    });
+    console.log(`📈 Total images selected: ${images.length}/2`);
+    
     // Parse JSON response
     let aiContent;
     try {
       aiContent = JSON.parse(content);
+      console.log('✅ Successfully parsed AI content JSON');
+      console.log('📋 AI Content structure:');
+      console.log(`  - Overview length: ${aiContent.overview?.length || 0} chars`);
+      console.log(`  - Tips count: ${aiContent.tips?.length || 0}`);
+      console.log(`  - Local context length: ${aiContent.localContext?.length || 0} chars`);
     } catch (parseError) {
-      console.error('Error parsing Perplexity JSON response:', parseError);
-      console.error('Raw content:', content);
+      console.error('❌ Error parsing Perplexity JSON response:', parseError);
+      console.error('🔍 Raw content preview:', content?.substring(0, 500));
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -160,7 +205,8 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
 
     // Validate response structure
     if (!aiContent.overview || !Array.isArray(aiContent.tips)) {
-      console.error('Invalid AI response structure:', aiContent);
+      console.error('❌ Invalid AI response structure:', aiContent);
+      console.error('🔍 Missing fields - Overview:', !!aiContent.overview, 'Tips array:', Array.isArray(aiContent.tips));
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -173,7 +219,13 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
       );
     }
 
-    console.log(`AI content generated successfully for step ${stepId}`);
+    console.log(`🎉 AI content generated successfully for step ${stepId}`);
+    console.log('📤 Final response summary:');
+    console.log(`  - Step ID: ${stepId}`);
+    console.log(`  - Overview: ${aiContent.overview.length} chars`);
+    console.log(`  - Tips: ${aiContent.tips.length} items`);
+    console.log(`  - Local context: ${aiContent.localContext?.length || 0} chars`);
+    console.log(`  - Images: ${images.length} URLs`);
 
     return new Response(
       JSON.stringify({
@@ -188,7 +240,12 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     );
 
   } catch (error) {
-    console.error('Error in generate-step-ai-content function:', error);
+    console.error('💥 Error in generate-step-ai-content function:', error);
+    console.error('🔍 Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
     return new Response(
       JSON.stringify({ 
         success: false, 
