@@ -142,7 +142,17 @@ export function DynamicItinerary({
       setStepStatus('Génération du contenu enrichi...');
       setAiContents(new Map());
 
-      const aiRequests = steps.map(createAIContentRequest);
+      const aiRequests = steps.map((step, index) => {
+        const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
+        const primaryLocationFromSummary = parsedStepInfo?.location;
+        
+        console.log(`🌍 Creating AI request for step ${index + 1}:`);
+        console.log(`  - Step ID: ${step.stepId}`);
+        console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
+        console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
+        
+        return createAIContentRequest(step, primaryLocationFromSummary);
+      });
       const results = await generateAllStepsAIContent(
         aiRequests, 
         tripId,

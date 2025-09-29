@@ -299,11 +299,11 @@ export async function getEnrichedSteps(tripId: string): Promise<{ success: boole
 /**
  * Generate AI content request for a step
  */
-export function createAIContentRequest(step: EnrichedStep): AIContentRequest {
+export function createAIContentRequest(step: EnrichedStep, primaryLocationOverride?: string): AIContentRequest {
   return {
     stepId: step.stepId,
     stepTitle: step.stepTitle,
-    primaryLocation: step.primaryLocation,
+    primaryLocation: primaryLocationOverride || step.primaryLocation,
     sections: step.sections
   };
 }
