@@ -104,6 +104,7 @@ interface GeneralInfo {
 export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps) {
   const [info, setInfo] = useState<GeneralInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchGeneralInfo = async () => {
@@ -128,6 +129,16 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
     fetchGeneralInfo();
   }, [tripId]);
 
+  const DeleteButton = ({ cardId }: { cardId: string }) => (
+    <button
+      onClick={() => setHiddenCards(prev => new Set(prev).add(cardId))}
+      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+      aria-label="Supprimer cette section"
+    >
+      <span className="text-white text-sm font-light">×</span>
+    </button>
+  );
+
   if (loading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -148,8 +159,8 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   return (
     <div className="space-y-6">
       {/* Basic Information */}
-      {(info.capital || info.population || info.surface_area) && (
-        <Card>
+      {(info.capital || info.population || info.surface_area) && !hiddenCards.has('basic') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Globe className="h-4 w-4" />
@@ -173,12 +184,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="basic" />
         </Card>
       )}
 
       {/* Timezone */}
-      {info.timezone_info && (
-        <Card>
+      {info.timezone_info && !hiddenCards.has('timezone') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Calendar className="h-4 w-4" />
@@ -193,12 +205,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               {info.timezone_info.offset_description}
             </div>
           </CardContent>
+          <DeleteButton cardId="timezone" />
         </Card>
       )}
 
       {/* Entry Requirements */}
-      {info.entry_requirements && (
-        <Card>
+      {info.entry_requirements && !hiddenCards.has('entry') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <MapPin className="h-4 w-4" />
@@ -216,12 +229,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               <strong>Durée autorisée:</strong> {info.entry_requirements.validity}
             </div>
           </CardContent>
+          <DeleteButton cardId="entry" />
         </Card>
       )}
 
       {/* Health */}
-      {info.health_requirements && (
-        <Card>
+      {info.health_requirements && !hiddenCards.has('health') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Heart className="h-4 w-4" />
@@ -250,12 +264,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="health" />
         </Card>
       )}
 
       {/* Clothing */}
-      {info.clothing_advice && (
-        <Card>
+      {info.clothing_advice && !hiddenCards.has('clothing') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Shirt className="h-4 w-4" />
@@ -284,12 +299,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="clothing" />
         </Card>
       )}
 
       {/* Food */}
-      {info.food_specialties && info.food_specialties.length > 0 && (
-        <Card>
+      {info.food_specialties && info.food_specialties.length > 0 && !hiddenCards.has('food') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <UtensilsCrossed className="h-4 w-4" />
@@ -306,12 +322,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               ))}
             </div>
           </CardContent>
+          <DeleteButton cardId="food" />
         </Card>
       )}
 
       {/* Currency */}
-      {(info.currency || info.exchange_rate) && (
-        <Card>
+      {(info.currency || info.exchange_rate) && !hiddenCards.has('currency') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Coins className="h-4 w-4" />
@@ -328,12 +345,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               <div className="text-sm text-muted-foreground">{info.exchange_rate}</div>
             )}
           </CardContent>
+          <DeleteButton cardId="currency" />
         </Card>
       )}
 
       {/* Budget */}
-      {info.budget_info && (
-        <Card>
+      {info.budget_info && !hiddenCards.has('budget') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Wallet className="h-4 w-4" />
@@ -357,12 +375,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="budget" />
         </Card>
       )}
 
       {/* Tipping */}
-      {info.tipping_culture && (
-        <Card>
+      {info.tipping_culture && !hiddenCards.has('tipping') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Gift className="h-4 w-4" />
@@ -394,12 +413,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="tipping" />
         </Card>
       )}
 
       {/* Electricity */}
-      {info.electricity_info && (
-        <Card>
+      {info.electricity_info && !hiddenCards.has('electricity') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Lightbulb className="h-4 w-4" />
@@ -425,12 +445,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
           </CardContent>
+          <DeleteButton cardId="electricity" />
         </Card>
       )}
 
       {/* Religion */}
-      {info.religion_info && (
-        <Card>
+      {info.religion_info && !hiddenCards.has('religion') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Building2 className="h-4 w-4" />
@@ -440,12 +461,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <CardContent>
             <p className="text-sm">{info.religion_info}</p>
           </CardContent>
+          <DeleteButton cardId="religion" />
         </Card>
       )}
 
       {/* Shopping */}
-      {info.shopping_info && (
-        <Card>
+      {info.shopping_info && !hiddenCards.has('shopping') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Gift className="h-4 w-4" />
@@ -455,12 +477,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <CardContent>
             <p className="text-sm">{info.shopping_info}</p>
           </CardContent>
+          <DeleteButton cardId="shopping" />
         </Card>
       )}
 
       {/* Phone */}
-      {info.phone_info && (
-        <Card>
+      {info.phone_info && !hiddenCards.has('phone') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Phone className="h-4 w-4" />
@@ -482,12 +505,13 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               <div className="text-muted-foreground">{info.phone_info.tips}</div>
             )}
           </CardContent>
+          <DeleteButton cardId="phone" />
         </Card>
       )}
 
       {/* Languages */}
-      {info.languages && (
-        <Card>
+      {info.languages && !hiddenCards.has('languages') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Languages className="h-4 w-4" />
@@ -504,56 +528,59 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             {info.languages.french_spoken !== undefined && (
               <div className="text-sm">
                 <strong>Français parlé:</strong>{" "}
-                {info.languages.french_spoken ? "Oui" : "Peu"}
+                {info.languages.french_spoken ? "Oui" : "Non"}
               </div>
             )}
             {info.languages.notes && (
               <div className="text-sm text-muted-foreground">{info.languages.notes}</div>
             )}
           </CardContent>
+          <DeleteButton cardId="languages" />
         </Card>
       )}
 
       {/* Cultural Sites */}
-      {info.cultural_sites && info.cultural_sites.length > 0 && (
-        <Card>
+      {info.cultural_sites && info.cultural_sites.length > 0 && !hiddenCards.has('cultural') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Building2 className="h-4 w-4" />
-              Sites historiques & culturels
+              Sites culturels
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {info.cultural_sites.map((site, idx) => (
-                <div key={idx} className="border-l-2 border-primary/20 pl-3">
+                <div key={idx}>
                   <div className="font-medium">{site.name}</div>
                   <div className="text-sm text-muted-foreground">{site.description}</div>
                 </div>
               ))}
             </div>
           </CardContent>
+          <DeleteButton cardId="cultural" />
         </Card>
       )}
 
-      {/* Nature */}
-      {info.natural_attractions && (
-        <Card>
+      {/* Natural Attractions */}
+      {info.natural_attractions && !hiddenCards.has('natural') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Trees className="h-4 w-4" />
-              Nature & paysages
+              Attractions naturelles
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">{info.natural_attractions}</p>
           </CardContent>
+          <DeleteButton cardId="natural" />
         </Card>
       )}
 
       {/* Safety */}
-      {info.safety_info && (
-        <Card>
+      {info.safety_info && !hiddenCards.has('safety') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <Shield className="h-4 w-4" />
@@ -563,54 +590,47 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <CardContent>
             <p className="text-sm">{info.safety_info}</p>
           </CardContent>
+          <DeleteButton cardId="safety" />
         </Card>
       )}
 
       {/* Climate */}
-      {info.climate_info && (
-        <Card>
+      {info.climate_info && !hiddenCards.has('climate') && (
+        <Card className="relative group">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 theme-text text-base">
               <CloudSun className="h-4 w-4" />
               Climat
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 text-sm">
             {info.climate_info.current_season && (
               <div>
-                <strong className="block mb-1">Période du voyage:</strong>
-                <p className="text-sm text-muted-foreground">
-                  {info.climate_info.current_season}
-                </p>
+                <strong>Saison actuelle:</strong> {info.climate_info.current_season}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              {info.climate_info.summer && (
-                <div>
-                  <strong>Été:</strong>
-                  <p className="text-muted-foreground">{info.climate_info.summer}</p>
-                </div>
-              )}
-              {info.climate_info.winter && (
-                <div>
-                  <strong>Hiver:</strong>
-                  <p className="text-muted-foreground">{info.climate_info.winter}</p>
-                </div>
-              )}
-              {info.climate_info.autumn && (
-                <div>
-                  <strong>Automne:</strong>
-                  <p className="text-muted-foreground">{info.climate_info.autumn}</p>
-                </div>
-              )}
-              {info.climate_info.spring && (
-                <div>
-                  <strong>Printemps:</strong>
-                  <p className="text-muted-foreground">{info.climate_info.spring}</p>
-                </div>
-              )}
-            </div>
+            {info.climate_info.summer && (
+              <div>
+                <strong>Été:</strong> {info.climate_info.summer}
+              </div>
+            )}
+            {info.climate_info.winter && (
+              <div>
+                <strong>Hiver:</strong> {info.climate_info.winter}
+              </div>
+            )}
+            {info.climate_info.autumn && (
+              <div>
+                <strong>Automne:</strong> {info.climate_info.autumn}
+              </div>
+            )}
+            {info.climate_info.spring && (
+              <div>
+                <strong>Printemps:</strong> {info.climate_info.spring}
+              </div>
+            )}
           </CardContent>
+          <DeleteButton cardId="climate" />
         </Card>
       )}
     </div>

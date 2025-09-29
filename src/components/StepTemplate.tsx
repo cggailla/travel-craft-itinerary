@@ -26,8 +26,12 @@ export function StepTemplate({
   nextStepStartDate,
   parsedStepInfo
 }: StepTemplateProps) {
-  // Gérer les images supprimées localement
+  // Gérer les éléments supprimés localement
   const [deletedImages, setDeletedImages] = useState<Set<string>>(new Set());
+  const [deletedSegments, setDeletedSegments] = useState<Set<string>>(new Set());
+  const [hiddenOverview, setHiddenOverview] = useState(false);
+  const [hiddenTips, setHiddenTips] = useState(false);
+  const [hiddenLocalContext, setHiddenLocalContext] = useState(false);
   
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
@@ -73,10 +77,17 @@ export function StepTemplate({
       </div>
 
       {/* AI Overview */}
-      {aiContent?.overview && (
-        <div className="mb-6 p-4 bg-muted/50 rounded-lg">
+      {aiContent?.overview && !hiddenOverview && (
+        <div className="mb-6 p-4 bg-muted/50 rounded-lg relative group">
           <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
+          <button
+            onClick={() => setHiddenOverview(true)}
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            aria-label="Supprimer l'aperçu"
+          >
+            <span className="text-white text-sm font-light">×</span>
+          </button>
         </div>
       )}
 
@@ -119,10 +130,14 @@ export function StepTemplate({
       {step.sections.map((section, sectionIndex) => {
         if (!section.segments || section.segments.length === 0) return null;
         
+        // Filtrer les segments supprimés
+        const visibleSegments = section.segments.filter(segment => !deletedSegments.has(segment.id));
+        if (visibleSegments.length === 0) return null;
+        
         return (
           <div key={sectionIndex} className="mb-6">
             <div className="space-y-3">
-              {section.segments.map(segment => {
+              {visibleSegments.map(segment => {
                 const hasStartDate = segment.start_date;
                 const hasEndDate = segment.end_date;
                 const startDate = hasStartDate ? new Date(segment.start_date) : null;
@@ -145,7 +160,7 @@ export function StepTemplate({
                 // Travel segments (flight, car, train, transfer) - vertical dotted line style
                 if (['flight', 'car', 'train', 'transfer'].includes(segment.segment_type)) {
                   return (
-                    <div key={segment.id} className="relative flex items-center my-3">
+                    <div key={segment.id} className="relative flex items-center my-3 group">
                       {/* Vertical dotted line */}
                       <div className="w-px h-12 border-l-2 border-dotted border-muted-foreground/40 flex-shrink-0"></div>
                       
@@ -178,13 +193,21 @@ export function StepTemplate({
                         </div>
                         {segment.description && <p className="text-xs text-muted-foreground/80 mt-1">{segment.description}</p>}
                       </div>
+                      {/* Bouton de suppression pour les segments de voyage */}
+                      <button
+                        onClick={() => setDeletedSegments(prev => new Set(prev).add(segment.id))}
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        aria-label="Supprimer le segment"
+                      >
+                        <span className="text-white text-sm font-light">×</span>
+                      </button>
                     </div>
                   );
                 }
 
                 // Main segments (hotel, activity, etc.) - keep boxed style
                 return (
-                  <div key={segment.id} className="relative p-3 bg-background border rounded-lg">
+                  <div key={segment.id} className="relative p-3 bg-background border rounded-lg group">
                     {segment.segment_type === 'hotel' && (
                        <div className="flex items-start gap-3">
                         <div className="flex-1">
@@ -437,6 +460,15 @@ export function StepTemplate({
                         </div>
                       </div>
                     )}
+                    
+                    {/* Bouton de suppression pour les segments principaux */}
+                    <button
+                      onClick={() => setDeletedSegments(prev => new Set(prev).add(segment.id))}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                      aria-label="Supprimer le segment"
+                    >
+                      <span className="text-white text-sm font-light">×</span>
+                    </button>
                   </div>
                 );
               })}
@@ -446,8 +478,8 @@ export function StepTemplate({
       })}
 
       {/* AI Tips */}
-      {aiContent?.tips && aiContent.tips.length > 0 && (
-        <div className="mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-lg">
+      {aiContent?.tips && aiContent.tips.length > 0 && !hiddenTips && (
+        <div className="mb-4 p-4 bg-primary/5 border-l-4 border-primary rounded-lg relative group">
           <h3 className="font-medium mb-2 text-foreground">Conseils pratiques</h3>
           <ul className="space-y-1">
             {aiContent.tips.map((tip, index) => (
@@ -457,14 +489,28 @@ export function StepTemplate({
               </li>
             ))}
           </ul>
+          <button
+            onClick={() => setHiddenTips(true)}
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            aria-label="Supprimer les conseils"
+          >
+            <span className="text-white text-sm font-light">×</span>
+          </button>
         </div>
       )}
 
       {/* AI Local Context */}
-      {aiContent?.localContext && (
-        <div className="p-4 bg-accent/20 rounded-lg">
+      {aiContent?.localContext && !hiddenLocalContext && (
+        <div className="p-4 bg-accent/20 rounded-lg relative group">
           <h3 className="font-medium mb-2 text-foreground">À savoir</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.localContext}</p>
+          <button
+            onClick={() => setHiddenLocalContext(true)}
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            aria-label="Supprimer le contexte local"
+          >
+            <span className="text-white text-sm font-light">×</span>
+          </button>
         </div>
       )}
 
