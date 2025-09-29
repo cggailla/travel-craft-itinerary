@@ -89,6 +89,7 @@ export function StepTemplate({
                   className="w-full h-32 object-cover"
                   onError={(e) => {
                     // Hard rule: hide the image if it fails to load
+                    console.warn('Failed to load image:', imageUrl);
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />

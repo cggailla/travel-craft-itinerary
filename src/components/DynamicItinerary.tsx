@@ -269,6 +269,7 @@ export function DynamicItinerary({
                 overview: aiContent.overview,
                 tips: aiContent.tips,
                 localContext: aiContent.localContext,
+                images: aiContent.images,
               } : undefined}
               isLoading={isStepGenerating}
               nextStepStartDate={nextStep?.startDate}
