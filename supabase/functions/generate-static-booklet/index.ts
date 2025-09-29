@@ -6,73 +6,106 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  console.log('📝 Generate static booklet function called');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight handled');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔧 Setting up Supabase client...');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log('✅ Supabase client created');
 
-    const { tripId } = await req.json();
+    console.log('📖 Reading request body...');
+    const body = await req.json();
+    const { tripId } = body;
+    console.log('Trip ID received:', tripId);
 
     if (!tripId) {
       throw new Error('tripId is required');
     }
 
-    console.log('Generating static booklet for trip:', tripId);
-
+    console.log('🔍 Fetching trip data...');
     // Fetch trip data
-    const { data: trip } = await supabase
+    const { data: trip, error: tripError } = await supabase
       .from('trips')
       .select('title, created_at')
       .eq('id', tripId)
       .single();
 
+    if (tripError) {
+      console.error('❌ Error fetching trip:', tripError);
+      throw new Error(`Failed to fetch trip: ${tripError.message}`);
+    }
+    console.log('✅ Trip data fetched:', trip?.title);
+
     // Fetch validated segments
-    const { data: segments } = await supabase
+    console.log('🔍 Fetching segments...');
+    const { data: segments, error: segmentsError } = await supabase
       .from('travel_segments')
       .select('*')
       .eq('trip_id', tripId)
       .eq('validated', true)
-      .order('start_date', { ascending: true })
-      .order('sequence_order', { ascending: true });
+      .order('start_date', { ascending: true });
+
+    if (segmentsError) {
+      console.error('❌ Error fetching segments:', segmentsError);
+      throw new Error(`Failed to fetch segments: ${segmentsError.message}`);
+    }
+    console.log(`✅ Fetched ${segments?.length || 0} segments`);
 
     // Fetch general info
+    console.log('🔍 Fetching general info...');
     const { data: generalInfo } = await supabase
       .from('trip_general_info')
       .select('*')
       .eq('trip_id', tripId)
       .maybeSingle();
+    console.log('✅ General info fetched');
 
     // Generate HTML content
+    console.log('🎨 Generating HTML...');
     const html = generateHTML(trip, segments || [], generalInfo);
+    console.log(`✅ HTML generated (${html.length} characters)`);
 
     // Upload to storage
     const timestamp = new Date().getTime();
     const fileName = `booklet-${tripId}-${timestamp}.html`;
-    const filePath = fileName;
-
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    
+    console.log('📤 Uploading to storage...');
+    console.log('File name:', fileName);
+    
+    const { error: uploadError } = await supabase.storage
       .from('booklet-exports')
-      .upload(filePath, new Blob([html], { type: 'text/html' }), {
+      .upload(fileName, html, {
         contentType: 'text/html',
         cacheControl: '3600',
+        upsert: false
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw uploadError;
+      console.error('❌ Upload error:', uploadError);
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
     }
+    console.log('✅ File uploaded successfully');
 
     // Get public URL
+    console.log('🔗 Getting public URL...');
     const { data: urlData } = supabase.storage
       .from('booklet-exports')
-      .getPublicUrl(filePath);
+      .getPublicUrl(fileName);
 
-    console.log('Booklet generated successfully:', urlData.publicUrl);
+    console.log('✅ Public URL generated:', urlData.publicUrl);
 
     return new Response(
       JSON.stringify({ url: urlData.publicUrl }),
@@ -82,10 +115,15 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error generating booklet:', error);
+    console.error('💥 Error in generate-static-booklet:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', errorMessage);
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : 'No stack trace'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
