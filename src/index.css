@@ -18,24 +18,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
     
-    /* Travel Blue Primary */
-    --primary: 210 100% 50%;
+    /* Adgentes Purple Primary */
+    --primary: 316 51% 33%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 210 100% 45%;
+    --primary-hover: 316 55% 28%;
     
-    /* Success Green */
-    --secondary: 142 76% 36%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-hover: 142 76% 32%;
+    /* Adgentes Secondary */
+    --secondary: 316 25% 75%;
+    --secondary-foreground: 316 51% 20%;
+    --secondary-hover: 316 25% 70%;
     
     /* Muted backgrounds */
     --muted: 210 40% 95%;
     --muted-foreground: 215 16% 47%;
     
-    /* Accent - Orange for highlights */
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    --accent-hover: 25 95% 48%;
+    /* Accent - Adgentes light pink */
+    --accent: 316 60% 95%;
+    --accent-foreground: 316 51% 25%;
+    --accent-hover: 316 60% 90%;
     
     /* Destructive */
     --destructive: 0 84% 60%;
@@ -44,7 +44,7 @@
     /* Borders and inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 210 100% 50%;
+    --ring: 316 51% 33%;
     
     /* Travel-specific colors */
     --travel-sky: 200 100% 85%;
@@ -53,14 +53,14 @@
     --travel-forest: 142 76% 36%;
     
     /* Gradients */
-    --gradient-sky: linear-gradient(135deg, hsl(200 100% 85%), hsl(210 100% 50%));
-    --gradient-ocean: linear-gradient(135deg, hsl(195 100% 40%), hsl(210 100% 50%));
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 32%));
+    --gradient-sky: linear-gradient(135deg, hsl(316 60% 85%), hsl(316 51% 33%));
+    --gradient-ocean: linear-gradient(135deg, hsl(316 51% 45%), hsl(316 55% 28%));
+    --gradient-success: linear-gradient(135deg, hsl(316 51% 33%), hsl(316 55% 28%));
     
     /* Shadows */
-    --shadow-soft: 0 4px 20px hsl(210 100% 50% / 0.1);
-    --shadow-medium: 0 8px 30px hsl(210 100% 50% / 0.15);
-    --shadow-strong: 0 20px 50px hsl(210 100% 50% / 0.25);
+    --shadow-soft: 0 4px 20px hsl(316 51% 33% / 0.1);
+    --shadow-medium: 0 8px 30px hsl(316 51% 33% / 0.15);
+    --shadow-strong: 0 20px 50px hsl(316 51% 33% / 0.25);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -98,24 +98,24 @@
     --popover: 215 25% 12%;
     --popover-foreground: 210 40% 95%;
     
-    /* Travel Blue Primary - brighter for dark */
-    --primary: 210 100% 60%;
+    /* Adgentes Purple - brighter for dark */
+    --primary: 316 51% 55%;
     --primary-foreground: 215 25% 8%;
-    --primary-hover: 210 100% 65%;
+    --primary-hover: 316 51% 60%;
     
-    /* Success Green - adjusted for dark */
-    --secondary: 142 76% 45%;
+    /* Adgentes Secondary - adjusted for dark */
+    --secondary: 316 25% 45%;
     --secondary-foreground: 215 25% 8%;
-    --secondary-hover: 142 76% 50%;
+    --secondary-hover: 316 25% 50%;
     
     /* Muted backgrounds */
     --muted: 215 25% 16%;
     --muted-foreground: 215 16% 65%;
     
-    /* Accent - Orange for highlights */
-    --accent: 25 95% 60%;
+    /* Accent - Adgentes light pink for dark mode */
+    --accent: 316 40% 85%;
     --accent-foreground: 215 25% 8%;
-    --accent-hover: 25 95% 65%;
+    --accent-hover: 316 40% 80%;
     
     /* Destructive */
     --destructive: 0 84% 65%;
@@ -124,7 +124,7 @@
     /* Borders and inputs */
     --border: 215 25% 20%;
     --input: 215 25% 20%;
-    --ring: 210 100% 60%;
+    --ring: 316 51% 55%;
     
     /* Travel-specific colors - adjusted */
     --travel-sky: 200 100% 70%;
@@ -133,9 +133,9 @@
     --travel-forest: 142 76% 45%;
     
     /* Gradients - darker versions */
-    --gradient-sky: linear-gradient(135deg, hsl(200 100% 40%), hsl(210 100% 60%));
-    --gradient-ocean: linear-gradient(135deg, hsl(195 100% 25%), hsl(210 100% 60%));
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 25%), hsl(142 76% 45%));
+    --gradient-sky: linear-gradient(135deg, hsl(316 40% 40%), hsl(316 51% 55%));
+    --gradient-ocean: linear-gradient(135deg, hsl(316 51% 25%), hsl(316 51% 55%));
+    --gradient-success: linear-gradient(135deg, hsl(316 51% 25%), hsl(316 51% 45%));
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

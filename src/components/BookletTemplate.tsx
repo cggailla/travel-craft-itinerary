@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { Calendar, Clock, FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
 import { GeneralInfoSection } from "./GeneralInfoSection";
+import { useState, useEffect } from "react";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -16,14 +17,18 @@ export function BookletTemplate({
   options,
   tripId,
 }: BookletTemplateProps) {
+  const [coverImages, setCoverImages] = useState<string[]>([]);
 
-  const colors = (() => {
-    switch (options.colorTheme) {
-      case "green": return { primary: "#22c55e", secondary: "#16a34a", accent: "#dcfce7" };
-      case "orange": return { primary: "#f97316", secondary: "#ea580c", accent: "#fed7aa" };
-      default: return { primary: "#3b82f6", secondary: "#2563eb", accent: "#dbeafe" };
-    }
-  })();
+  // On utilisera les images qui seront récupérées via le composant DynamicItinerary
+  // Pour l'instant, on va juste créer un placeholder
+  useEffect(() => {
+    // Les images seront récupérées via l'AI content dans DynamicItinerary
+    // On va créer un callback pour les récupérer
+    setCoverImages([]);
+  }, [data.segments]);
+
+  // Couleur fixe Adgentes
+  const colors = { primary: "#822a62", secondary: "#c084ab", accent: "#f5e6f0" };
 
   const templateStyles = { classic: "font-serif", modern: "font-sans", minimal: "font-mono" as const };
 
@@ -44,15 +49,37 @@ export function BookletTemplate({
       />
 
       {/* En-tête / couverture */}
-      <div className="text-center mb-6">
-        <div className="theme-bg p-6 rounded-lg">
-          <h1 className="text-3xl font-bold mb-2 theme-text">{data.tripTitle}</h1>
-          <div className="text-lg text-gray-600 mb-4">Carnet de Voyage</div>
+      <div className="mb-8">
+        {/* Barre de header avec logo Adgentes */}
+        <div className="theme-bg p-6 rounded-t-lg flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
+          <div className="w-32 h-12 bg-white/20 rounded flex items-center justify-center text-white text-xs">
+            Logo Adgentes
+          </div>
+          <h1 className="text-2xl font-bold text-white">{data.tripTitle}</h1>
+          <div className="w-32"></div>
+        </div>
 
+        {/* Images de destination */}
+        {coverImages.length > 0 && (
+          <div className="grid grid-cols-2 gap-0">
+            {coverImages.map((imageUrl, index) => (
+              <div key={index} className="relative h-64 overflow-hidden">
+                <img
+                  src={imageUrl}
+                  alt={`Destination ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Informations du voyage */}
+        <div className="theme-bg p-6 rounded-b-lg" style={{ backgroundColor: colors.accent }}>
           {data.startDate && (
             <div className="flex items-center justify-center mb-2 text-base">
-              <Calendar className="mr-2 h-5 w-5 theme-text" />
-              <span>
+              <Calendar className="mr-2 h-5 w-5" style={{ color: colors.primary }} />
+              <span style={{ color: colors.primary }}>
                 {format(data.startDate, "dd MMMM yyyy", { locale: fr })}
                 {data.endDate &&
                   data.endDate !== data.startDate && (
@@ -63,8 +90,8 @@ export function BookletTemplate({
           )}
 
           <div className="flex items-center justify-center">
-            <Clock className="mr-2 h-5 w-5 theme-text" />
-            <span className="text-base">
+            <Clock className="mr-2 h-5 w-5" style={{ color: colors.primary }} />
+            <span className="text-base" style={{ color: colors.primary }}>
               {data.totalDays} jour{data.totalDays > 1 ? "s" : ""}
             </span>
           </div>
