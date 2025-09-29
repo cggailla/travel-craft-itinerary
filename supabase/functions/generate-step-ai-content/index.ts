@@ -181,8 +181,8 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     // Extract up to 2 image URLs, trying multiple possible URL fields
     const validImages = (perplexityData.images || [])
       .filter((img: any) => {
-        // Try different possible URL fields
-        const imageUrl = img.imageUrl || img.url || img.src || img.href;
+        // Try different possible URL fields - prioritize image_url (snake_case) from Perplexity
+        const imageUrl = img.image_url || img.imageUrl || img.url || img.src || img.href;
         if (!imageUrl) {
           console.log(`❌ No valid URL found for image: ${JSON.stringify(img)}`);
           return false;
@@ -210,7 +210,7 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         return hasValidFormat && !isFromBlockedDomain;
       })
       .slice(0, 2)
-      .map((img: any) => img.imageUrl || img.url || img.src || img.href);
+      .map((img: any) => img.image_url || img.imageUrl || img.url || img.src || img.href);
     
     console.log('🎯 Final extracted images URLs:');
     validImages.forEach((url: string, index: number) => {
