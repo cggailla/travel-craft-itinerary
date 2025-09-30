@@ -69,7 +69,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
       <Card>
         <CardContent className="pt-6 space-y-6">
           {/* 1. Avant votre départ */}
-          <div>
+          <div className="keep-together">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="text-primary">1.</span> Avant votre départ
             </h3>
@@ -80,7 +80,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
           </div>
 
           {/* 2. Le jour de votre départ */}
-          <div>
+          <div className="keep-together">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="text-primary">2.</span> Le jour de votre départ
             </h3>
@@ -109,7 +109,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
           </div>
 
           {/* 3. Après votre départ */}
-          <div>
+          <div className="keep-together">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="text-primary">3.</span> Après votre départ
             </h3>
@@ -226,7 +226,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
           </div>
 
           {/* 4. Pour les cas d'extrême urgence */}
-          <div className="border-t pt-6">
+          <div className="border-t pt-6 keep-together">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="text-primary">4.</span> Pour les cas d'extrême urgence
             </h3>
