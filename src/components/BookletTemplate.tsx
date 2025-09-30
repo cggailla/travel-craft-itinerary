@@ -109,7 +109,7 @@ export function BookletTemplate({
             
             /* Qualité images */
             img {
-              max-height: 400px;
+              object-fit: cover !important;
               image-rendering: -webkit-optimize-contrast;
               image-rendering: crisp-edges;
               page-break-inside: avoid;
@@ -155,6 +155,7 @@ export function BookletTemplate({
                   src={imageUrl}
                   alt={`Destination ${index + 1}`}
                   className="w-full h-full object-cover"
+                  style={{ objectFit: 'cover' }}
                 />
               </div>
             ))}

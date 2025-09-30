@@ -103,11 +103,12 @@ export function StepTemplate({
           <div className="mb-6">
             <div className="grid grid-cols-1 gap-3">
               {visibleImages.map((imageUrl, index) => (
-              <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group">
+              <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group h-48">
                 <img
                   src={imageUrl}
                   alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-full object-cover"
+                  style={{ objectFit: 'cover' }}
                   onError={(e) => {
                     // Hard rule: hide the image if it fails to load
                     console.warn('Failed to load image:', imageUrl);
