@@ -32,6 +32,3 @@ verify_jwt = false
 
 [functions.generate-static-booklet]
 verify_jwt = false
-
-[functions.generate-pdf-booklet]
-verify_jwt = false
