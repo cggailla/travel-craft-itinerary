@@ -29,6 +29,7 @@ export function StepTemplate({
   // Gérer les éléments supprimés localement
   const [deletedImages, setDeletedImages] = useState<Set<string>>(new Set());
   const [deletedSegments, setDeletedSegments] = useState<Set<string>>(new Set());
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [hiddenOverview, setHiddenOverview] = useState(false);
   const [hiddenTips, setHiddenTips] = useState(false);
   const [hiddenLocalContext, setHiddenLocalContext] = useState(false);
@@ -51,8 +52,26 @@ export function StepTemplate({
   const isSingleDay = step.startDate.toDateString() === endDate.toDateString();
 
   return (
-    <div className="step-container mb-8 p-6 bg-card rounded-lg border relative">
-      {/* Date in top right corner */}
+    <>
+      <style>{`
+        @media print {
+          .hidden-in-pdf {
+            display: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+          }
+          .image-container.hidden-in-pdf {
+            display: none !important;
+          }
+          .segment-card.hidden-in-pdf {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div className="step-container mb-8 p-6 bg-card rounded-lg border relative">
+        {/* Date in top right corner */}
       <div className="absolute top-6 right-6 text-base font-medium text-foreground">
         {formatDate(step.startDate)}
         {!isSingleDay && <span className="text-muted-foreground mx-2">→</span>}
@@ -78,25 +97,27 @@ export function StepTemplate({
           </div>
         </div>
 
-        {/* AI Overview */}
-        {aiContent?.overview && !hiddenOverview && (
-          <div className="mb-6 p-4 bg-muted/50 rounded-lg relative group">
-            <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
-            <button
-              onClick={() => setHiddenOverview(true)}
-              className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-              aria-label="Supprimer l'aperçu"
-            >
-              <span className="text-white text-sm font-light">×</span>
-            </button>
-          </div>
-        )}
+      {/* AI Overview */}
+      {aiContent?.overview && !hiddenOverview && (
+        <div className="mb-6 p-4 bg-muted/50 rounded-lg relative group">
+          <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
+          <button
+            onClick={() => setHiddenOverview(true)}
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 print:hidden"
+            aria-label="Supprimer l'aperçu"
+          >
+            <span className="text-white text-sm font-light">×</span>
+          </button>
+        </div>
+      )}
       </div>
 
       {/* Images */}
       {aiContent?.images && aiContent.images.length > 0 && (() => {
-        const visibleImages = aiContent.images.filter(imageUrl => !deletedImages.has(imageUrl));
+        const visibleImages = aiContent.images.filter(imageUrl => 
+          !deletedImages.has(imageUrl) && !failedImages.has(imageUrl)
+        );
         if (visibleImages.length === 0) return null;
         
         return (
@@ -104,11 +125,14 @@ export function StepTemplate({
             <div className="grid grid-cols-1 gap-3">
               {visibleImages.map((imageUrl, index) => (
               <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group h-48">
-                <div
-                  className="w-full h-full bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }}
-                  role="img"
-                  aria-label={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
+                <img
+                  src={imageUrl}
+                  alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
+                  className="w-full h-full object-cover"
+                  onError={() => {
+                    console.warn('Failed to load image:', imageUrl);
+                    setFailedImages(prev => new Set(prev).add(imageUrl));
+                  }}
                 />
                 {/* Bouton de suppression au survol */}
                 <button
@@ -116,7 +140,7 @@ export function StepTemplate({
                     setDeletedImages(prev => new Set(prev).add(imageUrl));
                     console.log('Image supprimée du booklet:', imageUrl);
                   }}
-                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 print:hidden"
                   aria-label="Supprimer l'image"
                 >
                   <span className="text-white text-sm font-light">×</span>
@@ -198,7 +222,7 @@ export function StepTemplate({
                       {/* Bouton de suppression pour les segments de voyage */}
                       <button
                         onClick={() => setDeletedSegments(prev => new Set(prev).add(segment.id))}
-                        className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 print:hidden"
                         aria-label="Supprimer le segment"
                       >
                         <span className="text-white text-sm font-light">×</span>
@@ -466,7 +490,7 @@ export function StepTemplate({
                     {/* Bouton de suppression pour les segments principaux */}
                     <button
                       onClick={() => setDeletedSegments(prev => new Set(prev).add(segment.id))}
-                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 print:hidden"
                       aria-label="Supprimer le segment"
                     >
                       <span className="text-white text-sm font-light">×</span>
@@ -493,7 +517,7 @@ export function StepTemplate({
           </ul>
           <button
             onClick={() => setHiddenTips(true)}
-            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 print:hidden"
             aria-label="Supprimer les conseils"
           >
             <span className="text-white text-sm font-light">×</span>
@@ -508,7 +532,7 @@ export function StepTemplate({
           <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.localContext}</p>
           <button
             onClick={() => setHiddenLocalContext(true)}
-            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 print:hidden"
             aria-label="Supprimer le contexte local"
           >
             <span className="text-white text-sm font-light">×</span>
@@ -525,5 +549,6 @@ export function StepTemplate({
         </div>
       )}
     </div>
+    </>
   );
 }

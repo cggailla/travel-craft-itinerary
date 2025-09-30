@@ -24,6 +24,7 @@ export function BookletTemplate({
   tripId,
 }: BookletTemplateProps) {
   const [coverImages, setCoverImages] = useState<string[]>([]);
+  const [failedCoverImages, setFailedCoverImages] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(data.tripTitle);
   const { toast } = useToast();
@@ -147,35 +148,41 @@ export function BookletTemplate({
         </div>
 
         {/* Images de destination - pleine largeur, sans espaces, sans arrondis */}
-        {coverImages.length > 0 ? (
-          <div className="flex flex-col">
-            {coverImages.map((imageUrl, index) => (
-              <div key={index} className="relative h-80 w-full overflow-hidden">
-                <div
-                  className="absolute inset-0 bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }}
-                  role="img"
-                  aria-label={`Destination ${index + 1}`}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-80 bg-muted/20 gap-4">
-            <p className="text-muted-foreground text-sm">
-              Les images de couverture seront affichées une fois générées
-            </p>
-            <Button 
-              onClick={handleRefresh} 
-              disabled={isRefreshing}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Chargement...' : 'Rafraîchir'}
-            </Button>
-          </div>
-        )}
+        {(() => {
+          const visibleCoverImages = coverImages.filter(img => !failedCoverImages.has(img));
+          return visibleCoverImages.length > 0 ? (
+            <div className="flex flex-col">
+              {visibleCoverImages.map((imageUrl, index) => (
+                <div key={index} className="relative h-80 w-full overflow-hidden">
+                  <img
+                    src={imageUrl}
+                    alt={`Destination ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      console.warn('Failed to load cover image:', imageUrl);
+                      setFailedCoverImages(prev => new Set(prev).add(imageUrl));
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-80 bg-muted/20 gap-4 no-print">
+              <p className="text-muted-foreground text-sm">
+                Les images de couverture seront affichées une fois générées
+              </p>
+              <Button 
+                onClick={handleRefresh} 
+                disabled={isRefreshing}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Chargement...' : 'Rafraîchir'}
+              </Button>
+            </div>
+          );
+        })()}
 
         {/* Informations du voyage */}
         <div className="theme-bg p-6 rounded-b-lg" style={{ backgroundColor: colors.accent }}>
