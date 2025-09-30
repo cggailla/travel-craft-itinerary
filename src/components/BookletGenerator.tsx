@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
   tripId: string;
@@ -56,50 +55,33 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
 
   const handleGeneratePdf = async () => {
     if (!bookletData) return;
-    
+
     try {
       setIsGeneratingPdf(true);
-      
-      // Récupérer l'élément HTML à convertir
-      const element = document.getElementById('booklet-content');
-      if (!element) {
-        throw new Error('Contenu du carnet introuvable');
-      }
 
-      // Configuration PDF optimisée
-      const opt = {
-        margin: [15, 12, 15, 12] as [number, number, number, number],
-        filename: `carnet-voyage-${bookletData.tripTitle.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-        image: { type: 'jpeg' as const, quality: 1.0 },
-        html2canvas: { 
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          letterRendering: true,
-          allowTaint: false,
-          imageTimeout: 15000
+      // Appel de la Supabase Edge Function qui génère le PDF via Puppeteer
+      const { data, error } = await supabase.functions.invoke("generate-pdf-booklet", {
+        body: {
+          tripId,
+          data: bookletData,
         },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait' as const,
-          compress: true
-        },
-        pagebreak: { 
-          mode: ['avoid-all', 'css', 'legacy'],
-          before: '.section-break',
-          avoid: ['.segment-card', '.step-container', '.image-container', '.keep-together']
-        }
-      };
-
-      // Générer le PDF
-      await html2pdf().set(opt).from(element).save();
-      
-      toast({
-        title: "PDF généré",
-        description: "Votre carnet de voyage a été téléchargé avec succès.",
       });
-    } catch (error) {
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Ouvrir le PDF généré dans un nouvel onglet
+        window.open(data.url, "_blank");
+
+        toast({
+          title: "PDF généré",
+          description: "Votre carnet de voyage est prêt et disponible au téléchargement.",
+        });
+      } else {
+        throw new Error("URL PDF introuvable");
+      }
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
       toast({
         title: "Erreur",
         description: "Impossible de générer le PDF.",
@@ -119,7 +101,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         description: "Création du lien partageable...",
       });
 
-      const { data, error } = await supabase.functions.invoke('generate-static-booklet', {
+      const { data, error } = await supabase.functions.invoke("generate-static-booklet", {
         body: { tripId },
       });
 
@@ -133,9 +115,11 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
           description: "Le lien a été copié dans votre presse-papiers",
           duration: 5000,
         });
+      } else {
+        throw new Error("URL introuvable");
       }
     } catch (error) {
-      console.error('Error generating shareable link:', error);
+      console.error("Error generating shareable link:", error);
       toast({
         title: "Erreur",
         description: "Impossible de générer le lien partageable",
@@ -185,17 +169,17 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
             {bookletData.startDate && (
               <div className="flex items-center">
                 <Calendar className="mr-1 h-4 w-4" />
-                {bookletData.startDate.toLocaleDateString('fr-FR')}
-                {bookletData.endDate && ` - ${bookletData.endDate.toLocaleDateString('fr-FR')}`}
+                {bookletData.startDate.toLocaleDateString("fr-FR")}
+                {bookletData.endDate && ` - ${bookletData.endDate.toLocaleDateString("fr-FR")}`}
               </div>
             )}
             <div className="flex items-center">
               <Clock className="mr-1 h-4 w-4" />
-              {bookletData.totalDays} jour{bookletData.totalDays > 1 ? 's' : ''}
+              {bookletData.totalDays} jour{bookletData.totalDays > 1 ? "s" : ""}
             </div>
             <div className="flex items-center">
               <MapPin className="mr-1 h-4 w-4" />
-              {bookletData.segments.length} segment{bookletData.segments.length > 1 ? 's' : ''}
+              {bookletData.segments.length} segment{bookletData.segments.length > 1 ? "s" : ""}
             </div>
           </div>
         </CardHeader>
@@ -225,7 +209,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
+              {isGeneratingPdf ? "Génération..." : "Télécharger PDF"}
             </Button>
             <Button 
               onClick={handleGenerateShareableLink}
@@ -238,7 +222,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
               ) : (
                 <Link className="mr-2 h-4 w-4" />
               )}
-              {isGeneratingLink ? 'Génération...' : 'Générer lien'}
+              {isGeneratingLink ? "Génération..." : "Générer lien"}
             </Button>
           </div>
         </div>
