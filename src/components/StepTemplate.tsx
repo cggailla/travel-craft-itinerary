@@ -104,16 +104,11 @@ export function StepTemplate({
             <div className="grid grid-cols-1 gap-3">
               {visibleImages.map((imageUrl, index) => (
               <div key={imageUrl} className="image-container relative rounded-lg overflow-hidden bg-muted/30 group h-48">
-                <img
-                  src={imageUrl}
-                  alt={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
-                  className="w-full h-full object-cover"
-                  style={{ objectFit: 'cover' }}
-                  onError={(e) => {
-                    // Hard rule: hide the image if it fails to load
-                    console.warn('Failed to load image:', imageUrl);
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
+                <div
+                  className="w-full h-full bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }}
+                  role="img"
+                  aria-label={`Vue de ${parsedStepInfo?.location || step.primaryLocation}`}
                 />
                 {/* Bouton de suppression au survol */}
                 <button

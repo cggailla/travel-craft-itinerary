@@ -151,11 +151,11 @@ export function BookletTemplate({
           <div className="flex flex-col">
             {coverImages.map((imageUrl, index) => (
               <div key={index} className="relative h-80 w-full overflow-hidden">
-                <img
-                  src={imageUrl}
-                  alt={`Destination ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  style={{ objectFit: 'cover' }}
+                <div
+                  className="absolute inset-0 bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }}
+                  role="img"
+                  aria-label={`Destination ${index + 1}`}
                 />
               </div>
             ))}
