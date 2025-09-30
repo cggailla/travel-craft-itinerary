@@ -59,37 +59,40 @@ export function StepTemplate({
         {!isSingleDay && formatDate(endDate)}
       </div>
 
-      {/* Header */}
-      <div className="mb-6 pr-32">
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">
-            {parsedStepInfo?.title || step.stepTitle}
-          </h2>
+      {/* Wrapper pour garder l'en-tête et le premier contenu ensemble */}
+      <div className="keep-together">
+        {/* Header */}
+        <div className="mb-6 pr-32">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">
+              {parsedStepInfo?.title || step.stepTitle}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              {parsedStepInfo?.location || step.primaryLocation}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
-            {parsedStepInfo?.location || step.primaryLocation}
-          </span>
-        </div>
+        {/* AI Overview */}
+        {aiContent?.overview && !hiddenOverview && (
+          <div className="mb-6 p-4 bg-muted/50 rounded-lg relative group">
+            <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
+            <button
+              onClick={() => setHiddenOverview(true)}
+              className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              aria-label="Supprimer l'aperçu"
+            >
+              <span className="text-white text-sm font-light">×</span>
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* AI Overview */}
-      {aiContent?.overview && !hiddenOverview && (
-        <div className="mb-6 p-4 bg-muted/50 rounded-lg relative group">
-          <h3 className="font-medium mb-2 text-foreground">Aperçu</h3>
-          <p className="text-sm text-muted-foreground leading-relaxed">{aiContent.overview}</p>
-          <button
-            onClick={() => setHiddenOverview(true)}
-            className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-            aria-label="Supprimer l'aperçu"
-          >
-            <span className="text-white text-sm font-light">×</span>
-          </button>
-        </div>
-      )}
 
       {/* Images */}
       {aiContent?.images && aiContent.images.length > 0 && (() => {
