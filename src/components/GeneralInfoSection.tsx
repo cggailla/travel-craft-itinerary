@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -172,10 +171,10 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   const DeleteButton = ({ cardId }: { cardId: string }) => (
     <button
       onClick={() => setHiddenCards(prev => new Set(prev).add(cardId))}
-      className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+      className="ml-2 w-5 h-5 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
       aria-label="Supprimer cette section"
     >
-      <span className="text-white text-sm font-light">×</span>
+      <span className="text-white text-xs font-light">×</span>
     </button>
   );
 
@@ -206,98 +205,91 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Basic Information */}
       {(info.capital || info.population || info.surface_area) && !hiddenCards.has('basic') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Globe className="h-4 w-4" />
-              Informations de base
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Informations de base</h3>
+            <DeleteButton cardId="basic" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.capital && (
               <div>
-                <strong>Capitale:</strong> {info.capital}
+                <span className="font-medium">Capitale:</span> {info.capital}
               </div>
             )}
             {info.population && (
               <div>
-                <strong>Population:</strong> {info.population}
+                <span className="font-medium">Population:</span> {info.population}
               </div>
             )}
             {info.surface_area && (
               <div>
-                <strong>Superficie:</strong> {info.surface_area}
+                <span className="font-medium">Superficie:</span> {info.surface_area}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="basic" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Timezone */}
       {info.timezone_info && !hiddenCards.has('timezone') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Calendar className="h-4 w-4" />
-              Décalage horaire
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Décalage horaire</h3>
+            <DeleteButton cardId="timezone" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             <div>
-              <strong>Fuseau horaire:</strong> {info.timezone_info.main_timezone}
+              <span className="font-medium">Fuseau horaire:</span> {info.timezone_info.main_timezone}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground">
               {info.timezone_info.offset_description}
             </div>
-          </CardContent>
-          <DeleteButton cardId="timezone" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Entry Requirements */}
       {info.entry_requirements && !hiddenCards.has('entry') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <MapPin className="h-4 w-4" />
-              Formalités d'entrée
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <MapPin className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Formalités d'entrée</h3>
+            <DeleteButton cardId="entry" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             <div>
-              <strong>Passeport:</strong> {info.entry_requirements.passport}
+              <span className="font-medium">Passeport:</span> {info.entry_requirements.passport}
             </div>
             <div>
-              <strong>Visa:</strong> {info.entry_requirements.visa}
+              <span className="font-medium">Visa:</span> {info.entry_requirements.visa}
             </div>
             <div>
-              <strong>Durée autorisée:</strong> {info.entry_requirements.validity}
+              <span className="font-medium">Durée autorisée:</span> {info.entry_requirements.validity}
             </div>
-          </CardContent>
-          <DeleteButton cardId="entry" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Health */}
       {info.health_requirements && !hiddenCards.has('health') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Heart className="h-4 w-4" />
-              Santé
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Heart className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Santé</h3>
+            <DeleteButton cardId="health" />
+          </div>
+          <div className="space-y-1 text-xs ml-5">
             {info.health_requirements.vaccines && info.health_requirements.vaccines.length > 0 && (
               <div>
-                <strong className="block mb-2">Vaccins recommandés:</strong>
-                <div className="flex flex-wrap gap-2">
+                <span className="font-medium block mb-1">Vaccins recommandés:</span>
+                <div className="flex flex-wrap gap-1">
                   {info.health_requirements.vaccines.map((vaccine, idx) => (
-                    <Badge key={idx} variant="secondary">
+                    <Badge key={idx} variant="secondary" className="text-xs py-0 px-1.5">
                       {vaccine}
                     </Badge>
                   ))}
@@ -305,382 +297,341 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               </div>
             )}
             {info.health_requirements.insurance_advice && (
-              <div className="text-sm">{info.health_requirements.insurance_advice}</div>
+              <div>{info.health_requirements.insurance_advice}</div>
             )}
             {info.health_requirements.water_safety && (
-              <div className="text-sm">
-                <strong>Eau potable:</strong> {info.health_requirements.water_safety}
+              <div>
+                <span className="font-medium">Eau potable:</span> {info.health_requirements.water_safety}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="health" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Clothing */}
       {info.clothing_advice && !hiddenCards.has('clothing') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Shirt className="h-4 w-4" />
-              Vêtements conseillés
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Shirt className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Vêtements conseillés</h3>
+            <DeleteButton cardId="clothing" />
+          </div>
+          <div className="space-y-1 text-xs ml-5">
             {info.clothing_advice.season && (
               <div>
-                <strong>Saison:</strong> {info.clothing_advice.season}
+                <span className="font-medium">Saison:</span> {info.clothing_advice.season}
               </div>
             )}
             {info.clothing_advice.temperatures && (
               <div>
-                <strong>Températures:</strong> {info.clothing_advice.temperatures}
+                <span className="font-medium">Températures:</span> {info.clothing_advice.temperatures}
               </div>
             )}
             {info.clothing_advice.recommended && info.clothing_advice.recommended.length > 0 && (
               <div>
-                <strong className="block mb-2">À prévoir:</strong>
-                <ul className="list-disc list-inside space-y-1 text-sm">
+                <span className="font-medium block mb-0.5">À prévoir:</span>
+                <ul className="list-disc list-inside space-y-0.5">
                   {info.clothing_advice.recommended.map((item, idx) => (
                     <li key={idx}>{item}</li>
                   ))}
                 </ul>
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="clothing" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Food */}
       {info.food_specialties && info.food_specialties.length > 0 && !hiddenCards.has('food') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <UtensilsCrossed className="h-4 w-4" />
-              Nourriture
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {info.food_specialties.map((item, idx) => (
-                <div key={idx} className="border-l-2 border-primary/20 pl-3">
-                  <div className="font-medium">{item.region}</div>
-                  <div className="text-sm text-muted-foreground">{item.specialty}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <DeleteButton cardId="food" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <UtensilsCrossed className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Nourriture</h3>
+            <DeleteButton cardId="food" />
+          </div>
+          <div className="space-y-1 text-xs ml-5">
+            {info.food_specialties.map((item, idx) => (
+              <div key={idx} className="border-l border-primary/20 pl-2">
+                <div className="font-medium">{item.region}</div>
+                <div className="text-muted-foreground">{item.specialty}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Currency */}
       {(info.currency || info.exchange_rate) && !hiddenCards.has('currency') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Coins className="h-4 w-4" />
-              Monnaie
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Coins className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Monnaie</h3>
+            <DeleteButton cardId="currency" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.currency && (
               <div>
-                <strong>Devise:</strong> {info.currency}
+                <span className="font-medium">Devise:</span> {info.currency}
               </div>
             )}
             {info.exchange_rate && (
-              <div className="text-sm text-muted-foreground">{info.exchange_rate}</div>
+              <div className="text-muted-foreground">{info.exchange_rate}</div>
             )}
-          </CardContent>
-          <DeleteButton cardId="currency" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Budget */}
       {info.budget_info && !hiddenCards.has('budget') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Wallet className="h-4 w-4" />
-              Budget sur place
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Wallet className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Budget sur place</h3>
+            <DeleteButton cardId="budget" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.budget_info.coffee && (
               <div>
-                <strong>Café:</strong> {info.budget_info.coffee}
+                <span className="font-medium">Café:</span> {info.budget_info.coffee}
               </div>
             )}
             {info.budget_info.simple_meal && (
               <div>
-                <strong>Repas simple:</strong> {info.budget_info.simple_meal}
+                <span className="font-medium">Repas simple:</span> {info.budget_info.simple_meal}
               </div>
             )}
             {info.budget_info.restaurant && (
               <div>
-                <strong>Restaurant:</strong> {info.budget_info.restaurant}
+                <span className="font-medium">Restaurant:</span> {info.budget_info.restaurant}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="budget" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Tipping */}
       {info.tipping_culture && !hiddenCards.has('tipping') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Gift className="h-4 w-4" />
-              Pourboires
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Gift className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Pourboires</h3>
+            <DeleteButton cardId="tipping" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             <div>
-              <strong>Usage:</strong> {info.tipping_culture.required ? "Attendu" : "Optionnel"}
+              <span className="font-medium">Usage:</span> {info.tipping_culture.required ? "Attendu" : "Optionnel"}
             </div>
             {info.tipping_culture.restaurants && (
               <div>
-                <strong>Restaurants:</strong> {info.tipping_culture.restaurants}
+                <span className="font-medium">Restaurants:</span> {info.tipping_culture.restaurants}
               </div>
             )}
             {info.tipping_culture.taxis && (
               <div>
-                <strong>Taxis:</strong> {info.tipping_culture.taxis}
+                <span className="font-medium">Taxis:</span> {info.tipping_culture.taxis}
               </div>
             )}
             {info.tipping_culture.guides && (
               <div>
-                <strong>Guides:</strong> {info.tipping_culture.guides}
+                <span className="font-medium">Guides:</span> {info.tipping_culture.guides}
               </div>
             )}
             {info.tipping_culture.porters && (
               <div>
-                <strong>Porteurs:</strong> {info.tipping_culture.porters}
+                <span className="font-medium">Porteurs:</span> {info.tipping_culture.porters}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="tipping" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Electricity */}
       {info.electricity_info && !hiddenCards.has('electricity') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Lightbulb className="h-4 w-4" />
-              Électricité
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Lightbulb className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Électricité</h3>
+            <DeleteButton cardId="electricity" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.electricity_info.voltage && (
               <div>
-                <strong>Voltage:</strong> {info.electricity_info.voltage}
+                <span className="font-medium">Voltage:</span> {info.electricity_info.voltage}
               </div>
             )}
             {info.electricity_info.plug_types && info.electricity_info.plug_types.length > 0 && (
               <div>
-                <strong>Types de prises:</strong>{" "}
+                <span className="font-medium">Types de prises:</span>{" "}
                 {info.electricity_info.plug_types.join(", ")}
               </div>
             )}
             {info.electricity_info.adapter_needed !== undefined && (
-              <div className="text-sm">
-                <strong>Adaptateur:</strong>{" "}
+              <div>
+                <span className="font-medium">Adaptateur:</span>{" "}
                 {info.electricity_info.adapter_needed ? "Nécessaire" : "Non nécessaire"}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="electricity" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Religion */}
       {info.religion_info && !hiddenCards.has('religion') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Building2 className="h-4 w-4" />
-              Religion
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{info.religion_info}</p>
-          </CardContent>
-          <DeleteButton cardId="religion" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Religion</h3>
+            <DeleteButton cardId="religion" />
+          </div>
+          <p className="text-xs ml-5">{info.religion_info}</p>
+        </div>
       )}
 
       {/* Shopping */}
       {info.shopping_info && !hiddenCards.has('shopping') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Gift className="h-4 w-4" />
-              Achats / Shopping
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{info.shopping_info}</p>
-          </CardContent>
-          <DeleteButton cardId="shopping" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Gift className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Achats / Shopping</h3>
+            <DeleteButton cardId="shopping" />
+          </div>
+          <p className="text-xs ml-5">{info.shopping_info}</p>
+        </div>
       )}
 
       {/* Phone */}
       {info.phone_info && !hiddenCards.has('phone') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Phone className="h-4 w-4" />
-              Poste & Téléphone
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Phone className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Poste & Téléphone</h3>
+            <DeleteButton cardId="phone" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.phone_info.calling_to && (
               <div>
-                <strong>Appeler depuis la Suisse:</strong> {info.phone_info.calling_to}
+                <span className="font-medium">Appeler depuis la Suisse:</span> {info.phone_info.calling_to}
               </div>
             )}
             {info.phone_info.calling_from && (
               <div>
-                <strong>Appeler la Suisse:</strong> {info.phone_info.calling_from}
+                <span className="font-medium">Appeler la Suisse:</span> {info.phone_info.calling_from}
               </div>
             )}
             {info.phone_info.tips && (
               <div className="text-muted-foreground">{info.phone_info.tips}</div>
             )}
-          </CardContent>
-          <DeleteButton cardId="phone" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Languages */}
       {info.languages && !hiddenCards.has('languages') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Languages className="h-4 w-4" />
-              Langue
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Languages className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Langue</h3>
+            <DeleteButton cardId="languages" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.languages.official && info.languages.official.length > 0 && (
               <div>
-                <strong>Langues officielles:</strong>{" "}
+                <span className="font-medium">Langues officielles:</span>{" "}
                 {info.languages.official.join(", ")}
               </div>
             )}
             {info.languages.french_spoken !== undefined && (
-              <div className="text-sm">
-                <strong>Français parlé:</strong>{" "}
+              <div>
+                <span className="font-medium">Français parlé:</span>{" "}
                 {info.languages.french_spoken ? "Oui" : "Non"}
               </div>
             )}
             {info.languages.notes && (
-              <div className="text-sm text-muted-foreground">{info.languages.notes}</div>
+              <div className="text-muted-foreground">{info.languages.notes}</div>
             )}
-          </CardContent>
-          <DeleteButton cardId="languages" />
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Cultural Sites */}
       {info.cultural_sites && info.cultural_sites.length > 0 && !hiddenCards.has('cultural') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Building2 className="h-4 w-4" />
-              Sites culturels
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {info.cultural_sites.map((site, idx) => (
-                <div key={idx}>
-                  <div className="font-medium">{site.name}</div>
-                  <div className="text-sm text-muted-foreground">{site.description}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <DeleteButton cardId="cultural" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Sites culturels</h3>
+            <DeleteButton cardId="cultural" />
+          </div>
+          <div className="space-y-1 text-xs ml-5">
+            {info.cultural_sites.map((site, idx) => (
+              <div key={idx}>
+                <div className="font-medium">{site.name}</div>
+                <div className="text-muted-foreground">{site.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Natural Attractions */}
       {info.natural_attractions && !hiddenCards.has('natural') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Trees className="h-4 w-4" />
-              Attractions naturelles
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{info.natural_attractions}</p>
-          </CardContent>
-          <DeleteButton cardId="natural" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Trees className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Attractions naturelles</h3>
+            <DeleteButton cardId="natural" />
+          </div>
+          <p className="text-xs ml-5">{info.natural_attractions}</p>
+        </div>
       )}
 
       {/* Safety */}
       {info.safety_info && !hiddenCards.has('safety') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <Shield className="h-4 w-4" />
-              Sécurité
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{info.safety_info}</p>
-          </CardContent>
-          <DeleteButton cardId="safety" />
-        </Card>
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Sécurité</h3>
+            <DeleteButton cardId="safety" />
+          </div>
+          <p className="text-xs ml-5">{info.safety_info}</p>
+        </div>
       )}
 
       {/* Climate */}
       {info.climate_info && !hiddenCards.has('climate') && (
-        <Card className="relative group">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 theme-text text-base">
-              <CloudSun className="h-4 w-4" />
-              Climat
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <div className="relative group keep-together">
+          <div className="flex items-center gap-2 mb-1">
+            <CloudSun className="h-3.5 w-3.5 theme-text" />
+            <h3 className="text-sm font-semibold theme-text">Climat</h3>
+            <DeleteButton cardId="climate" />
+          </div>
+          <div className="space-y-0.5 text-xs ml-5">
             {info.climate_info.current_season && (
               <div>
-                <strong>Saison actuelle:</strong> {info.climate_info.current_season}
+                <span className="font-medium">Saison actuelle:</span> {info.climate_info.current_season}
               </div>
             )}
             {info.climate_info.summer && (
               <div>
-                <strong>Été:</strong> {info.climate_info.summer}
+                <span className="font-medium">Été:</span> {info.climate_info.summer}
               </div>
             )}
             {info.climate_info.winter && (
               <div>
-                <strong>Hiver:</strong> {info.climate_info.winter}
+                <span className="font-medium">Hiver:</span> {info.climate_info.winter}
               </div>
             )}
             {info.climate_info.autumn && (
               <div>
-                <strong>Automne:</strong> {info.climate_info.autumn}
+                <span className="font-medium">Automne:</span> {info.climate_info.autumn}
               </div>
             )}
             {info.climate_info.spring && (
               <div>
-                <strong>Printemps:</strong> {info.climate_info.spring}
+                <span className="font-medium">Printemps:</span> {info.climate_info.spring}
               </div>
             )}
-          </CardContent>
-          <DeleteButton cardId="climate" />
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );
