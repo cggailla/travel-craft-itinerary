@@ -110,7 +110,6 @@ export function BookletTemplate({
             /* Qualité images */
             img {
               max-height: 400px;
-              object-fit: contain !important;
               image-rendering: -webkit-optimize-contrast;
               image-rendering: crisp-edges;
               page-break-inside: avoid;
@@ -151,12 +150,11 @@ export function BookletTemplate({
         {coverImages.length > 0 ? (
           <div className="flex flex-col">
             {coverImages.map((imageUrl, index) => (
-              <div key={index} className="relative w-full overflow-hidden bg-muted/20 flex items-center justify-center" style={{ minHeight: '320px', maxHeight: '400px' }}>
+              <div key={index} className="relative h-80 w-full overflow-hidden">
                 <img
                   src={imageUrl}
                   alt={`Destination ${index + 1}`}
-                  className="w-full h-full object-contain"
-                  style={{ aspectRatio: 'auto' }}
+                  className="w-full h-full object-cover"
                 />
               </div>
             ))}
