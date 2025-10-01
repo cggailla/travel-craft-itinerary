@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import html2pdf from "html2pdf.js";
 
 interface BookletGeneratorProps {
   tripId: string;
@@ -29,7 +30,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [bookletData, setBookletData] = useState<BookletData | null>(null);
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const { toast } = useToast();
 
@@ -53,41 +54,59 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
-  const handleGenerateDocx = async () => {
+  const handleGeneratePdf = async () => {
     if (!bookletData) return;
     
     try {
-      setIsGeneratingDocx(true);
+      setIsGeneratingPdf(true);
+      
+      // Récupérer l'élément HTML à convertir
+      const element = document.getElementById('booklet-content');
+      if (!element) {
+        throw new Error('Contenu du carnet introuvable');
+      }
+
+      // Configuration PDF optimisée
+      const opt = {
+        margin: [15, 12, 15, 12] as [number, number, number, number],
+        filename: `carnet-voyage-${bookletData.tripTitle.toLowerCase().replace(/\s+/g, '-')}.pdf`,
+        image: { type: 'jpeg' as const, quality: 1.0 },
+        html2canvas: { 
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          letterRendering: true,
+          allowTaint: false,
+          imageTimeout: 15000
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' as const,
+          compress: true
+        },
+        pagebreak: { 
+          mode: ['avoid-all', 'css', 'legacy'],
+          before: '.section-break',
+          avoid: ['.segment-card', '.step-container', '.image-container', '.keep-together']
+        }
+      };
+
+      // Générer le PDF
+      await html2pdf().set(opt).from(element).save();
       
       toast({
-        title: "Génération en cours",
-        description: "Création du document Word...",
+        title: "PDF généré",
+        description: "Votre carnet de voyage a été téléchargé avec succès.",
       });
-
-      const { data, error } = await supabase.functions.invoke('generate-docx-booklet', {
-        body: { tripId },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        // Télécharger le fichier
-        window.open(data.url, '_blank');
-        
-        toast({
-          title: "Document généré",
-          description: "Votre carnet de voyage DOCX a été téléchargé avec succès.",
-        });
-      }
     } catch (error) {
-      console.error('Error generating DOCX:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de générer le document Word.",
+        description: "Impossible de générer le PDF.",
         variant: "destructive",
       });
     } finally {
-      setIsGeneratingDocx(false);
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -197,16 +216,16 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
           <div className="flex gap-2">
             <Button 
-              onClick={handleGenerateDocx}
-              disabled={isGeneratingDocx}
+              onClick={handleGeneratePdf}
+              disabled={isGeneratingPdf}
               className="flex items-center"
             >
-              {isGeneratingDocx ? (
+              {isGeneratingPdf ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              {isGeneratingDocx ? 'Génération...' : 'Télécharger DOCX'}
+              {isGeneratingPdf ? 'Génération...' : 'Télécharger PDF'}
             </Button>
             <Button 
               onClick={handleGenerateShareableLink}
