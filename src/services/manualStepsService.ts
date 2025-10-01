@@ -35,6 +35,8 @@ export async function getManualSteps(tripId: string) {
             icao_code,
             route,
             ticket_price,
+            enriched,
+            raw_data,
             documents (
               file_name
             )

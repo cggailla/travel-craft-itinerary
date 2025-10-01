@@ -34,42 +34,102 @@ export function DynamicItinerary({
 
   useEffect(() => {
     if (data.segments.length > 0 && tripId) {
-      generateContent();
+      // Charger les données existantes au lieu de régénérer
+      loadExistingContent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.segments, tripId]);
 
-  const refreshEnrichedSteps = async () => {
+  // Charger les données existantes depuis la base de données
+  const loadExistingContent = async () => {
+    setIsGenerating(true);
+    setProgress(20);
+    setStepStatus('Chargement des données du voyage...');
+    
     try {
+      // 1. Récupérer les étapes manuelles avec leurs segments
       const stepsResult = await getManualSteps(tripId);
-      if (stepsResult.success && stepsResult.steps && stepsResult.steps.length > 0) {
-        const updatedSteps = stepsResult.steps.map(step => {
-          const segments = step.travel_step_segments
-            ?.sort((a, b) => a.position_in_step - b.position_in_step)
-            .map(tss => tss.travel_segments)
-            .filter(Boolean) || [];
-
-          return {
-            stepId: step.id,
-            stepTitle: step.step_title,
-            stepType: step.step_type || 'manual',
-            primaryLocation: step.primary_location || '',
-            startDate: step.start_date ? new Date(step.start_date) : new Date(),
-            endDate: step.end_date ? new Date(step.end_date) : new Date(),
-            sections: [{
-              title: "Segments",
-              segments,
-              role: 'services' as const,
-              icon: '📋'
-            }],
-            rawData: step
-          };
-        });
-        setEnrichedSteps(updatedSteps);
+      
+      if (!stepsResult.success || !stepsResult.steps || stepsResult.steps.length === 0) {
+        setStepStatus('Aucune étape trouvée pour ce voyage');
+        setIsGenerating(false);
+        return;
       }
+
+      setProgress(40);
+      
+      // 2. Convertir au format EnrichedStep
+      const steps = stepsResult.steps.map(step => {
+        const segments = step.travel_step_segments
+          ?.sort((a, b) => a.position_in_step - b.position_in_step)
+          .map(tss => tss.travel_segments)
+          .filter(Boolean) || [];
+
+        return {
+          stepId: step.id,
+          stepTitle: step.step_title,
+          stepType: step.step_type || 'manual',
+          primaryLocation: step.primary_location || '',
+          startDate: step.start_date ? new Date(step.start_date) : new Date(),
+          endDate: step.end_date ? new Date(step.end_date) : new Date(),
+          sections: [{
+            title: "Segments",
+            segments,
+            role: 'services' as const,
+            icon: '📋'
+          }],
+          rawData: step
+        };
+      });
+      
+      setEnrichedSteps(steps);
+      setProgress(60);
+      
+      // 3. Récupérer le contenu IA déjà généré depuis les segments
+      setStepStatus('Récupération du contenu enrichi...');
+      const aiMap = new Map<string, AIContentResult>();
+      
+      for (const step of steps) {
+        // Récupérer le contenu IA depuis les segments du step
+        const stepSegments = step.sections[0]?.segments || [];
+        if (stepSegments.length > 0) {
+          // Chercher le contenu AI dans le champ enriched des segments
+          const segmentWithAI = stepSegments.find(seg => seg.enriched?.ai_content || seg.enriched);
+          if (segmentWithAI?.enriched) {
+            try {
+              const enrichedData = segmentWithAI.enriched;
+              const aiContent = enrichedData.ai_content || enrichedData;
+              
+              aiMap.set(step.stepId, {
+                success: true,
+                stepId: step.stepId,
+                overview: aiContent.overview || '',
+                tips: aiContent.tips || [],
+                localContext: aiContent.localContext || aiContent.local_context || '',
+                images: aiContent.images || aiContent.cover_images || [],
+                error: undefined
+              });
+            } catch (error) {
+              console.warn(`Could not parse AI content for step ${step.stepId}:`, error);
+            }
+          }
+        }
+      }
+      
+      setAiContents(aiMap);
+      setProgress(100);
+      setStepStatus(`Carnet chargé avec succès (${steps.length} étapes)`);
+      
     } catch (error) {
-      console.error('Error refreshing enriched steps:', error);
+      console.error('Error loading existing content:', error);
+      setStepStatus(`Erreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setIsGenerating(false);
     }
+  };
+
+  const refreshEnrichedSteps = async () => {
+    await loadExistingContent();
   };
 
   const generateContent = async () => {
