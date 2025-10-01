@@ -149,15 +149,15 @@ export default function IndexNew() {
 
       if (segs && segs.length > 0 && segs[0].trip_id) {
         const latestTripId = segs[0].trip_id as string;
-        navigate(`/?tripId=${latestTripId}`);
+        navigate(`/booklet?tripId=${latestTripId}`);
         toast({
-          title: "Mode Dev activé",
-          description: "Redirection vers le dernier voyage traité",
+          title: "Redirection vers le carnet",
+          description: "Ouverture du carnet de voyage du dernier voyage",
         });
       } else {
         toast({
           title: "Aucun voyage trouvé",
-          description: "Créez d'abord un voyage pour utiliser le mode dev",
+          description: "Créez d'abord un voyage pour voir le carnet",
           variant: "destructive",
         });
       }
@@ -277,8 +277,8 @@ export default function IndexNew() {
                 </>
               ) : (
                 <>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Mode Dev - Charger dernier voyage
+                  <FileText className="h-4 w-4 mr-2" />
+                  Voir le carnet du dernier voyage
                 </>
               )}
             </Button>
