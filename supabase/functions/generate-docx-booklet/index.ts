@@ -337,12 +337,25 @@ serve(async (req) => {
     console.log('Generating DOCX file...');
     const buffer = await Packer.toBuffer(doc);
 
+    // Ensure bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === 'booklet-exports');
+    
+    if (!bucketExists) {
+      console.log('Creating booklet-exports bucket...');
+      await supabase.storage.createBucket('booklet-exports', {
+        public: true,
+        fileSizeLimit: 52428800, // 50MB
+        allowedMimeTypes: ['application/octet-stream', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      });
+    }
+
     // Upload to Supabase Storage
     const fileName = `booklet_${tripId}_${Date.now()}.docx`;
     const { error: uploadError } = await supabase.storage
       .from('booklet-exports')
       .upload(fileName, buffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        contentType: 'application/octet-stream',
         upsert: true,
       });
 
