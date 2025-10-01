@@ -337,17 +337,32 @@ serve(async (req) => {
     console.log('Generating DOCX file...');
     const buffer = await Packer.toBuffer(doc);
 
-    // Ensure bucket exists
+    // Ensure bucket exists and allows DOCX uploads
     const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(b => b.name === 'booklet-exports');
+    const bucket = buckets?.find(b => b.name === 'booklet-exports');
     
-    if (!bucketExists) {
+    if (!bucket) {
       console.log('Creating booklet-exports bucket...');
-      await supabase.storage.createBucket('booklet-exports', {
+      const { error: createBucketError } = await supabase.storage.createBucket('booklet-exports', {
         public: true,
         fileSizeLimit: 52428800, // 50MB
-        allowedMimeTypes: ['application/octet-stream', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        allowedMimeTypes: [
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/octet-stream'
+        ]
       });
+      if (createBucketError) console.error('Error creating bucket:', createBucketError);
+    } else {
+      // Update bucket to ensure mime types are allowed
+      const { error: updateBucketError } = await supabase.storage.updateBucket('booklet-exports', {
+        public: true,
+        fileSizeLimit: 52428800,
+        allowedMimeTypes: [
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/octet-stream'
+        ]
+      });
+      if (updateBucketError) console.warn('Warning updating bucket (may already be configured):', updateBucketError);
     }
 
     // Upload to Supabase Storage
@@ -355,7 +370,7 @@ serve(async (req) => {
     const { error: uploadError } = await supabase.storage
       .from('booklet-exports')
       .upload(fileName, buffer, {
-        contentType: 'application/octet-stream',
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         upsert: true,
       });
 
