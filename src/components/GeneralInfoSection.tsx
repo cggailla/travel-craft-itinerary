@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -286,14 +285,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-1 text-xs ml-5">
             {info.health_requirements.vaccines && info.health_requirements.vaccines.length > 0 && (
               <div>
-                <span className="font-medium block mb-1">Vaccins recommandés:</span>
-                <div className="flex flex-wrap gap-1">
-                  {info.health_requirements.vaccines.map((vaccine, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs py-0 px-1.5">
-                      {vaccine}
-                    </Badge>
-                  ))}
-                </div>
+                <span className="font-medium">Vaccins recommandés:</span> {info.health_requirements.vaccines.join(", ")}
               </div>
             )}
             {info.health_requirements.insurance_advice && (
