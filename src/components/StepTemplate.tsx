@@ -91,19 +91,16 @@ export function StepTemplate({
               const endTime = formatTime(endDate);
               return <div key={segment.id} className="relative group">
                       <div className="flex gap-4">
-                        {/* Heure */}
-                        {startTime}
+                        {/* Type de segment */}
+                        <p className="text-sm font-semibold text-gray-800 capitalize w-24 flex-shrink-0">
+                          {formatSegmentType(segment.segment_type)}
+                        </p>
                         
-                        {/* Type + Contenu */}
+                        {/* Contenu indenté */}
                         <div className="flex-1">
-                          <div className="flex items-baseline gap-3">
-                            <p className="text-sm font-semibold text-gray-800 capitalize">
-                              {formatSegmentType(segment.segment_type)}
-                            </p>
-                            <p className="text-sm text-gray-900 font-medium">
-                              {segment.title}
-                            </p>
-                          </div>
+                          <p className="text-sm text-gray-900 font-medium">
+                            {segment.title}
+                          </p>
                           
                           {/* Description */}
                           {segment.description && <p className="text-sm text-gray-700 mt-1 leading-relaxed">
