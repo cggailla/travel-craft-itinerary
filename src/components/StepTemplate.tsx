@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { formatSegmentType } from '@/services/bookletService';
 import { ParsedStepInfo } from '@/services/aiContentService';
+import { EditableText } from './EditableText';
+import { StepImageGallery } from './StepImageGallery';
+import { listSessionImages, SupabaseImage } from '@/services/supabaseImageService';
 interface StepTemplateProps {
   step: EnrichedStep;
+  tripId: string;
   aiContent?: {
     overview: string;
     tips: string[];
     localContext?: string;
-    images?: string[];
   };
   isLoading?: boolean;
   nextStepStartDate?: Date;
@@ -18,6 +21,7 @@ interface StepTemplateProps {
 }
 export function StepTemplate({
   step,
+  tripId,
   aiContent,
   isLoading,
   nextStepStartDate,
@@ -28,16 +32,92 @@ export function StepTemplate({
   const [hiddenTips, setHiddenTips] = useState(false);
   const [hiddenLocalContext, setHiddenLocalContext] = useState(false);
   
+  // Images management
+  const [stepImages, setStepImages] = useState<SupabaseImage[]>([]);
+  
   // Editable content states
   const [editableOverview, setEditableOverview] = useState(aiContent?.overview || '');
   const [editableTips, setEditableTips] = useState<string[]>(aiContent?.tips || []);
   const [editableLocalContext, setEditableLocalContext] = useState(aiContent?.localContext || '');
+  const [editableStepTitle, setEditableStepTitle] = useState(parsedStepInfo?.title || step.stepTitle);
+  
+  // Editable segment data - Map avec id du segment comme clé
+  type SegmentEditableData = {
+    title: string;
+    description: string;
+    provider: string;
+    address: string;
+    phone: string;
+    duration: string;
+  };
+  
+  const [editableSegments, setEditableSegments] = useState<Map<string, SegmentEditableData>>(new Map());
 
   React.useEffect(() => {
     if (aiContent?.overview) setEditableOverview(aiContent.overview);
     if (aiContent?.tips) setEditableTips(aiContent.tips);
     if (aiContent?.localContext) setEditableLocalContext(aiContent.localContext);
   }, [aiContent]);
+  
+  React.useEffect(() => {
+    setEditableStepTitle(parsedStepInfo?.title || step.stepTitle);
+  }, [parsedStepInfo, step.stepTitle]);
+
+  // Load step images from Supabase
+  useEffect(() => {
+    const loadStepImages = async () => {
+      const result = await listSessionImages(tripId);
+      if (result.success && result.data) {
+        // Filter images for this specific step
+        const stepImagesList = result.data.filter(img => 
+          img.storage_path.includes(`/${tripId}/step_`) && 
+          img.file_name.includes(`step_${step.stepId}`)
+        );
+        setStepImages(stepImagesList);
+      }
+    };
+    loadStepImages();
+  }, [tripId, step.stepId]);
+
+  const handleImagesChange = async () => {
+    const result = await listSessionImages(tripId);
+    if (result.success && result.data) {
+      const stepImagesList = result.data.filter(img => 
+        img.storage_path.includes(`/${tripId}/step_`) && 
+        img.file_name.includes(`step_${step.stepId}`)
+      );
+      setStepImages(stepImagesList);
+    }
+  };
+
+  // Initialiser les données éditables des segments
+  React.useEffect(() => {
+    const newMap = new Map<string, SegmentEditableData>();
+    step.sections.forEach(section => {
+      section.segments?.forEach(segment => {
+        newMap.set(segment.id, {
+          title: segment.title,
+          description: segment.description || '',
+          provider: segment.provider || '',
+          address: segment.address || '',
+          phone: segment.phone || '',
+          duration: segment.duration || ''
+        });
+      });
+    });
+    setEditableSegments(newMap);
+  }, [step.sections]);
+
+  const updateSegmentField = (segmentId: string, field: keyof SegmentEditableData, value: string) => {
+    setEditableSegments(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(segmentId) || {
+        title: '', description: '', provider: '', address: '', phone: '', duration: ''
+      };
+      newMap.set(segmentId, { ...current, [field]: value });
+      return newMap;
+    });
+  };
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
   });
@@ -66,22 +146,24 @@ export function StepTemplate({
               {formatDate(step.startDate)}
               {!isSingleDay && ` → ${formatDate(endDate)}`}
             </p>
-            <h2 className="text-lg font-bold text-gray-800 uppercase">
-              {parsedStepInfo?.title || step.stepTitle}
-            </h2>
+            <EditableText
+              value={editableStepTitle}
+              onChange={setEditableStepTitle}
+              className="text-lg font-bold text-gray-800 uppercase"
+              as="h2"
+            />
           </div>
         </div>
 
         {/* Overview */}
         {editableOverview && !hiddenOverview && <div className="mb-4 relative group">
-            <p 
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => setEditableOverview(e.currentTarget.textContent || '')}
-              className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300 outline-none"
-            >
-              {editableOverview}
-            </p>
+            <EditableText
+              value={editableOverview}
+              onChange={setEditableOverview}
+              className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300"
+              multiline
+              as="p"
+            />
             <button onClick={() => setHiddenOverview(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
             </button>
@@ -105,6 +187,15 @@ export function StepTemplate({
               };
               const startTime = formatTime(startDate);
               const endTime = formatTime(endDate);
+              const segmentData = editableSegments.get(segment.id) || {
+                title: segment.title,
+                description: segment.description || '',
+                provider: segment.provider || '',
+                address: segment.address || '',
+                phone: segment.phone || '',
+                duration: segment.duration || ''
+              };
+              
               return <div key={segment.id} className="relative group">
                       <div className="flex gap-4">
                         {/* Type de segment */}
@@ -114,35 +205,68 @@ export function StepTemplate({
                         
                         {/* Contenu indenté */}
                         <div className="flex-1">
-                          <p className="text-sm text-gray-900 font-medium">
-                            {segment.title}
-                          </p>
+                          <EditableText
+                            value={segmentData.title}
+                            onChange={(val) => updateSegmentField(segment.id, 'title', val)}
+                            className="text-sm text-gray-900 font-medium"
+                            as="p"
+                          />
                           
                           {/* Description */}
-                          {segment.description && <p className="text-sm text-gray-700 mt-1 leading-relaxed">
-                              {segment.description}
-                            </p>}
+                          {segmentData.description && <EditableText
+                              value={segmentData.description}
+                              onChange={(val) => updateSegmentField(segment.id, 'description', val)}
+                              className="text-sm text-gray-700 mt-1 leading-relaxed"
+                              multiline
+                              as="p"
+                            />}
                           
                           {/* Détails */}
                           <div className="mt-1 space-y-0.5">
-                            {segment.provider && <p className="text-xs text-gray-600">
+                            {segmentData.provider && <p className="text-xs text-gray-600">
                                 • {segment.segment_type === 'flight' && 'Vol : '}
                                 {segment.segment_type === 'train' && 'Train : '}
                                 {segment.segment_type === 'hotel' && 'Hôtel : '}
                                 {segment.segment_type === 'activity' && 'Activité : '}
-                                {segment.provider}
+                                <EditableText
+                                  value={segmentData.provider}
+                                  onChange={(val) => updateSegmentField(segment.id, 'provider', val)}
+                                  className="inline"
+                                  as="span"
+                                />
                                 {segment.reference_number && ` - ${segment.reference_number}`}
                               </p>}
                             
-                            {segment.address && <p className="text-xs text-gray-600">• Adresse : {segment.address}</p>}
+                            {segmentData.address && <p className="text-xs text-gray-600">
+                                • Adresse : <EditableText
+                                  value={segmentData.address}
+                                  onChange={(val) => updateSegmentField(segment.id, 'address', val)}
+                                  className="inline"
+                                  as="span"
+                                />
+                              </p>}
                             
-                            {segment.phone && <p className="text-xs text-gray-600">• Tél : {segment.phone}</p>}
+                            {segmentData.phone && <p className="text-xs text-gray-600">
+                                • Tél : <EditableText
+                                  value={segmentData.phone}
+                                  onChange={(val) => updateSegmentField(segment.id, 'phone', val)}
+                                  className="inline"
+                                  as="span"
+                                />
+                              </p>}
                             
                             {segment.checkin_time && <p className="text-xs text-gray-600">
                                 • Check-in : {segment.checkin_time} | Check-out : {segment.checkout_time || 'N/A'}
                               </p>}
                             
-                            {segment.duration && <p className="text-xs text-gray-600">• Durée : {segment.duration}</p>}
+                            {segmentData.duration && <p className="text-xs text-gray-600">
+                                • Durée : <EditableText
+                                  value={segmentData.duration}
+                                  onChange={(val) => updateSegmentField(segment.id, 'duration', val)}
+                                  className="inline"
+                                  as="span"
+                                />
+                              </p>}
                             
                             {endTime && startTime !== endTime && <p className="text-xs text-gray-600">• Arrivée : {endTime}</p>}
                           </div>
@@ -161,21 +285,20 @@ export function StepTemplate({
 
         {/* Tips */}
         {editableTips && editableTips.length > 0 && !hiddenTips && <div className="mt-4 pl-4 border-l-2 border-yellow-400 relative group">
-            <p className="text-xs font-semibold text-gray-700 mb-2">🌺 NOTE</p>
+            <p className="text-xs font-semibold text-gray-700 mb-2"> NOTE</p>
             <ul className="space-y-1">
-              {editableTips.map((tip, index) => <li 
-                  key={index} 
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) => {
+              {editableTips.map((tip, index) => <EditableText
+                  key={index}
+                  value={tip}
+                  onChange={(val) => {
                     const newTips = [...editableTips];
-                    newTips[index] = e.currentTarget.textContent || '';
+                    newTips[index] = val;
                     setEditableTips(newTips);
                   }}
-                  className="text-xs text-gray-700 leading-relaxed outline-none"
-                >
-                  {tip}
-                </li>)}
+                  className="text-xs text-gray-700 leading-relaxed"
+                  multiline
+                  as="li"
+                />)}
             </ul>
             <button onClick={() => setHiddenTips(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
@@ -185,18 +308,40 @@ export function StepTemplate({
         {/* Local Context */}
         {editableLocalContext && !hiddenLocalContext && <div className="mt-4 pl-4 border-l-2 border-green-400 relative group">
             <p className="text-xs font-semibold text-gray-700 mb-1">🌍 Info locale</p>
-            <p 
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => setEditableLocalContext(e.currentTarget.textContent || '')}
-              className="text-xs text-gray-700 leading-relaxed outline-none"
-            >
-              {editableLocalContext}
-            </p>
+            <EditableText
+              value={editableLocalContext}
+              onChange={setEditableLocalContext}
+              className="text-xs text-gray-700 leading-relaxed"
+              multiline
+              as="p"
+            />
             <button onClick={() => setHiddenLocalContext(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
             </button>
           </div>}
+
+        {/* Step Images Gallery */}
+        <StepImageGallery
+          tripId={step.rawData?.trip_id || ''}
+          stepId={step.stepId}
+          images={stepImages}
+          onImagesChange={handleImagesChange}
+        />
+
+        {/* Step Images - Display for PDF */}
+        {stepImages.length > 0 && (
+          <div className="print-only mt-4 space-y-2">
+            {stepImages.map((image) => (
+              <div key={image.storage_path} className="w-full">
+                <img
+                  src={image.public_url}
+                  alt={image.file_name}
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>;
 }

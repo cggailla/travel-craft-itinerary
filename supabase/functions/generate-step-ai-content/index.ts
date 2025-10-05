@@ -56,9 +56,7 @@ serve(async (req) => {
     console.log(`🚀 Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
     console.log('🌐 Perplexity API request configuration:');
     console.log('  - Model: sonar');
-    console.log('  - Return images: true');
-    console.log('  - Image domain filter:', ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"]);
-    console.log('  - Image format filter:', ["jpeg", "png", "webp"]);
+
 
     // Create structured prompt for targeted content generation
     const sectionsInfo = sections.map((section: any) => {
@@ -92,7 +90,6 @@ CONSIGNES STRICTES:
 - Overview: Intègre des détails spécifiques et récents sur le lieu
 - Tips: Base-toi sur des informations locales authentiques trouvées
 - LocalContext: Inclus des faits historiques/culturels précis et captivants
-- Trouve et sélectionne des images de paysages, vie locale, et bâtiments emblématiques de ${primaryLocation}
 - Ton: Narratif expert, style ADGENTES, informatif mais personnel
 - OBLIGATOIRE: Réponds en JSON pur sans backticks markdown
 ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyage' : ''}`;
@@ -124,9 +121,6 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
           "search_context_size": "medium"
         },
         return_related_questions: false,
-        return_images: true,
-        image_domain_filter: ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"],
-        image_format_filter: ["jpeg", "png", "webp"]
       }),
     });
 
@@ -149,77 +143,9 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     console.log('✅ Perplexity response received');
     console.log('📊 Full Perplexity response structure:');
     console.log('  - Choices:', perplexityData.choices?.length || 0);
-    console.log('  - Images field present:', !!perplexityData.images);
-    console.log('  - Images count:', perplexityData.images?.length || 0);
-    
-    if (perplexityData.images && perplexityData.images.length > 0) {
-      console.log('🖼️ Images found in response:');
-      console.log('  - Images count:', perplexityData.images.length);
-      
-      // Log the complete structure of the first image for debugging
-      console.log('📊 First image complete structure:');
-      console.log(JSON.stringify(perplexityData.images[0], null, 2));
-      
-      perplexityData.images.forEach((img: any, index: number) => {
-        console.log(`  Image ${index + 1}:`);
-        console.log(`    - Title: ${img.title || 'N/A'}`);
-        console.log(`    - URL (url field): ${img.url}`);
-        console.log(`    - URL (imageUrl field): ${img.imageUrl}`);
-        console.log(`    - OriginUrl: ${img.originUrl || 'N/A'}`);
-        console.log(`    - Source: ${img.source || 'N/A'}`);
-        console.log(`    - Format: ${img.format || 'N/A'}`);
-        console.log(`    - Width: ${img.width || 'N/A'}`);
-        console.log(`    - Height: ${img.height || 'N/A'}`);
-      });
-    } else {
-      console.log('⚠️ No images found in Perplexity response');
-    }
 
     const content = perplexityData.choices[0].message.content;
     console.log('📄 Content length:', content?.length || 0);
-    
-    // Extract up to 2 image URLs, trying multiple possible URL fields
-    const validImages = (perplexityData.images || [])
-      .filter((img: any) => {
-        // Try different possible URL fields - prioritize image_url (snake_case) from Perplexity
-        const imageUrl = img.image_url || img.imageUrl || img.url || img.src || img.href;
-        if (!imageUrl) {
-          console.log(`❌ No valid URL found for image: ${JSON.stringify(img)}`);
-          return false;
-        }
-        
-        // Filter by format - check the URL extension
-        const allowedFormats = ['jpeg', 'jpg', 'png', 'webp'];
-        const hasValidFormat = allowedFormats.some(format => 
-          imageUrl.toLowerCase().includes(`.${format}`)
-        );
-        
-        // Filter out stock photo sites
-        const blockedDomains = ['-gettyimages.com', '-shutterstock.com', '-istockphoto.com'];
-        const isFromBlockedDomain = blockedDomains.some(domain => 
-          imageUrl.includes(domain)
-        );
-        
-        console.log(`🔍 Image validation for "${img.title}":`, {
-          url: imageUrl,
-          hasValidFormat,
-          isFromBlockedDomain,
-          passed: hasValidFormat && !isFromBlockedDomain
-        });
-        
-        return hasValidFormat && !isFromBlockedDomain;
-      })
-      .slice(0, 2)
-      .map((img: any) => img.image_url || img.imageUrl || img.url || img.src || img.href);
-    
-    console.log('🎯 Final extracted images URLs:');
-    validImages.forEach((url: string, index: number) => {
-      console.log(`  ${index + 1}. ${url}`);
-    });
-    console.log(`📈 Total images selected: ${validImages.length}/2`);
-    
-    const images = validImages;
-    
     // Parse JSON response
     let aiContent;
     try {
@@ -266,7 +192,6 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
     console.log(`  - Overview: ${aiContent.overview.length} chars`);
     console.log(`  - Tips: ${aiContent.tips.length} items`);
     console.log(`  - Local context: ${aiContent.localContext?.length || 0} chars`);
-    console.log(`  - Images: ${images.length} URLs`);
 
     return new Response(
       JSON.stringify({
@@ -275,7 +200,6 @@ ${tripSummary ? '\n- Crée des liens pertinents avec le contexte global du voyag
         overview: aiContent.overview,
         tips: aiContent.tips,
         localContext: aiContent.localContext || null,
-        images: images
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

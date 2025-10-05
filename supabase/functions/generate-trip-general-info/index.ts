@@ -175,10 +175,8 @@ CONSIGNES:
         ],
         temperature: 0.2,
         max_tokens: 3000,
-        return_images: true,
+        return_images: false, // Images removed - manual upload only
         return_related_questions: false,
-        image_domain_filter: ["-gettyimages.com", "-shutterstock.com", "-istockphoto.com"],
-        image_format_filter: ["jpeg", "png", "webp"],
         search_recency_filter: "month",
         web_search_options: {
           search_context_size: "medium"
@@ -208,37 +206,8 @@ CONSIGNES:
 
     console.log("Raw Perplexity content (first 500 chars):", content.substring(0, 500));
 
-    // Extract and filter images
-    const images = perplexityData.images || [];
-    console.log(`📸 Images found: ${images.length}`);
-    
+    // Images removed - manual upload only
     const validImageUrls: string[] = [];
-    const blockedDomains = ["gettyimages.com", "shutterstock.com", "istockphoto.com"];
-    const validFormats = ["jpeg", "jpg", "png", "webp"];
-    
-    for (const img of images) {
-      if (validImageUrls.length >= 2) break;
-      
-      const imageUrl = img.image_url || img.url;
-      if (!imageUrl) continue;
-      
-      // Check format
-      const hasValidFormat = validFormats.some(format => 
-        imageUrl.toLowerCase().includes(`.${format}`)
-      );
-      
-      // Check blocked domains
-      const isFromBlockedDomain = blockedDomains.some(domain => 
-        imageUrl.toLowerCase().includes(domain)
-      );
-      
-      if (hasValidFormat && !isFromBlockedDomain) {
-        validImageUrls.push(imageUrl);
-        console.log(`✅ Valid cover image ${validImageUrls.length}: ${imageUrl}`);
-      }
-    }
-    
-    console.log(`📈 Total cover images selected: ${validImageUrls.length}/2`);
 
     // Try to parse JSON, handle markdown wrapping
     let generalInfo;

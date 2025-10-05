@@ -12,7 +12,7 @@ export interface EnrichedStep {
     overview: string;
     tips: string[];
     localContext?: string;
-    images?: string[];
+    // images?: string[]; // Deprecated - manual upload only
   };
   rawData: any; // Original step data from DB
 }
@@ -55,7 +55,7 @@ export interface AIContentResult {
   overview: string;
   tips: string[];
   localContext?: string;
-  images?: string[];
+  // images?: string[]; // Deprecated - manual upload only
   success: boolean;
   error?: string;
 }

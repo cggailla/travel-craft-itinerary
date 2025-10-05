@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { EditableText } from "./EditableText";
+import { EditableContent } from "./EditableContent";
 import { 
   Globe, 
   MapPin, 
@@ -108,6 +110,29 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
+  
+  // État éditable pour chaque champ
+  const [editableInfo, setEditableInfo] = useState<GeneralInfo | null>(null);
+  
+  // Synchro des données éditables
+  useEffect(() => {
+    if (info) {
+      setEditableInfo(JSON.parse(JSON.stringify(info))); // deep copy
+    }
+  }, [info]);
+  
+  const updateEditableField = (path: string[], value: any) => {
+    setEditableInfo(prev => {
+      if (!prev) return prev;
+      const newInfo = JSON.parse(JSON.stringify(prev));
+      let current: any = newInfo;
+      for (let i = 0; i < path.length - 1; i++) {
+        current = current[path[i]];
+      }
+      current[path[path.length - 1]] = value;
+      return newInfo;
+    });
+  };
 
   const fetchGeneralInfo = async () => {
     console.log('🔍 Fetching general info for trip:', tripId);
@@ -206,7 +231,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
   return (
     <div className="space-y-3">
       {/* Basic Information */}
-      {(info.capital || info.population || info.surface_area) && !hiddenCards.has('basic') && (
+      {(editableInfo?.capital || editableInfo?.population || editableInfo?.surface_area) && !hiddenCards.has('basic') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Globe className="h-3.5 w-3.5 theme-text" />
@@ -214,19 +239,37 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <DeleteButton cardId="basic" />
           </div>
           <div className="space-y-0.5 text-xs ml-5">
-            {info.capital && (
+            {editableInfo?.capital && (
               <div>
-                <span className="font-medium">Capitale:</span> {info.capital}
+                <span className="font-medium">Capitale:</span>{' '}
+                <EditableText
+                  value={editableInfo.capital}
+                  onChange={(val) => updateEditableField(['capital'], val)}
+                  className="inline"
+                  as="span"
+                />
               </div>
             )}
-            {info.population && (
+            {editableInfo?.population && (
               <div>
-                <span className="font-medium">Population:</span> {info.population}
+                <span className="font-medium">Population:</span>{' '}
+                <EditableText
+                  value={editableInfo.population}
+                  onChange={(val) => updateEditableField(['population'], val)}
+                  className="inline"
+                  as="span"
+                />
               </div>
             )}
-            {info.surface_area && (
+            {editableInfo?.surface_area && (
               <div>
-                <span className="font-medium">Superficie:</span> {info.surface_area}
+                <span className="font-medium">Superficie:</span>{' '}
+                <EditableText
+                  value={editableInfo.surface_area}
+                  onChange={(val) => updateEditableField(['surface_area'], val)}
+                  className="inline"
+                  as="span"
+                />
               </div>
             )}
           </div>
@@ -234,7 +277,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       )}
 
       {/* Timezone */}
-      {info.timezone_info && !hiddenCards.has('timezone') && (
+      {editableInfo?.timezone_info && !hiddenCards.has('timezone') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Calendar className="h-3.5 w-3.5 theme-text" />
@@ -243,117 +286,126 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           </div>
           <div className="space-y-0.5 text-xs ml-5">
             <div>
-              <span className="font-medium">Fuseau horaire:</span> {info.timezone_info.main_timezone}
+              <span className="font-medium">Fuseau horaire:</span>{' '}
+              <EditableText
+                value={editableInfo.timezone_info.main_timezone}
+                onChange={(val) => updateEditableField(['timezone_info', 'main_timezone'], val)}
+                className="inline"
+                as="span"
+              />
             </div>
-            <div className="text-muted-foreground">
-              {info.timezone_info.offset_description}
-            </div>
+            <EditableText
+              value={editableInfo.timezone_info.offset_description}
+              onChange={(val) => updateEditableField(['timezone_info', 'offset_description'], val)}
+              className="text-muted-foreground"
+              as="div"
+            />
           </div>
         </div>
       )}
 
       {/* Entry Requirements */}
-      {info.entry_requirements && !hiddenCards.has('entry') && (
+      {editableInfo?.entry_requirements && !hiddenCards.has('entry') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-3.5 w-3.5 theme-text" />
             <h3 className="text-sm font-semibold theme-text">Formalités d'entrée</h3>
             <DeleteButton cardId="entry" />
           </div>
-          <div className="space-y-0.5 text-xs ml-5">
+          <EditableContent className="space-y-0.5 text-xs ml-5">
             <div>
-              <span className="font-medium">Passeport:</span> {info.entry_requirements.passport}
+              <span className="font-medium">Passeport:</span> {editableInfo.entry_requirements.passport}
             </div>
             <div>
-              <span className="font-medium">Visa:</span> {info.entry_requirements.visa}
+              <span className="font-medium">Visa:</span> {editableInfo.entry_requirements.visa}
             </div>
             <div>
-              <span className="font-medium">Durée autorisée:</span> {info.entry_requirements.validity}
+              <span className="font-medium">Durée autorisée:</span> {editableInfo.entry_requirements.validity}
             </div>
-          </div>
+          </EditableContent>
         </div>
       )}
 
       {/* Health */}
-      {info.health_requirements && !hiddenCards.has('health') && (
+      {editableInfo?.health_requirements && !hiddenCards.has('health') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Heart className="h-3.5 w-3.5 theme-text" />
             <h3 className="text-sm font-semibold theme-text">Santé</h3>
             <DeleteButton cardId="health" />
           </div>
-          <div className="space-y-1 text-xs ml-5">
-            {info.health_requirements.vaccines && info.health_requirements.vaccines.length > 0 && (
+          <EditableContent className="space-y-1 text-xs ml-5">
+            {editableInfo.health_requirements.vaccines && editableInfo.health_requirements.vaccines.length > 0 && (
               <div>
-                <span className="font-medium">Vaccins recommandés:</span> {info.health_requirements.vaccines.join(", ")}
+                <span className="font-medium">Vaccins recommandés:</span> {editableInfo.health_requirements.vaccines.join(", ")}
               </div>
             )}
-            {info.health_requirements.insurance_advice && (
-              <div>{info.health_requirements.insurance_advice}</div>
+            {editableInfo.health_requirements.insurance_advice && (
+              <div>{editableInfo.health_requirements.insurance_advice}</div>
             )}
-            {info.health_requirements.water_safety && (
+            {editableInfo.health_requirements.water_safety && (
               <div>
-                <span className="font-medium">Eau potable:</span> {info.health_requirements.water_safety}
+                <span className="font-medium">Eau potable:</span> {editableInfo.health_requirements.water_safety}
               </div>
             )}
-          </div>
+          </EditableContent>
         </div>
       )}
 
       {/* Clothing */}
-      {info.clothing_advice && !hiddenCards.has('clothing') && (
+      {editableInfo?.clothing_advice && !hiddenCards.has('clothing') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Shirt className="h-3.5 w-3.5 theme-text" />
             <h3 className="text-sm font-semibold theme-text">Vêtements conseillés</h3>
             <DeleteButton cardId="clothing" />
           </div>
-          <div className="space-y-1 text-xs ml-5">
-            {info.clothing_advice.season && (
+          <EditableContent className="space-y-1 text-xs ml-5">
+            {editableInfo.clothing_advice.season && (
               <div>
-                <span className="font-medium">Saison:</span> {info.clothing_advice.season}
+                <span className="font-medium">Saison:</span> {editableInfo.clothing_advice.season}
               </div>
             )}
-            {info.clothing_advice.temperatures && (
+            {editableInfo.clothing_advice.temperatures && (
               <div>
-                <span className="font-medium">Températures:</span> {info.clothing_advice.temperatures}
+                <span className="font-medium">Températures:</span> {editableInfo.clothing_advice.temperatures}
               </div>
             )}
-            {info.clothing_advice.recommended && info.clothing_advice.recommended.length > 0 && (
+            {editableInfo.clothing_advice.recommended && editableInfo.clothing_advice.recommended.length > 0 && (
               <div>
                 <span className="font-medium block mb-0.5">À prévoir:</span>
                 <ul className="list-disc list-inside space-y-0.5">
-                  {info.clothing_advice.recommended.map((item, idx) => (
+                  {editableInfo.clothing_advice.recommended.map((item, idx) => (
                     <li key={idx}>{item}</li>
                   ))}
                 </ul>
               </div>
             )}
-          </div>
+          </EditableContent>
         </div>
       )}
 
       {/* Food */}
-      {info.food_specialties && info.food_specialties.length > 0 && !hiddenCards.has('food') && (
+      {editableInfo?.food_specialties && editableInfo.food_specialties.length > 0 && !hiddenCards.has('food') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <UtensilsCrossed className="h-3.5 w-3.5 theme-text" />
             <h3 className="text-sm font-semibold theme-text">Nourriture</h3>
             <DeleteButton cardId="food" />
           </div>
-          <div className="space-y-1 text-xs ml-5">
-            {info.food_specialties.map((item, idx) => (
+          <EditableContent className="space-y-1 text-xs ml-5">
+            {editableInfo.food_specialties.map((item, idx) => (
               <div key={idx} className="border-l border-primary/20 pl-2">
                 <div className="font-medium">{item.region}</div>
                 <div className="text-muted-foreground">{item.specialty}</div>
               </div>
             ))}
-          </div>
+          </EditableContent>
         </div>
       )}
 
       {/* Currency */}
-      {(info.currency || info.exchange_rate) && !hiddenCards.has('currency') && (
+      {(editableInfo?.currency || editableInfo?.exchange_rate) && !hiddenCards.has('currency') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Coins className="h-3.5 w-3.5 theme-text" />

@@ -66,6 +66,18 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         throw new Error('Contenu du carnet introuvable');
       }
 
+      // Masquer uniquement les zones d'upload vides (data-has-image="false")
+      const emptyUploadZones = element.querySelectorAll('.no-print[data-has-image="false"]');
+      emptyUploadZones.forEach((el) => {
+        (el as HTMLElement).style.display = 'none';
+      });
+
+      // Afficher les éléments .print-only
+      const printOnlyElements = element.querySelectorAll('.print-only');
+      printOnlyElements.forEach((el) => {
+        (el as HTMLElement).style.display = 'block';
+      });
+
       // Configuration PDF optimisée
       const opt = {
         margin: [15, 12, 15, 12] as [number, number, number, number],
@@ -94,12 +106,38 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
 
       // Générer le PDF
       await html2pdf().set(opt).from(element).save();
+
+      // Réafficher les zones d'upload vides après génération
+      emptyUploadZones.forEach((el) => {
+        (el as HTMLElement).style.display = '';
+      });
+
+      // Masquer à nouveau les éléments .print-only
+      printOnlyElements.forEach((el) => {
+        (el as HTMLElement).style.display = '';
+      });
       
       toast({
         title: "PDF généré",
         description: "Votre carnet de voyage a été téléchargé avec succès.",
       });
     } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      
+      // En cas d'erreur, restaurer l'affichage normal
+      const element = document.getElementById('booklet-content');
+      if (element) {
+        const emptyUploadZones = element.querySelectorAll('.no-print[data-has-image="false"]');
+        emptyUploadZones.forEach((el) => {
+          (el as HTMLElement).style.display = '';
+        });
+        
+        const printOnlyElements = element.querySelectorAll('.print-only');
+        printOnlyElements.forEach((el) => {
+          (el as HTMLElement).style.display = '';
+        });
+      }
+      
       toast({
         title: "Erreur",
         description: "Impossible de générer le PDF.",

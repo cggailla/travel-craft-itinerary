@@ -1,16 +1,15 @@
 import { BookletData, BookletOptions } from "@/services/bookletService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Clock, FileText, RefreshCw } from "lucide-react";
+import { FileText } from "lucide-react";
 import { DynamicItinerary } from "./DynamicItinerary";
 import { ThankYouSection } from "./ThankYouSection";
 import { GeneralInfoSection } from "./GeneralInfoSection";
 import { EmergencyContactsSection } from "./EmergencyContactsSection";
+import { ImageUploader } from "./ImageUploader";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "./ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { listSessionImages, SupabaseImage } from "@/services/supabaseImageService";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -23,58 +22,40 @@ export function BookletTemplate({
   options,
   tripId,
 }: BookletTemplateProps) {
-  const [coverImages, setCoverImages] = useState<string[]>([]);
-  const [failedCoverImages, setFailedCoverImages] = useState<Set<string>>(new Set());
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(data.tripTitle);
-  const { toast } = useToast();
+  const [coverImage1, setCoverImage1] = useState<SupabaseImage | undefined>();
+  const [coverImage2, setCoverImage2] = useState<SupabaseImage | undefined>();
 
-  const fetchCoverImages = async () => {
-    const { data: generalInfo, error } = await supabase
-      .from('trip_general_info')
-      .select('cover_images')
-      .eq('trip_id', tripId)
-      .maybeSingle();
-    
-    if (!error && generalInfo?.cover_images) {
-      setCoverImages(generalInfo.cover_images);
-      return true;
-    }
-    return false;
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    const success = await fetchCoverImages();
-    setIsRefreshing(false);
-    
-    if (success) {
-      toast({
-        title: "Images mises à jour",
-        description: "Les images de couverture ont été rechargées.",
-      });
-    } else {
-      toast({
-        title: "Aucune image disponible",
-        description: "Les images de couverture ne sont pas encore générées.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // Load cover images from Supabase
   useEffect(() => {
-    // Initial fetch
-    fetchCoverImages();
-    
-    // Poll every 5 seconds for new images if none are loaded
-    const interval = setInterval(async () => {
-      if (coverImages.length === 0) {
-        await fetchCoverImages();
+    const loadCoverImages = async () => {
+      const result = await listSessionImages(tripId);
+      if (result.success && result.data) {
+        const cover1 = result.data.find(img => img.storage_path.includes('cover_1'));
+        const cover2 = result.data.find(img => img.storage_path.includes('cover_2'));
+        
+        if (cover1) setCoverImage1(cover1);
+        if (cover2) setCoverImage2(cover2);
       }
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [tripId, coverImages.length]);
+    };
+    loadCoverImages();
+  }, [tripId]);
+
+  const handleCoverImage1Uploaded = (image: SupabaseImage) => {
+    setCoverImage1(image);
+  };
+
+  const handleCoverImage2Uploaded = (image: SupabaseImage) => {
+    setCoverImage2(image);
+  };
+
+  const handleCoverImage1Deleted = () => {
+    setCoverImage1(undefined);
+  };
+
+  const handleCoverImage2Deleted = () => {
+    setCoverImage2(undefined);
+  };
 
   // Couleur fixe Adgentes
   const colors = { primary: "#822a62", secondary: "#c084ab", accent: "#f5e6f0" };
@@ -116,10 +97,24 @@ export function BookletTemplate({
               page-break-inside: avoid;
             }
             
+            /* Masquer les zones d'upload et contrôles */
             .no-print { 
               display: none !important; 
             }
+
+            /* Afficher uniquement les éléments print-only */
+            .print-only {
+              display: block !important;
+            }
           }
+
+          /* En mode écran, masquer les éléments print-only */
+          @media screen {
+            .print-only {
+              display: none !important;
+            }
+          }
+          
           .theme-bg { background-color: ${colors.accent}; }
           .theme-border { border-color: ${colors.primary}; }
           .theme-text { color: ${colors.primary}; }
@@ -147,42 +142,47 @@ export function BookletTemplate({
           <div className="w-24"></div>
         </div>
 
-        {/* Images de destination - pleine largeur, sans espaces, sans arrondis */}
-        {(() => {
-          const visibleCoverImages = coverImages.filter(img => !failedCoverImages.has(img));
-          return visibleCoverImages.length > 0 ? (
-            <div className="flex flex-col">
-              {visibleCoverImages.map((imageUrl, index) => (
-                <div key={index} className="relative h-80 w-full overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt={`Destination ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={() => {
-                      console.warn('Failed to load cover image:', imageUrl);
-                      setFailedCoverImages(prev => new Set(prev).add(imageUrl));
-                    }}
-                  />
-                </div>
-              ))}
+        {/* Images de couverture - Zone d'upload (masquée à l'impression) */}
+        <div className="no-print">
+          <ImageUploader
+            tripId={tripId}
+            imageType="cover"
+            position={1}
+            currentImage={coverImage1}
+            onImageUploaded={handleCoverImage1Uploaded}
+            onImageDeleted={handleCoverImage1Deleted}
+          />
+          <ImageUploader
+            tripId={tripId}
+            imageType="cover"
+            position={2}
+            currentImage={coverImage2}
+            onImageUploaded={handleCoverImage2Uploaded}
+            onImageDeleted={handleCoverImage2Deleted}
+          />
+        </div>
+
+        {/* Images de couverture - Affichage pour le PDF */}
+        <div className="print-only">
+          {coverImage1 && (
+            <div className="w-full">
+              <img
+                src={coverImage1.public_url}
+                alt="Couverture 1"
+                className="w-full h-auto object-contain"
+              />
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-80 bg-muted/20 gap-4 no-print">
-              <p className="text-muted-foreground text-sm">
-                Les images de couverture seront affichées une fois générées
-              </p>
-              <Button 
-                onClick={handleRefresh} 
-                disabled={isRefreshing}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Chargement...' : 'Rafraîchir'}
-              </Button>
+          )}
+          {coverImage2 && (
+            <div className="w-full">
+              <img
+                src={coverImage2.public_url}
+                alt="Couverture 2"
+                className="w-full h-auto object-contain"
+              />
             </div>
-          );
-        })()}
+          )}
+        </div>
 
         {/* Informations du voyage - simplifié */}
         <div className="p-4 bg-gray-50 text-center text-sm text-gray-700">

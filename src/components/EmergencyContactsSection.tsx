@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { EditableText } from "./EditableText";
+import { EditableContent } from "./EditableContent";
 
 interface EmergencyContactsSectionProps {
   tripId: string;
@@ -91,34 +93,30 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
 
   return (
     <div className="space-y-6">
-      <h2 
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e) => updateText('title', e.currentTarget.textContent || texts.title)}
-        className="text-lg font-bold pb-2 border-b border-gray-300 outline-none"
-      >
-        {texts.title}
-      </h2>
+      <EditableText
+        value={texts.title}
+        onChange={(val) => updateText('title', val)}
+        className="text-lg font-bold pb-2 border-b border-gray-300"
+        as="h2"
+        multiline
+      />
 
       <div className="space-y-6 text-sm leading-relaxed">
         {/* 1. Avant votre départ */}
         <div className="keep-together">
-          <h3 
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => updateText('section1Title', e.currentTarget.textContent || texts.section1Title)}
-            className="font-semibold mb-2 outline-none"
-          >
-            {texts.section1Title}
-          </h3>
-          <p 
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => updateText('section1Text', e.currentTarget.textContent || texts.section1Text)}
-            className="ml-6 text-gray-700 outline-none"
-          >
-            {texts.section1Text}
-          </p>
+          <EditableText
+            value={texts.section1Title}
+            onChange={(val) => updateText('section1Title', val)}
+            className="font-semibold mb-2"
+            as="h3"
+          />
+          <EditableText
+            value={texts.section1Text}
+            onChange={(val) => updateText('section1Text', val)}
+            className="ml-6 text-gray-700"
+            multiline
+            as="p"
+          />
         </div>
 
         {/* 2. Le jour de votre départ */}

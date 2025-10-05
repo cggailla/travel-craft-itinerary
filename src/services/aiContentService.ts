@@ -228,31 +228,13 @@ export async function generateStepAIContent(request: AIContentRequest): Promise<
       };
     }
 
-    let images = data.images || [];
+    // Images removed - manual upload only
     
-    // If no images from Perplexity, try Wikimedia fallback
-    if (images.length === 0 && request.primaryLocation) {
-      console.log('🔄 No images from Perplexity, trying Wikimedia fallback...');
-      try {
-        const { data: wikimediaData, error: wikimediaError } = await supabase.functions.invoke('search-location-images', {
-          body: { location: request.primaryLocation }
-        });
-        
-        if (!wikimediaError && wikimediaData?.success && wikimediaData?.images?.length > 0) {
-          images = wikimediaData.images;
-          console.log(`✅ Found ${images.length} images from Wikimedia for ${request.primaryLocation}`);
-        }
-      } catch (wikimediaError) {
-        console.warn('Wikimedia fallback failed:', wikimediaError);
-      }
-    }
-
     return {
       stepId: request.stepId,
       overview: data.overview || '',
       tips: data.tips || [],
       localContext: data.localContext,
-      images,
       success: true
     };
 

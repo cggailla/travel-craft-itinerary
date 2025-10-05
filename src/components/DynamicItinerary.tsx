@@ -266,11 +266,11 @@ export function DynamicItinerary({
           <div key={step.stepId}>
             <StepTemplate
               step={step}
+              tripId={tripId}
               aiContent={aiContent?.success ? {
                 overview: aiContent.overview,
                 tips: aiContent.tips,
                 localContext: aiContent.localContext,
-                images: aiContent.images,
               } : undefined}
               isLoading={isStepGenerating}
               nextStepStartDate={nextStep?.startDate}
