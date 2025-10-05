@@ -129,22 +129,22 @@ export function BookletTemplate({
 
       {/* En-tête / couverture */}
       <div className="mb-8">
-        {/* Barre de header avec logo Adgentes */}
-        <div className="theme-bg p-6 rounded-t-lg flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
+        {/* Header simple */}
+        <div className="p-4 border-b-2 border-gray-800 flex items-center justify-between">
           <img 
             src={logoAdgentes} 
             alt="Adgentes" 
-            className="h-10 object-contain"
+            className="h-8 object-contain"
           />
           <h1 
-            className="text-2xl font-bold text-white outline-none"
+            className="text-xl font-bold text-gray-900 uppercase outline-none"
             contentEditable
             suppressContentEditableWarning
             onBlur={(e) => setEditableTitle(e.currentTarget.textContent || data.tripTitle)}
           >
             {editableTitle}
           </h1>
-          <div className="w-32"></div>
+          <div className="w-24"></div>
         </div>
 
         {/* Images de destination - pleine largeur, sans espaces, sans arrondis */}
@@ -184,34 +184,24 @@ export function BookletTemplate({
           );
         })()}
 
-        {/* Informations du voyage */}
-        <div className="theme-bg p-6 rounded-b-lg" style={{ backgroundColor: colors.accent }}>
+        {/* Informations du voyage - simplifié */}
+        <div className="p-4 bg-gray-50 text-center text-sm text-gray-700">
           {data.startDate && (
-            <div className="flex items-center justify-center mb-2 text-base">
-              <Calendar className="mr-2 h-5 w-5" style={{ color: colors.primary }} />
-              <span style={{ color: colors.primary }}>
-                {format(data.startDate, "dd MMMM yyyy", { locale: fr })}
-                {data.endDate &&
-                  data.endDate !== data.startDate && (
-                    <> - {format(data.endDate, "dd MMMM yyyy", { locale: fr })}</>
-                  )}
-              </span>
-            </div>
+            <p className="mb-1">
+              {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
+              {data.endDate && data.endDate !== data.startDate && (
+                <> - {format(data.endDate, "dd/MM/yyyy", { locale: fr })}</>
+              )}
+            </p>
           )}
-
-          <div className="flex items-center justify-center">
-            <Clock className="mr-2 h-5 w-5" style={{ color: colors.primary }} />
-            <span className="text-base" style={{ color: colors.primary }}>
-              {data.totalDays} jour{data.totalDays > 1 ? "s" : ""}
-            </span>
-          </div>
+          <p>{data.totalDays} jour{data.totalDays > 1 ? "s" : ""}</p>
         </div>
       </div>
 
       {/* Itinéraire */}
       <div className="section-break mb-12">
-        <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
-          Itinéraire détaillé
+        <h2 className="text-lg font-bold mb-6 text-gray-900 uppercase">
+          Programme détaillé
         </h2>
 
         <DynamicItinerary
@@ -228,7 +218,7 @@ export function BookletTemplate({
 
       {/* Informations générales */}
       <div className="section-break mb-12">
-        <h2 className="text-2xl font-bold mb-4 theme-text border-b-2 theme-border pb-2">
+        <h2 className="text-lg font-bold mb-4 text-gray-900 uppercase">
           Informations complémentaires
         </h2>
 
@@ -237,6 +227,9 @@ export function BookletTemplate({
 
       {/* Contacts d'urgence */}
       <div className="section-break mb-12">
+        <h2 className="text-lg font-bold mb-4 text-gray-900 uppercase">
+          Contacts d'urgence
+        </h2>
         <EmergencyContactsSection tripId={tripId} />
       </div>
 
