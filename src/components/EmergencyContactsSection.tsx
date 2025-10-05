@@ -14,6 +14,36 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Editable text states
+  const [texts, setTexts] = useState({
+    title: "Qui contacter pendant votre voyage en cas de nécessité ?",
+    section1Title: "1. Avant votre départ",
+    section1Text: "Avant votre départ, votre voyagiste reste le contact à privilégier en cas de changement à réaliser ou d'annulations à effectuer.",
+    section2Title: "2. Le jour de votre départ",
+    section2aTitle: "a. Les vols",
+    section2aText: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais.",
+    section2bTitle: "b. Votre voyagiste",
+    section3Title: "3. Après votre départ",
+    section3Intro: "Afin de pouvoir répondre au mieux et le plus rapidement à vos besoins, veuillez contacter dans l'ordre suivant :",
+    section3aTitle: "a. Les vols",
+    section3aText: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais.",
+    section3bTitle: "b. Nos correspondants locaux",
+    section3bItem1: "Pour signaler un retard important à votre arrivée",
+    section3bItem2: "Pour toute demande de modification de programme/circuit (sous réserve)",
+    section3bItem3: "Pour des renseignements complémentaires au sujet des prestations",
+    section3bItem4: "Pour tout manquement ou mécontentement relatif au programme",
+    section3bItem5: "Pour un problème d'hébergement, après avoir vérifié auprès de la réception de votre hôtel si une solution peut être trouvée sur place.",
+    section3bNote: "Si le cas n'a pas pu être résolu après prise de contact avec notre correspondant local, alors contactez :",
+    section3cTitle: "c. Votre voyagiste",
+    section4Title: "4. Pour les cas d'extrême urgence",
+    section4Text1: "*Sont considérées comme extrême urgence (maladie, accident, décès…), veuillez contacter votre assurance voyage.",
+    section4Text2: "Si notre correspondant local ou votre assurance ne peut résoudre votre problème, vous pouvez nous contacter sur notre numéro d'urgence au 0041 76 296 25 40."
+  });
+
+  const updateText = (key: keyof typeof texts, value: string) => {
+    setTexts(prev => ({ ...prev, [key]: value }));
+  };
 
   useEffect(() => {
     const fetchPhone = async () => {
@@ -61,73 +91,133 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold pb-2 border-b border-gray-300">
-        Qui contacter pendant votre voyage en cas de nécessité ?
+      <h2 
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => updateText('title', e.currentTarget.textContent || texts.title)}
+        className="text-lg font-bold pb-2 border-b border-gray-300 outline-none"
+      >
+        {texts.title}
       </h2>
 
       <div className="space-y-6 text-sm leading-relaxed">
         {/* 1. Avant votre départ */}
         <div className="keep-together">
-          <h3 className="font-semibold mb-2">
-            1. Avant votre départ
+          <h3 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section1Title', e.currentTarget.textContent || texts.section1Title)}
+            className="font-semibold mb-2 outline-none"
+          >
+            {texts.section1Title}
           </h3>
-          <p className="ml-6 text-gray-700">
-            Avant votre départ, votre voyagiste reste le contact à privilégier en cas de changement 
-            à réaliser ou d'annulations à effectuer.
+          <p 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section1Text', e.currentTarget.textContent || texts.section1Text)}
+            className="ml-6 text-gray-700 outline-none"
+          >
+            {texts.section1Text}
           </p>
         </div>
 
         {/* 2. Le jour de votre départ */}
         <div className="keep-together">
-          <h3 className="font-semibold mb-2">
-            2. Le jour de votre départ
+          <h3 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section2Title', e.currentTarget.textContent || texts.section2Title)}
+            className="font-semibold mb-2 outline-none"
+          >
+            {texts.section2Title}
           </h3>
           
           <div className="ml-6 space-y-3">
             {/* a. Les vols */}
             <div>
-              <h4 className="font-medium mb-1">a. Les vols</h4>
-              <p className="ml-4 text-gray-700">
-                En cas de retard ou de problèmes concernant les vols, la compagnie aérienne 
-                est le contact à privilégier pour tout renseignement. C'est cette dernière qui 
-                vous proposera la meilleure solution possible afin de vous acheminer dans les 
-                meilleurs délais.
+              <h4 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section2aTitle', e.currentTarget.textContent || texts.section2aTitle)}
+                className="font-medium mb-1 outline-none"
+              >
+                {texts.section2aTitle}
+              </h4>
+              <p 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section2aText', e.currentTarget.textContent || texts.section2aText)}
+                className="ml-4 text-gray-700 outline-none"
+              >
+                {texts.section2aText}
               </p>
             </div>
 
             {/* b. Votre voyagiste */}
             <div>
-              <h4 className="font-medium">b. Votre voyagiste</h4>
+              <h4 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section2bTitle', e.currentTarget.textContent || texts.section2bTitle)}
+                className="font-medium outline-none"
+              >
+                {texts.section2bTitle}
+              </h4>
             </div>
           </div>
         </div>
 
         {/* 3. Après votre départ */}
         <div className="keep-together">
-          <h3 className="font-semibold mb-2">
-            3. Après votre départ
+          <h3 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section3Title', e.currentTarget.textContent || texts.section3Title)}
+            className="font-semibold mb-2 outline-none"
+          >
+            {texts.section3Title}
           </h3>
           
-          <p className="ml-6 text-gray-700 mb-3">
-            Afin de pouvoir répondre au mieux et le plus rapidement à vos besoins, veuillez 
-            contacter dans l'ordre suivant :
+          <p 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section3Intro', e.currentTarget.textContent || texts.section3Intro)}
+            className="ml-6 text-gray-700 mb-3 outline-none"
+          >
+            {texts.section3Intro}
           </p>
 
           <div className="ml-6 space-y-3">
             {/* a. Les vols */}
             <div>
-              <h4 className="font-medium mb-1">a. Les vols</h4>
-              <p className="ml-4 text-gray-700">
-                En cas de retard ou de problèmes concernant les vols, la compagnie aérienne 
-                est le contact à privilégier pour tout renseignement. C'est cette dernière qui 
-                vous proposera la meilleure solution possible afin de vous acheminer dans les 
-                meilleurs délais.
+              <h4 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section3aTitle', e.currentTarget.textContent || texts.section3aTitle)}
+                className="font-medium mb-1 outline-none"
+              >
+                {texts.section3aTitle}
+              </h4>
+              <p 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section3aText', e.currentTarget.textContent || texts.section3aText)}
+                className="ml-4 text-gray-700 outline-none"
+              >
+                {texts.section3aText}
               </p>
             </div>
 
             {/* b. Nos correspondants locaux */}
             <div>
-              <h4 className="font-medium mb-2">b. Nos correspondants locaux</h4>
+              <h4 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section3bTitle', e.currentTarget.textContent || texts.section3bTitle)}
+                className="font-medium mb-2 outline-none"
+              >
+                {texts.section3bTitle}
+              </h4>
               
               {/* Phone input field */}
               <div className="ml-4 mb-2 p-3 border border-gray-300">
@@ -172,42 +262,100 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
               </div>
 
               <ul className="ml-4 space-y-1 text-gray-700">
-                <li>• Pour signaler un retard important à votre arrivée</li>
-                <li>• Pour toute demande de modification de programme/circuit (sous réserve)</li>
-                <li>• Pour des renseignements complémentaires au sujet des prestations</li>
-                <li>• Pour tout manquement ou mécontentement relatif au programme</li>
-                <li>• Pour un problème d'hébergement, après avoir vérifié auprès de la réception de votre hôtel si une solution peut être trouvée sur place.</li>
+                <li 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => updateText('section3bItem1', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem1)}
+                  className="outline-none"
+                >
+                  • {texts.section3bItem1}
+                </li>
+                <li 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => updateText('section3bItem2', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem2)}
+                  className="outline-none"
+                >
+                  • {texts.section3bItem2}
+                </li>
+                <li 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => updateText('section3bItem3', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem3)}
+                  className="outline-none"
+                >
+                  • {texts.section3bItem3}
+                </li>
+                <li 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => updateText('section3bItem4', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem4)}
+                  className="outline-none"
+                >
+                  • {texts.section3bItem4}
+                </li>
+                <li 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => updateText('section3bItem5', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem5)}
+                  className="outline-none"
+                >
+                  • {texts.section3bItem5}
+                </li>
               </ul>
 
-              <p className="ml-4 mt-3 text-gray-700 italic text-xs">
-                Si le cas n'a pas pu être résolu après prise de contact avec notre correspondant 
-                local, alors contactez :
+              <p 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section3bNote', e.currentTarget.textContent || texts.section3bNote)}
+                className="ml-4 mt-3 text-gray-700 italic text-xs outline-none"
+              >
+                {texts.section3bNote}
               </p>
             </div>
 
             {/* c. Votre voyagiste */}
             <div>
-              <h4 className="font-medium">c. Votre voyagiste</h4>
+              <h4 
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => updateText('section3cTitle', e.currentTarget.textContent || texts.section3cTitle)}
+                className="font-medium outline-none"
+              >
+                {texts.section3cTitle}
+              </h4>
             </div>
           </div>
         </div>
 
         {/* 4. Pour les cas d'extrême urgence */}
         <div className="border-t border-gray-300 pt-6 keep-together">
-          <h3 className="font-semibold mb-2">
-            4. Pour les cas d'extrême urgence
+          <h3 
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => updateText('section4Title', e.currentTarget.textContent || texts.section4Title)}
+            className="font-semibold mb-2 outline-none"
+          >
+            {texts.section4Title}
           </h3>
           
           <div className="ml-6 space-y-2">
-            <p className="text-gray-700">
-              <span className="font-medium">*Sont considérées comme extrême urgence</span> (maladie, accident, décès…), 
-              veuillez contacter votre assurance voyage.
+            <p 
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => updateText('section4Text1', e.currentTarget.textContent || texts.section4Text1)}
+              className="text-gray-700 outline-none"
+            >
+              {texts.section4Text1}
             </p>
             
-            <p className="text-gray-700">
-              Si notre correspondant local ou votre assurance ne peut résoudre votre problème, 
-              vous pouvez nous contacter sur notre numéro d'urgence au{" "}
-              <span className="font-semibold">0041 76 296 25 40</span>.
+            <p 
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => updateText('section4Text2', e.currentTarget.textContent || texts.section4Text2)}
+              className="text-gray-700 outline-none"
+            >
+              {texts.section4Text2}
             </p>
           </div>
         </div>

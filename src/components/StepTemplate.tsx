@@ -27,6 +27,17 @@ export function StepTemplate({
   const [hiddenOverview, setHiddenOverview] = useState(false);
   const [hiddenTips, setHiddenTips] = useState(false);
   const [hiddenLocalContext, setHiddenLocalContext] = useState(false);
+  
+  // Editable content states
+  const [editableOverview, setEditableOverview] = useState(aiContent?.overview || '');
+  const [editableTips, setEditableTips] = useState<string[]>(aiContent?.tips || []);
+  const [editableLocalContext, setEditableLocalContext] = useState(aiContent?.localContext || '');
+
+  React.useEffect(() => {
+    if (aiContent?.overview) setEditableOverview(aiContent.overview);
+    if (aiContent?.tips) setEditableTips(aiContent.tips);
+    if (aiContent?.localContext) setEditableLocalContext(aiContent.localContext);
+  }, [aiContent]);
   const formatDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', {
     locale: fr
   });
@@ -62,9 +73,14 @@ export function StepTemplate({
         </div>
 
         {/* Overview */}
-        {aiContent?.overview && !hiddenOverview && <div className="mb-4 relative group">
-            <p className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300">
-              {aiContent.overview}
+        {editableOverview && !hiddenOverview && <div className="mb-4 relative group">
+            <p 
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => setEditableOverview(e.currentTarget.textContent || '')}
+              className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300 outline-none"
+            >
+              {editableOverview}
             </p>
             <button onClick={() => setHiddenOverview(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
@@ -144,10 +160,20 @@ export function StepTemplate({
         </div>
 
         {/* Tips */}
-        {aiContent?.tips && aiContent.tips.length > 0 && !hiddenTips && <div className="mt-4 pl-4 border-l-2 border-yellow-400 relative group">
+        {editableTips && editableTips.length > 0 && !hiddenTips && <div className="mt-4 pl-4 border-l-2 border-yellow-400 relative group">
             <p className="text-xs font-semibold text-gray-700 mb-2">🌺 NOTE</p>
             <ul className="space-y-1">
-              {aiContent.tips.map((tip, index) => <li key={index} className="text-xs text-gray-700 leading-relaxed">
+              {editableTips.map((tip, index) => <li 
+                  key={index} 
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    const newTips = [...editableTips];
+                    newTips[index] = e.currentTarget.textContent || '';
+                    setEditableTips(newTips);
+                  }}
+                  className="text-xs text-gray-700 leading-relaxed outline-none"
+                >
                   {tip}
                 </li>)}
             </ul>
@@ -157,9 +183,16 @@ export function StepTemplate({
           </div>}
 
         {/* Local Context */}
-        {aiContent?.localContext && !hiddenLocalContext && <div className="mt-4 pl-4 border-l-2 border-green-400 relative group">
+        {editableLocalContext && !hiddenLocalContext && <div className="mt-4 pl-4 border-l-2 border-green-400 relative group">
             <p className="text-xs font-semibold text-gray-700 mb-1">🌍 Info locale</p>
-            <p className="text-xs text-gray-700 leading-relaxed">{aiContent.localContext}</p>
+            <p 
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => setEditableLocalContext(e.currentTarget.textContent || '')}
+              className="text-xs text-gray-700 leading-relaxed outline-none"
+            >
+              {editableLocalContext}
+            </p>
             <button onClick={() => setHiddenLocalContext(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
             </button>
