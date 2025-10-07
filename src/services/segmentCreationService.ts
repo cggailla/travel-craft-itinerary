@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { TravelSegment } from '@/types/travel';
+import { sessionManager } from '@/utils/sessionManager';
 
 export interface CreateSegmentData {
   segment_type: string;
@@ -33,11 +34,15 @@ export async function createManualSegment(
   segmentData: CreateSegmentData
 ): Promise<{ success: boolean; segment?: TravelSegment; error?: string }> {
   try {
+    // Get current user session ID for secure access
+    const userId = await sessionManager.getCurrentUserId();
+    
     // 1. Créer un document virtuel pour "Création manuelle"
     const { data: virtualDoc, error: docError } = await supabase
       .from('documents')
       .insert({
         trip_id: tripId,
+        user_id: userId,
         file_name: 'Création manuelle',
         file_type: 'manual',
         file_size: 0,
