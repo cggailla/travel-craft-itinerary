@@ -8,6 +8,7 @@ import { generateAllStepsAIContent, generateStepAIContent, generateAndParseTripS
 import { AIContentResult } from '@/types/enrichedStep';
 import { EnrichedStep } from '@/types/enrichedStep';
 import { StepTemplate } from '@/components/StepTemplate';
+import { estimateStepHeight, shouldBreakBefore } from '@/utils/pdfEstimator';
 
 
 interface DynamicItineraryProps {
@@ -227,10 +228,35 @@ export function DynamicItinerary({
     }
   };
 
-  // --- Affichage simple des segments ---
+  // --- Affichage simple des segments avec estimation de hauteur ---
   const visibleSteps = useMemo<EnrichedStep[]>(() => {
     return enrichedSteps;
   }, [enrichedSteps]);
+
+  // Calcul des sauts de page recommandés
+  const stepsWithBreaks = useMemo(() => {
+    let cumulativeHeight = 80; // hauteur cover + sections initiales
+    
+    return visibleSteps.map((step, index) => {
+      // Construire un objet simple pour l'estimateur
+      const stepForEstimation = {
+        description: aiContents.get(step.stepId)?.overview || '',
+        images: [], // Les images ne sont pas dans step directement
+        notes: aiContents.get(step.stepId)?.tips?.join('\n') || ''
+      };
+      
+      const needsBreak = index > 0 && shouldBreakBefore(stepForEstimation, cumulativeHeight);
+      const height = estimateStepHeight(stepForEstimation);
+      
+      if (needsBreak) {
+        cumulativeHeight = height; // reset sur nouvelle page
+      } else {
+        cumulativeHeight += height;
+      }
+      
+      return { step, forcePageBreak: needsBreak };
+    });
+  }, [visibleSteps, aiContents]);
 
   return (
     <div className="space-y-6">
@@ -255,7 +281,7 @@ export function DynamicItinerary({
         </div>
       )}
 
-      {visibleSteps.length > 0 && visibleSteps.map((step, index) => {
+      {visibleSteps.length > 0 && stepsWithBreaks.map(({ step, forcePageBreak }, index) => {
         const aiContent = aiContents.get(step.stepId);
         const isStepGenerating = isGenerating && currentStep === index;
         const nextStep = visibleSteps[index + 1];
@@ -263,7 +289,10 @@ export function DynamicItinerary({
         const isLastStep = index === visibleSteps.length - 1;
 
         return (
-          <div key={step.stepId}>
+          <div 
+            key={step.stepId}
+            className={forcePageBreak ? 'section-break' : ''}
+          >
             <StepTemplate
               step={step}
               tripId={tripId}

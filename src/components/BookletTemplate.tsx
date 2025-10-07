@@ -68,43 +68,133 @@ export function BookletTemplate({
         dangerouslySetInnerHTML={{
           __html: `
           @media print {
-            /* Anti-coupures pour éléments critiques */
-            .segment-card,
-            .step-container,
-            .image-container,
+            /* Configuration de base pour A4 */
+            @page {
+              size: A4;
+              margin: 15mm 12mm;
+            }
+            
+            /* RÈGLES FLUIDES - Contrôle des orphelines et veuves */
+            p, div, span {
+              orphans: 3;
+              widows: 3;
+            }
+            
+            /* === GROUPES INSÉCABLES (unités atomiques seulement) === */
+            
+            /* Header d'étape : reste collé au premier paragraphe */
+            .step-header-group,
+            .step-header {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+            }
+            
+            /* Paragraphes individuels non coupables */
+            .step-description-paragraph {
+              page-break-inside: avoid;
+              break-inside: avoid;
+              orphans: 3;
+              widows: 3;
+              margin-bottom: 8px;
+            }
+            
+            /* Segments : unités atomiques insécables */
+            .segment-card {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 12px;
+            }
+            
+            /* Items d'image individuels (pas la grille entière) */
+            .image-item {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            
+            /* Notes */
+            .step-notes {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            /* Classe générique keep-together */
             .keep-together {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
             
-            /* Nouvelles pages obligatoires aux sections */
+            /* === GRILLES D'IMAGES === */
+            /* La grille elle-même PEUT se couper entre les lignes */
+            .day-images {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 8px;
+              margin: 12px 0;
+              /* PAS de page-break-inside: avoid ici */
+            }
+            
+            /* Chaque image reste intacte */
+            .image-item img {
+              max-width: 100%;
+              height: auto;
+              display: block;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            .image-caption {
+              font-size: 9px;
+              margin-top: 4px;
+              page-break-before: avoid;
+            }
+            
+            /* === IMAGES GÉNÉRALES === */
+            img {
+              max-height: 180mm !important;
+              width: auto !important;
+              height: auto !important;
+              object-fit: contain !important;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            /* Images de couverture : plus grandes */
+            .cover-image img {
+              max-height: 240mm !important;
+            }
+            
+            /* === SAUTS DE PAGE FORCÉS === */
+            /* Uniquement pour les sections majeures */
             .section-break {
               page-break-before: always !important;
-              break-before: always !important;
+              break-before: page !important;
             }
             
-            /* Éviter orphelins et veuves */
-            p, div {
-              orphans: 3;
-              widows: 3;
-            }
-            
-            /* Qualité images */
-            img {
-              object-fit: cover !important;
-              image-rendering: -webkit-optimize-contrast;
-              image-rendering: crisp-edges;
-              page-break-inside: avoid;
-            }
-            
-            /* Masquer les zones d'upload et contrôles */
+            /* === MASQUAGE === */
             .no-print { 
               display: none !important; 
             }
 
-            /* Afficher uniquement les éléments print-only */
             .print-only {
               display: block !important;
+            }
+            
+            /* === OPTIMISATION QUALITÉ === */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+            }
+            
+            /* Éviter les espaces blancs excessifs */
+            .itinerary-step {
+              margin-bottom: 16px;
+            }
+            
+            /* Premier jour reste sur page 1 si possible */
+            .itinerary-step:first-of-type {
+              page-break-before: avoid;
             }
           }
 
@@ -165,7 +255,7 @@ export function BookletTemplate({
         {/* Images de couverture - Affichage pour le PDF */}
         <div className="print-only">
           {coverImage1 && (
-            <div className="w-full">
+            <div className="w-full cover-image">
               <img
                 src={coverImage1.public_url}
                 alt="Couverture 1"
@@ -174,7 +264,7 @@ export function BookletTemplate({
             </div>
           )}
           {coverImage2 && (
-            <div className="w-full">
+            <div className="w-full cover-image">
               <img
                 src={coverImage2.public_url}
                 alt="Couverture 2"

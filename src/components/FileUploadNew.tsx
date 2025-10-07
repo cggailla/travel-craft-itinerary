@@ -24,6 +24,7 @@ interface FileUploadNewProps {
 export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tripId }: FileUploadNewProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pastedText, setPastedText] = useState('');
   const { toast } = useToast();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -83,6 +84,7 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tr
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'image/*': ['.png', '.jpg', '.jpeg', '.tiff']
     },
     multiple: true,
@@ -164,6 +166,76 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tr
     setUploadedFiles([]);
   };
 
+  const handleTextUpload = async () => {
+    if (!pastedText.trim()) {
+      toast({
+        title: "Texte vide",
+        description: "Veuillez coller du texte avant d'uploader",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create a .txt File from the pasted text
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const blob = new Blob([pastedText], { type: 'text/plain' });
+    const txtFile = new File([blob], `pasted-text-${timestamp}.txt`, { type: 'text/plain' });
+
+    const newFile: UploadedFile = {
+      file: txtFile,
+      status: 'uploading',
+      progress: 0
+    };
+
+    setUploadedFiles(prev => [...prev, newFile]);
+    const fileIndex = uploadedFiles.length;
+
+    try {
+      // Update progress
+      setUploadedFiles(prev => prev.map((f, idx) => 
+        idx === fileIndex ? { ...f, progress: 50 } : f
+      ));
+
+      const result = await uploadDocument(txtFile, tripId);
+      
+      if (result.success && result.document_id) {
+        setUploadedFiles(prev => prev.map((f, idx) => 
+          idx === fileIndex ? { 
+            ...f, 
+            status: 'uploaded', 
+            progress: 100,
+            documentId: result.document_id 
+          } : f
+        ));
+        
+        setPastedText(''); // Clear textarea
+        
+        toast({
+          title: "Texte uploadé",
+          description: "Le texte a été enregistré comme document",
+        });
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Text upload error:', error);
+      setUploadedFiles(prev => prev.map((f, idx) => 
+        idx === fileIndex ? { 
+          ...f, 
+          status: 'error', 
+          progress: 100,
+          error: error instanceof Error ? error.message : 'Upload failed'
+        } : f
+      ));
+      
+      toast({
+        title: "Erreur d'upload",
+        description: "Impossible d'uploader le texte",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getFileIcon = (file: File) => {
     if (file.type.startsWith('image/')) {
       return <Image className="h-4 w-4 text-accent" />;
@@ -187,32 +259,74 @@ export default function FileUploadNew({ onFilesProcessed, onProcessingUpdate, tr
 
   return (
     <div className="space-y-6">
-      <Card className="border-2 border-dashed border-border hover:border-primary transition-colors">
-        <CardContent className="p-8">
-          <div
-            {...getRootProps()}
-            className={`cursor-pointer text-center space-y-4 ${
-              isDragActive ? 'opacity-75' : ''
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-            <div>
-              <p className="text-lg font-medium text-foreground">
-                {isDragActive
-                  ? 'Déposez les fichiers ici...'
-                  : 'Glissez-déposez vos documents de voyage'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                PDF, PNG, JPG, TIFF - Maximum 20MB par fichier
-              </p>
+      {/* Two-column upload area */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: Drag & Drop */}
+        <Card className="border-2 border-dashed border-border hover:border-primary transition-colors">
+          <CardContent className="p-8">
+            <div
+              {...getRootProps()}
+              className={`cursor-pointer text-center space-y-4 ${
+                isDragActive ? 'opacity-75' : ''
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div>
+                <p className="text-lg font-medium text-foreground">
+                  {isDragActive
+                    ? 'Déposez les fichiers ici...'
+                    : 'Glissez-déposez vos documents'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  PDF, DOCX, PNG, JPG, TIFF
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Maximum 20MB par fichier
+                </p>
+              </div>
+              <Button variant="outline" type="button" className="mt-4">
+                Parcourir les fichiers
+              </Button>
             </div>
-            <Button variant="outline" type="button" className="mt-4">
-              Parcourir les fichiers
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Right: Text Paste */}
+        <Card className="border-2 border-dashed border-border hover:border-primary transition-colors">
+          <CardContent className="p-8">
+            <div className="text-center space-y-4">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div>
+                <p className="text-lg font-medium text-foreground">
+                  Collez votre texte brut
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Itinéraire, vouchers, confirmations
+                </p>
+              </div>
+              <textarea
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder="Collez votre texte ici (email, itinéraire, confirmation...)&#10;&#10;Le texte sera analysé automatiquement pour extraire les segments de voyage."
+                className="w-full h-32 p-3 text-sm border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground placeholder:text-muted-foreground"
+              />
+              <Button 
+                onClick={handleTextUpload}
+                disabled={!pastedText.trim() || isProcessing}
+                className="w-full bg-primary hover:bg-primary-hover"
+              >
+                Uploader le texte
+              </Button>
+              {pastedText.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  {pastedText.length} caractères
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {uploadedFiles.length > 0 && (
         <Card>

@@ -138,36 +138,48 @@ export function StepTemplate({
         }
       `}</style>
       
-      <div className="step-container mb-8 pb-6 border-b border-gray-200">
-        {/* Date et lieu */}
-        <div className="mb-4">
-          <div className="flex items-baseline justify-between mb-2">
-            <p className="text-sm text-gray-600 font-medium">
-              {formatDate(step.startDate)}
-              {!isSingleDay && ` → ${formatDate(endDate)}`}
-            </p>
-            <EditableText
-              value={editableStepTitle}
-              onChange={setEditableStepTitle}
-              className="text-lg font-bold text-gray-800 uppercase"
-              as="h2"
-            />
+      <div className="itinerary-step mb-8 pb-6 border-b border-gray-200">
+        {/* En-tête + premier contenu = groupe insécable */}
+        <div className="step-header-group keep-together mb-6">
+          {/* En-tête horodaté avec fond gris */}
+          <div className="step-header">
+            <div className="w-full bg-gray-100 p-4 rounded-lg border border-gray-200 flex items-center gap-4">
+              {/* Dates horodatées */}
+              <div className="flex items-center gap-2 text-gray-700 font-semibold whitespace-nowrap">
+                <span>{format(step.startDate, 'dd/MM')}</span>
+                {!isSingleDay && (
+                  <>
+                    <span>→</span>
+                    <span>{format(endDate, 'dd/MM')}</span>
+                  </>
+                )}
+                <span className="text-gray-400">:</span>
+              </div>
+              
+              {/* Titre de l'étape */}
+              <EditableText
+                value={editableStepTitle}
+                onChange={setEditableStepTitle}
+                className="text-xl font-bold text-gray-900 uppercase flex-1"
+                as="h2"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Overview */}
-        {editableOverview && !hiddenOverview && <div className="mb-4 relative group">
-            <EditableText
-              value={editableOverview}
-              onChange={setEditableOverview}
-              className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300"
-              multiline
-              as="p"
-            />
-            <button onClick={() => setHiddenOverview(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
-              ×
-            </button>
-          </div>}
+          {/* Overview - collé au header */}
+          {editableOverview && !hiddenOverview && <div className="mt-4 relative group first-paragraph">
+              <EditableText
+                value={editableOverview}
+                onChange={setEditableOverview}
+                className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300"
+                multiline
+                as="p"
+              />
+              <button onClick={() => setHiddenOverview(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
+                ×
+              </button>
+            </div>}
+        </div>
 
         {/* Segments */}
         <div className="space-y-4">
