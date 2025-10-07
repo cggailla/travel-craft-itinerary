@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SegmentCreationForm } from '@/components/SegmentCreationForm';
 import { 
   Calendar, 
   MapPin, 
@@ -47,6 +49,7 @@ export default function ManualStepGrouper({
   const [manualSteps, setManualSteps] = useState<ManualStep[]>([]);
   const [currentStepTitle, setCurrentStepTitle] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isCreatingSegment, setIsCreatingSegment] = useState(false);
   const { toast } = useToast();
 
   // Initialize with first step
@@ -232,14 +235,42 @@ export default function ManualStepGrouper({
     }
   };
 
+  const handleSegmentCreated = (newSegment: TravelSegment) => {
+    setIsCreatingSegment(false);
+    
+    // Ajouter le nouveau segment à l'étape courante
+    if (manualSteps.length > 0) {
+      const currentStep = manualSteps[manualSteps.length - 1];
+      addSegmentToCurrentStep(newSegment);
+    }
+    
+    toast({
+      title: "Segment créé",
+      description: `Le segment "${newSegment.title}" a été ajouté avec succès`
+    });
+    
+    // Rafraîchir la page pour afficher le nouveau segment
+    window.location.reload();
+  };
+
   return (
     <div className="grid grid-cols-2 gap-6 h-[80vh]">
       {/* Segments disponibles - Colonne gauche */}
       <Card className="overflow-hidden flex flex-col">
         <CardHeader className="pb-4 flex-shrink-0">
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>Segments disponibles</span>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Segments disponibles</span>
+            </div>
+            <Button 
+              onClick={() => setIsCreatingSegment(true)} 
+              size="sm"
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Créer un segment
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
@@ -423,6 +454,20 @@ export default function ManualStepGrouper({
           ))}
         </CardContent>
       </Card>
+
+      {/* Dialog pour créer un nouveau segment */}
+      <Dialog open={isCreatingSegment} onOpenChange={setIsCreatingSegment}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau segment</DialogTitle>
+          </DialogHeader>
+          <SegmentCreationForm 
+            tripId={tripId}
+            onSuccess={handleSegmentCreated}
+            onCancel={() => setIsCreatingSegment(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

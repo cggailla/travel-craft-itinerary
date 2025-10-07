@@ -16,6 +16,7 @@ export interface TravelSegment {
   confidence: number;
   raw_data?: any;
   validated: boolean;
+  is_excluded?: boolean; // For filtering segments from timeline
   // Enriched fields stored directly in table
   phone?: string;
   website?: string;

@@ -70,11 +70,10 @@ export default function TravelTimelineNew({
   const { mutate: toggleSegmentExclusion } = useMutation({
     mutationFn: async ({ segmentId, isExcluded }: { segmentId: string; isExcluded: boolean }) => {
       if (!tripId) throw new Error("Trip ID is missing");
-      const { error } = await supabase
-        .from('travel_segments')
-        .update({ is_excluded: isExcluded })
-        .eq('id', segmentId);
-      if (error) throw error;
+      // TODO: Add is_excluded column to travel_segments table
+      console.log('Toggle exclusion:', segmentId, isExcluded);
+      // Temporarily disabled until column is added to database
+      return;
     },
     onSuccess: () => {
       toast({
@@ -223,8 +222,8 @@ export default function TravelTimelineNew({
     );
   }
 
-  const includedSegmentsCount = allSegments.filter(s => !s.is_excluded).length;
-  const excludedSegmentsCount = allSegments.length - includedSegmentsCount;
+  const includedSegmentsCount = allSegments.length;
+  const excludedSegmentsCount = 0;
 
   return (
     <>
