@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { TravelSegment } from '@/types/travel';
-import { sessionManager } from '@/utils/sessionManager';
 
 export interface CreateSegmentData {
   segment_type: string;
@@ -34,10 +33,38 @@ export async function createManualSegment(
   segmentData: CreateSegmentData
 ): Promise<{ success: boolean; segment?: TravelSegment; error?: string }> {
   try {
-    // Get current user session ID for secure access
-    const userId = await sessionManager.getCurrentUserId();
+    console.log('🔧 createManualSegment called');
+    console.log('  - tripId:', tripId);
+    console.log('  - segmentData:', segmentData);
+    
+    // 1. Vérifier et récupérer la session Supabase active
+    console.log('🔐 Getting Supabase session...');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('❌ Session error:', sessionError);
+      return {
+        success: false,
+        error: 'Erreur de session: ' + sessionError.message,
+      };
+    }
+    
+    if (!session || !session.user) {
+      console.error('❌ No active session found');
+      return {
+        success: false,
+        error: 'Vous devez être connecté pour créer un segment. Veuillez vous reconnecter.',
+      };
+    }
+    
+    const userId = session.user.id;
+    console.log('✅ Session valid, user:', userId);
+    console.log('  - User email:', session.user.email);
+    console.log('  - Access token present:', !!session.access_token);
+
     
     // 1. Créer un document virtuel pour "Création manuelle"
+    console.log('📄 Creating virtual document...');
     const { data: virtualDoc, error: docError } = await supabase
       .from('documents')
       .insert({
@@ -52,17 +79,21 @@ export async function createManualSegment(
       .single();
 
     if (docError || !virtualDoc) {
-      console.error('Error creating virtual document:', docError);
+      console.error('❌ Error creating virtual document:', docError);
       return {
         success: false,
-        error: 'Erreur lors de la création du document virtuel',
+        error: 'Erreur lors de la création du document virtuel: ' + (docError?.message || 'Unknown error'),
       };
     }
+    
+    console.log('✅ Virtual document created:', virtualDoc.id);
 
     // 2. Préparer les données du segment
+    console.log('📦 Preparing segment data...');
     const segmentToInsert = {
       trip_id: tripId,
       document_id: virtualDoc.id,
+      user_id: userId, // ✅ Ajout du user_id pour la sécurité RLS
       segment_type: segmentData.segment_type,
       title: segmentData.title,
       description: segmentData.description,
@@ -94,8 +125,10 @@ export async function createManualSegment(
         created_at: new Date().toISOString(),
       },
     };
+    console.log('  - segmentToInsert:', segmentToInsert);
 
     // 3. Insérer le segment
+    console.log('💾 Inserting segment into database...');
     const { data: segment, error: segmentError } = await supabase
       .from('travel_segments')
       .insert(segmentToInsert)
@@ -103,21 +136,28 @@ export async function createManualSegment(
       .single();
 
     if (segmentError || !segment) {
-      console.error('Error creating segment:', segmentError);
+      console.error('❌ Error creating segment:', segmentError);
+      console.error('  - Error details:', {
+        code: segmentError?.code,
+        message: segmentError?.message,
+        details: segmentError?.details,
+        hint: segmentError?.hint,
+      });
       return {
         success: false,
-        error: 'Erreur lors de la création du segment',
+        error: 'Erreur lors de la création du segment: ' + (segmentError?.message || 'Unknown error'),
       };
     }
 
-    console.log('Manual segment created successfully:', segment.id);
+    console.log('✅ Manual segment created successfully:', segment.id);
+    console.log('  - Full segment data:', segment);
 
     return {
       success: true,
       segment: segment as TravelSegment,
     };
   } catch (error) {
-    console.error('Unexpected error in createManualSegment:', error);
+    console.error('💥 Unexpected error in createManualSegment:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Erreur inattendue',

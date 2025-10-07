@@ -118,18 +118,34 @@ export default function ManualStepGrouper({
   };
 
   const addSegmentToCurrentStep = (segment: TravelSegment) => {
-    if (manualSteps.length === 0) return;
+    console.log('➕ addSegmentToCurrentStep called');
+    console.log('  - Segment to add:', segment);
+    console.log('  - Current manualSteps count:', manualSteps.length);
+    
+    if (manualSteps.length === 0) {
+      console.warn('⚠️ Cannot add segment: no manual steps exist');
+      return;
+    }
 
-    setManualSteps(prev => prev.map((step, index) => {
-      if (index === prev.length - 1) { // Current (last) step
-        const updatedStep = {
-          ...step,
-          segments: [...step.segments, segment]
-        };
-        return updateStepDates(updatedStep, prev, index);
-      }
-      return step;
-    }));
+    setManualSteps(prev => {
+      console.log('  - Previous steps:', prev);
+      
+      const updated = prev.map((step, index) => {
+        if (index === prev.length - 1) { // Current (last) step
+          console.log('  - Adding to step:', step);
+          const updatedStep = {
+            ...step,
+            segments: [...step.segments, segment]
+          };
+          console.log('  - Updated step:', updatedStep);
+          return updateStepDates(updatedStep, prev, index);
+        }
+        return step;
+      });
+      
+      console.log('  - Final updated steps:', updated);
+      return updated;
+    });
   };
 
   const removeSegmentFromStep = (stepId: string, segmentId: string) => {
@@ -236,12 +252,19 @@ export default function ManualStepGrouper({
   };
 
   const handleSegmentCreated = (newSegment: TravelSegment) => {
+    console.log('🎯 handleSegmentCreated called with segment:', newSegment);
+    console.log('📊 Current manualSteps:', manualSteps);
+    console.log('📝 tripId:', tripId);
+    
     setIsCreatingSegment(false);
     
     // Ajouter le nouveau segment à l'étape courante
     if (manualSteps.length > 0) {
       const currentStep = manualSteps[manualSteps.length - 1];
+      console.log('✅ Current step found:', currentStep);
       addSegmentToCurrentStep(newSegment);
+    } else {
+      console.warn('⚠️ No manual steps available to add segment to');
     }
     
     toast({
@@ -249,6 +272,7 @@ export default function ManualStepGrouper({
       description: `Le segment "${newSegment.title}" a été ajouté avec succès`
     });
     
+    console.log('🔄 Reloading page...');
     // Rafraîchir la page pour afficher le nouveau segment
     window.location.reload();
   };

@@ -76,15 +76,22 @@ export function SegmentCreationForm({ tripId, onSuccess, onCancel }: SegmentCrea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('📋 Form submitted');
+    console.log('  - tripId:', tripId);
+    console.log('  - formData:', formData);
+    
     setErrors({});
     setIsLoading(true);
 
     try {
       // Validation
+      console.log('✅ Validating form data...');
       const validatedData = segmentSchema.parse(formData);
+      console.log('  - Validation passed:', validatedData);
       
       // Import dynamically to avoid circular dependencies
       const { createManualSegment } = await import('@/services/segmentCreationService');
+      console.log('  - Service imported successfully');
       
       // Créer l'objet avec les champs obligatoires
       const dataToSubmit: CreateSegmentData = {
@@ -114,15 +121,21 @@ export function SegmentCreationForm({ tripId, onSuccess, onCancel }: SegmentCrea
         route: validatedData.route,
       };
       
+      console.log('🚀 Calling createManualSegment with:', dataToSubmit);
       const result = await createManualSegment(tripId, dataToSubmit);
+      console.log('📦 Result from createManualSegment:', result);
       
       if (result.success && result.segment) {
+        console.log('✅ Segment created successfully:', result.segment);
         onSuccess(result.segment);
       } else {
+        console.error('❌ Segment creation failed:', result.error);
         setErrors({ submit: result.error || 'Erreur lors de la création' });
       }
     } catch (error) {
+      console.error('💥 Exception caught in handleSubmit:', error);
       if (error instanceof z.ZodError) {
+        console.log('  - Validation error details:', error.errors);
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
           if (err.path[0]) {
@@ -131,10 +144,12 @@ export function SegmentCreationForm({ tripId, onSuccess, onCancel }: SegmentCrea
         });
         setErrors(fieldErrors);
       } else {
+        console.error('  - Unexpected error:', error);
         setErrors({ submit: 'Une erreur inattendue est survenue' });
       }
     } finally {
       setIsLoading(false);
+      console.log('⏹️ Form submission complete');
     }
   };
 
