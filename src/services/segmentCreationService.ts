@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { requireAuth } from '@/utils/authHelpers';
 import type { TravelSegment } from '@/types/travel';
 
 export interface CreateSegmentData {
@@ -37,63 +38,17 @@ export async function createManualSegment(
     console.log('  - tripId:', tripId);
     console.log('  - segmentData:', segmentData);
     
-    // 1. Vérifier et récupérer la session Supabase active
-    console.log('🔐 Getting Supabase session...');
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('❌ Session error:', sessionError);
-      return {
-        success: false,
-        error: 'Erreur de session: ' + sessionError.message,
-      };
-    }
-    
-    if (!session || !session.user) {
-      console.error('❌ No active session found');
-      return {
-        success: false,
-        error: 'Vous devez être connecté pour créer un segment. Veuillez vous reconnecter.',
-      };
-    }
-    
-    const userId = session.user.id;
-    console.log('✅ Session valid, user:', userId);
-    console.log('  - User email:', session.user.email);
-    console.log('  - Access token present:', !!session.access_token);
+    // 1. Vérifier l'authentification et obtenir l'user_id
+    console.log('🔐 Checking authentication...');
+    const userId = await requireAuth();
+    console.log('✅ User authenticated:', userId);
 
-    
-    // 1. Créer un document virtuel pour "Création manuelle"
-    console.log('📄 Creating virtual document...');
-    const { data: virtualDoc, error: docError } = await supabase
-      .from('documents')
-      .insert({
-        trip_id: tripId,
-        user_id: userId,
-        file_name: 'Création manuelle',
-        file_type: 'manual',
-        file_size: 0,
-        storage_path: 'manual/virtual',
-      })
-      .select()
-      .single();
-
-    if (docError || !virtualDoc) {
-      console.error('❌ Error creating virtual document:', docError);
-      return {
-        success: false,
-        error: 'Erreur lors de la création du document virtuel: ' + (docError?.message || 'Unknown error'),
-      };
-    }
-    
-    console.log('✅ Virtual document created:', virtualDoc.id);
-
-    // 2. Préparer les données du segment
-    console.log('📦 Preparing segment data...');
+    // 2. Préparer les données du segment SANS document (segment manuel)
+    console.log('📦 Preparing manual segment data (no document)...');
     const segmentToInsert = {
       trip_id: tripId,
-      document_id: virtualDoc.id,
-      user_id: userId, // ✅ Ajout du user_id pour la sécurité RLS
+      document_id: null, // ✅ NULL pour les segments manuels (pas de document source)
+      user_id: userId, // ✅ Utilisateur authentifié (plus de NULL)
       segment_type: segmentData.segment_type,
       title: segmentData.title,
       description: segmentData.description,
@@ -127,8 +82,8 @@ export async function createManualSegment(
     };
     console.log('  - segmentToInsert:', segmentToInsert);
 
-    // 3. Insérer le segment
-    console.log('💾 Inserting segment into database...');
+    // 3. Insérer le segment directement (sans document)
+    console.log('💾 Inserting manual segment into database...');
     const { data: segment, error: segmentError } = await supabase
       .from('travel_segments')
       .insert(segmentToInsert)

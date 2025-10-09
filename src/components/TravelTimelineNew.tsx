@@ -3,15 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, MapPin, Clock, Plane, Hotel, Car, Activity, FileText, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, Clock, Plane, Hotel, Car, Activity, FileText, CheckCircle, ArrowLeft, X } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
+import { parseISO as parseISODate, formatISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getTravelSegments, validateSegments } from '@/services/documentService';
-import { TravelSegment } from '@/types/travel';
+import { deleteSegment, updateSegment } from '@/services/segmentValidationService';
+import { TravelSegment, SegmentType } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import ManualStepGrouper from './ManualStepGrouper';
 import { hasManualSteps } from '@/services/manualStepsService';
+import { DeleteSegmentDialog } from './DeleteSegmentDialog';
 
 interface TravelTimelineNewProps {
   documentIds?: string[];
@@ -37,6 +40,62 @@ export default function TravelTimelineNew({
   const [hasExistingSteps, setHasExistingSteps] = useState(false);
   const [manualSteps, setManualSteps] = useState<any[]>([]);
   const [validatingSteps, setValidatingSteps] = useState(false);
+  
+  // ✅ États pour la suppression
+  const [segmentToDelete, setSegmentToDelete] = useState<TravelSegment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSegment, setEditedSegment] = useState<Partial<TravelSegment> | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // helper to format ISO string to input value for datetime-local
+  const formatToInputDatetime = (iso?: string) => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      // yyyy-MM-ddTHH:mm
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Save edited segment to DB via updateSegment service
+  const saveEditedSegment = async () => {
+    if (!selectedSegment || !editedSegment) return;
+    try {
+      setIsSaving(true);
+      const updates: any = {};
+      // Copy editable fields
+      if ('title' in editedSegment) updates.title = editedSegment.title;
+      if ('segment_type' in editedSegment) updates.segment_type = editedSegment.segment_type;
+      if ('provider' in editedSegment) updates.provider = editedSegment.provider;
+      if ('address' in editedSegment) updates.address = editedSegment.address;
+      if ('reference_number' in editedSegment) updates.reference_number = editedSegment.reference_number;
+      if ('description' in editedSegment) updates.description = editedSegment.description;
+      if ('start_date' in editedSegment) updates.start_date = editedSegment.start_date || null;
+      if ('end_date' in editedSegment) updates.end_date = editedSegment.end_date || null;
+
+      // Call update service
+      const res = await updateSegment(selectedSegment.id, updates);
+      if (!res.success) throw new Error(res.error || 'Échec mise à jour');
+
+      // Refresh segments from parent
+      await loadTravelSegments(tripId);
+
+      toast({ title: 'Modifications enregistrées', description: 'Le segment a été mis à jour en base.' });
+      setIsEditing(false);
+      setEditedSegment(null);
+      setSelectedSegment(null);
+    } catch (err) {
+      console.error('Erreur saveEditedSegment', err);
+      toast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible de sauvegarder', variant: 'destructive' });
+    }
+      setIsSaving(false);
+  };
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,6 +146,43 @@ export default function TravelTimelineNew({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Fonction de suppression de segment avec sécurité
+  const handleDeleteSegment = async () => {
+    if (!segmentToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      console.log('🗑️ Suppression du segment:', segmentToDelete.id);
+
+      // ✅ Appel au service sécurisé (NIVEAU 2 + NIVEAU 3 RLS)
+      const result = await deleteSegment(segmentToDelete.id);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Échec de la suppression');
+      }
+
+      // ✅ Succès : Recharger les segments depuis la BDD
+      await loadTravelSegments(tripId);
+
+      toast({
+        title: "Segment supprimé",
+        description: `"${segmentToDelete.title}" a été supprimé définitivement`,
+      });
+
+      // Fermer le dialog
+      setSegmentToDelete(null);
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression:', error);
+      toast({
+        title: "Erreur de suppression",
+        description: error instanceof Error ? error.message : "Impossible de supprimer le segment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -323,6 +419,10 @@ export default function TravelTimelineNew({
                 loadManualSteps(tripId!);
                 onValidated?.();
               }}
+              onSegmentCreated={async () => {
+                // Recharger tous les segments depuis la BDD après création
+                await loadTravelSegments(tripId);
+              }}
             />
           ) : hasExistingSteps && manualSteps.length > 0 ? (
             <div className="space-y-6">
@@ -375,20 +475,14 @@ export default function TravelTimelineNew({
                                       >
                                         {segment.title}
                                       </h4>
-                                      <div className="flex items-center space-x-2">
-                                        {segment.start_date && (
-                                          <Badge variant="outline" className="text-xs">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            {formatTime(segment.start_date)}
-                                          </Badge>
-                                        )}
-                                        {segment.validated && (
-                                          <Badge variant="default" className="bg-secondary text-secondary-foreground">
-                                            <CheckCircle className="h-3 w-3 mr-1" />
-                                            Validé
-                                          </Badge>
-                                        )}
-                                      </div>
+                                        <div className="flex items-center space-x-2">
+                                          {segment.validated && (
+                                            <Badge variant="default" className="bg-secondary text-secondary-foreground">
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Validé
+                                            </Badge>
+                                          )}
+                                        </div>
                                     </div>
 
                                     {segment.provider && (
@@ -523,7 +617,28 @@ export default function TravelTimelineNew({
 
                   <div className="ml-12 space-y-3">
                     {day.segments.map((segment, segmentIndex) => (
-                      <Card key={segment.id} className="relative">
+                      <Card 
+                        key={segment.id} 
+                        className="relative group"
+                        onMouseEnter={() => setHoveredSegmentId(segment.id)}
+                        onMouseLeave={() => setHoveredSegmentId(null)}
+                      >
+                        {/* ✅ Bouton de suppression (visible au survol) */}
+                        {hoveredSegmentId === segment.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSegmentToDelete(segment);
+                            }}
+                            title="Supprimer ce segment"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-start space-x-3 flex-1">
@@ -605,12 +720,41 @@ export default function TravelTimelineNew({
       </Card>
 
       {/* Segment Detail Dialog */}
-      <Dialog open={!!selectedSegment} onOpenChange={() => setSelectedSegment(null)}>
+      <Dialog open={!!selectedSegment} onOpenChange={() => { setSelectedSegment(null); setIsEditing(false); setEditedSegment(null); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              {selectedSegment && getSegmentIcon(selectedSegment.segment_type)}
-              <span>{selectedSegment?.title}</span>
+            <DialogTitle className="flex items-center justify-between space-x-2">
+              <div className="flex items-center space-x-2">
+                {selectedSegment && getSegmentIcon(selectedSegment.segment_type)}
+                <span>{selectedSegment?.title}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {!isEditing ? (
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    // enter edit mode and copy selectedSegment
+                    setIsEditing(true);
+                    setEditedSegment(selectedSegment ? { ...selectedSegment } : null);
+                  }}>
+                    Modifier
+                  </Button>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      // cancel edits
+                      setIsEditing(false);
+                      setEditedSegment(selectedSegment ? { ...selectedSegment } : null);
+                    }}>
+                      Annuler
+                    </Button>
+                    <Button size="sm" onClick={async () => {
+                      // Save handler (defined below as saveEditedSegment)
+                      await saveEditedSegment();
+                    }} disabled={isSaving}>
+                      {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+                    </Button>
+                  </>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
           
@@ -621,15 +765,44 @@ export default function TravelTimelineNew({
                 <h4 className="font-semibold text-foreground border-b pb-2">Informations générales</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Type</span>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <div className={`p-1 rounded ${getSegmentColor(selectedSegment.segment_type)}`}>
-                        {getSegmentIcon(selectedSegment.segment_type)}
-                      </div>
-                      <span className="capitalize">{selectedSegment.segment_type}</span>
+                    <div>
+                      {isEditing ? (
+                        <>
+                          <div>
+                            <span className="text-sm text-muted-foreground">Titre</span>
+                            <input
+                              className="w-full mt-1 px-2 py-1 border rounded font-medium"
+                              value={editedSegment?.title || ''}
+                              onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), title: e.target.value }))}
+                            />
+                          </div>
+                          <div className="mt-2">
+                            <span className="text-sm text-muted-foreground">Type</span>
+                            <select
+                              className="w-full mt-1 px-2 py-1 border rounded"
+                              value={editedSegment?.segment_type || selectedSegment.segment_type}
+                              onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), segment_type: e.target.value as SegmentType }))}
+                            >
+                              <option value="flight">Vol</option>
+                              <option value="hotel">Hôtel</option>
+                              <option value="car">Voiture</option>
+                              <option value="activity">Activité</option>
+                              <option value="other">Autre</option>
+                            </select>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm text-muted-foreground">Type</span>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <div className={`p-1 rounded ${getSegmentColor(selectedSegment.segment_type)}`}>
+                              {getSegmentIcon(selectedSegment.segment_type)}
+                            </div>
+                            <span className="capitalize">{selectedSegment.segment_type}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </div>
                   
                   <div>
                     <span className="text-sm text-muted-foreground">Statut</span>
@@ -658,11 +831,22 @@ export default function TravelTimelineNew({
                       <div>
                         <span className="text-sm text-muted-foreground">Date/heure de début</span>
                         <div className="mt-1 space-y-1">
-                          <div className="font-medium">{formatDate(selectedSegment.start_date)}</div>
-                          <div className="text-sm text-muted-foreground flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {formatTime(selectedSegment.start_date)}
-                          </div>
+                          {isEditing ? (
+                            <input
+                              type="datetime-local"
+                              className="w-full px-2 py-1 border rounded"
+                              value={formatToInputDatetime(editedSegment?.start_date as string)}
+                              onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), start_date: new Date(e.target.value).toISOString() }))}
+                            />
+                          ) : (
+                            <>
+                              <div className="font-medium">{formatDate(selectedSegment.start_date)}</div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {formatTime(selectedSegment.start_date)}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -671,11 +855,22 @@ export default function TravelTimelineNew({
                       <div>
                         <span className="text-sm text-muted-foreground">Date/heure de fin</span>
                         <div className="mt-1 space-y-1">
-                          <div className="font-medium">{formatDate(selectedSegment.end_date)}</div>
-                          <div className="text-sm text-muted-foreground flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {formatTime(selectedSegment.end_date)}
-                          </div>
+                          {isEditing ? (
+                            <input
+                              type="datetime-local"
+                              className="w-full px-2 py-1 border rounded"
+                              value={formatToInputDatetime(editedSegment?.end_date as string)}
+                              onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), end_date: new Date(e.target.value).toISOString() }))}
+                            />
+                          ) : (
+                            <>
+                              <div className="font-medium">{formatDate(selectedSegment.end_date)}</div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {formatTime(selectedSegment.end_date)}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -689,21 +884,44 @@ export default function TravelTimelineNew({
                   <h4 className="font-semibold text-foreground border-b pb-2">Lieu et prestataire</h4>
                   
                   <div className="space-y-3">
-                    {selectedSegment.provider && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Prestataire</span>
-                        <div className="mt-1 font-medium">{selectedSegment.provider}</div>
-                      </div>
-                    )}
-                    
-                    {selectedSegment.address && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Adresse</span>
-                        <div className="mt-1 flex items-start space-x-2">
-                          <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                          <span>{selectedSegment.address}</span>
+                    {isEditing ? (
+                      <>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Prestataire</span>
+                          <input
+                            className="w-full mt-1 px-2 py-1 border rounded"
+                            value={editedSegment?.provider || ''}
+                            onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), provider: e.target.value }))}
+                          />
                         </div>
-                      </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Adresse</span>
+                          <input
+                            className="w-full mt-1 px-2 py-1 border rounded"
+                            value={editedSegment?.address || ''}
+                            onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), address: e.target.value }))}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {selectedSegment.provider && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Prestataire</span>
+                            <div className="mt-1 font-medium">{selectedSegment.provider}</div>
+                          </div>
+                        )}
+
+                        {selectedSegment.address && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Adresse</span>
+                            <div className="mt-1 flex items-start space-x-2">
+                              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                              <span>{selectedSegment.address}</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -715,23 +933,47 @@ export default function TravelTimelineNew({
                   <h4 className="font-semibold text-foreground border-b pb-2">Détails</h4>
                   
                   <div className="space-y-3">
-                    {selectedSegment.reference_number && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">Numéro de référence</span>
-                        <div className="mt-1 font-mono text-sm bg-muted px-2 py-1 rounded">
-                          {selectedSegment.reference_number}
+                    {isEditing ? (
+                      <>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Numéro de référence</span>
+                          <input
+                            className="w-full mt-1 px-2 py-1 border rounded font-mono"
+                            value={editedSegment?.reference_number || ''}
+                            onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), reference_number: e.target.value }))}
+                          />
                         </div>
-                      </div>
-                    )}
-                    
-                     {selectedSegment.description && (
-                       <div>
-                         <span className="text-sm text-muted-foreground">Description</span>
-                          <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
-                            {selectedSegment.description}
+                        <div>
+                          <span className="text-sm text-muted-foreground">Description</span>
+                          <textarea
+                            className="w-full mt-1 px-2 py-1 border rounded"
+                            rows={4}
+                            value={editedSegment?.description || ''}
+                            onChange={(e) => setEditedSegment(prev => ({ ...(prev||{}), description: e.target.value }))}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {selectedSegment.reference_number && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Numéro de référence</span>
+                            <div className="mt-1 font-mono text-sm bg-muted px-2 py-1 rounded">
+                              {selectedSegment.reference_number}
+                            </div>
                           </div>
-                       </div>
-                     )}
+                        )}
+                        
+                         {selectedSegment.description && (
+                           <div>
+                             <span className="text-sm text-muted-foreground">Description</span>
+                              <div className="mt-1 text-sm bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                                {selectedSegment.description}
+                              </div>
+                           </div>
+                         )}
+                      </>
+                    )}
 
                      {/* Afficher les commentaires depuis raw_data si disponibles */}
                      {selectedSegment.raw_data?.comment && (
@@ -816,6 +1058,15 @@ export default function TravelTimelineNew({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ✅ Dialog de confirmation de suppression */}
+      <DeleteSegmentDialog
+        open={!!segmentToDelete}
+        onOpenChange={(open) => !open && setSegmentToDelete(null)}
+        segmentTitle={segmentToDelete?.title || ''}
+        onConfirm={handleDeleteSegment}
+        isDeleting={isDeleting}
+      />
     </>
   );
 }

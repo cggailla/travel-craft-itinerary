@@ -1,9 +1,13 @@
 import { supabase } from '@/integrations/supabase/client'
-import { sessionManager } from '@/utils/sessionManager'
+import { requireAuth, getCurrentUserId } from '@/utils/authHelpers'
+import type { Database } from '@/integrations/supabase/types'
 
 // Supabase configuration
 const SUPABASE_URL = "https://jjlhsikgczigvtdzfroa.supabase.co"
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqbGhzaWtnY3ppZ3Z0ZHpmcm9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxODQ3ODIsImV4cCI6MjA3Mzc2MDc4Mn0.RFZ7mWCxgJpy-tJt5HudvjcHnX3Hoa2HEIcqvV8uHvo"
+
+export type Document = Database['public']['Tables']['documents']['Row'];
+export type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
 
 export interface DocumentUploadResult {
   success: boolean
@@ -30,23 +34,27 @@ export interface TravelSegmentResponse {
 }
 
 /**
- * Create a new trip
+ * 🔐 NIVEAU 2 : Create a new trip (avec vérification auth)
  */
 export async function createTrip(): Promise<{ success: boolean; trip_id?: string; error?: string }> {
   try {
-    // Get current user session ID for secure access
-    const userId = await sessionManager.getCurrentUserId();
+    console.log('🔐 [NIVEAU 2] Vérification authentification pour création trip...');
     
-    // Use Supabase client for better RLS handling
+    // ✅ NIVEAU 2 : Get current user session ID for secure access
+    const userId = await requireAuth();
+    console.log('✅ [NIVEAU 2] User authentifié:', userId);
+    
+    // ✅ NIVEAU 2 : Use Supabase client for better RLS handling
     const { data, error } = await supabase
       .from('trips')
       .insert({
         title: 'Nouveau carnet de voyage',
         status: 'draft',
-        user_id: userId
+        user_id: userId // ✅ NIVEAU 2 : Lié à l'utilisateur
       })
       .select()
       .single();
+    // ✅ NIVEAU 3 : RLS vérifie que auth.uid() = user_id
 
     if (error) {
       console.error('Supabase error:', error);
@@ -67,25 +75,29 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
 }
 
 /**
- * Upload a document to the backend for processing
+ * 🔐 NIVEAU 2 : Upload a document to the backend for processing (avec vérification auth)
  */
 export async function uploadDocument(file: File, tripId: string | null = null): Promise<DocumentUploadResult> {
   try {
-    // Get current user session ID for secure access
-    const userId = await sessionManager.getCurrentUserId();
+    console.log('🔐 [NIVEAU 2] Vérification authentification pour upload document...');
+    
+    // ✅ NIVEAU 2 : Get current user session ID for secure access
+    const userId = await requireAuth();
+    console.log('✅ [NIVEAU 2] User authentifié:', userId);
     
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('user_id', userId)
+    formData.append('user_id', userId) // ✅ NIVEAU 2 : Lié à l'utilisateur
     if (tripId) {
       formData.append('trip_id', tripId)
     }
 
-    // Use fetch directly for file uploads to avoid Supabase JS issues with FormData
+    // ✅ NIVEAU 2 : Use fetch directly for file uploads to avoid Supabase JS issues with FormData
     const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
       method: 'POST',
       body: formData
     })
+    // ✅ NIVEAU 3 : Edge function vérifie auth via JWT
 
     if (!response.ok) {
       const errorText = await response.text()
