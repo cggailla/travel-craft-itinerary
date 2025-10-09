@@ -1,5 +1,10 @@
-// LOCAL IMAGE MANAGEMENT - No Supabase Storage required
+// 🔐 LOCAL IMAGE MANAGEMENT - Images stored in localStorage with user_id protection
 // Images are stored as base64 in localStorage for persistence across sessions
+// ✅ NIVEAU 1 : Protected by ProtectedRoute (user must be authenticated)
+// ✅ NIVEAU 2 : user_id prefix in localStorage keys
+// ✅ NIVEAU 3 : N/A (localStorage is client-side only)
+
+import { getCurrentUserId } from '@/utils/authHelpers';
 
 export interface TripImage {
   public_url: string; // base64 data URL or blob URL
@@ -34,22 +39,27 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Get localStorage key for images
+ * 🔐 NIVEAU 2 : Get localStorage key for images (with user_id prefix)
  */
-function getStorageKey(tripId: string, stepId?: string, imageType?: string): string {
+async function getStorageKey(tripId: string, stepId?: string, imageType?: string): Promise<string> {
+  // ✅ NIVEAU 2 : Récupérer le user_id pour préfixer les clés
+  const userId = await getCurrentUserId();
+  const userPrefix = userId ? `user_${userId}_` : 'anon_';
+  
   if (imageType === 'cover') {
-    return `trip_images_${tripId}_covers`;
+    return `${userPrefix}trip_images_${tripId}_covers`;
   } else if (stepId) {
-    return `trip_images_${tripId}_step_${stepId}`;
+    return `${userPrefix}trip_images_${tripId}_step_${stepId}`;
   }
-  return `trip_images_${tripId}`;
+  return `${userPrefix}trip_images_${tripId}`;
 }
 
 /**
- * Upload an image (store locally as base64)
+ * 🔐 NIVEAU 2 : Upload an image (store locally as base64 with user_id protection)
  */
 export async function uploadTripImage(params: UploadImageParams): Promise<{ success: boolean; data?: TripImage; error?: string }> {
   try {
+    console.log('🔐 [NIVEAU 2] Upload image avec protection user...');
     const { file, tripId, stepId, imageType, position } = params;
     
     // Validate file
@@ -86,8 +96,8 @@ export async function uploadTripImage(params: UploadImageParams): Promise<{ succ
       file_name: sanitizedFileName
     };
 
-    // Store in localStorage
-    const storageKey = getStorageKey(tripId, stepId, imageType);
+    // ✅ NIVEAU 2 : Store in localStorage with user_id prefix
+    const storageKey = await getStorageKey(tripId, stepId, imageType);
     const existingData = localStorage.getItem(storageKey);
     let images: TripImage[] = existingData ? JSON.parse(existingData) : [];
 
@@ -102,7 +112,7 @@ export async function uploadTripImage(params: UploadImageParams): Promise<{ succ
 
     localStorage.setItem(storageKey, JSON.stringify(images));
     
-    console.log('✅ Image stored locally:', storagePath);
+    console.log('✅ [NIVEAU 2] Image stored locally:', storagePath);
 
     return { 
       success: true, 
@@ -110,7 +120,7 @@ export async function uploadTripImage(params: UploadImageParams): Promise<{ succ
     };
 
   } catch (error) {
-    console.error('💥 Unexpected error in uploadTripImage:', error);
+    console.error('💥 [NIVEAU 2] Unexpected error in uploadTripImage:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Erreur inconnue' 
@@ -119,11 +129,11 @@ export async function uploadTripImage(params: UploadImageParams): Promise<{ succ
 }
 
 /**
- * Get cover images for a trip (returns URLs for position 1 and 2)
+ * 🔐 NIVEAU 2 : Get cover images for a trip (with user_id protection)
  */
 export async function getCoverImages(tripId: string): Promise<{ cover1?: string; cover2?: string }> {
   try {
-    const storageKey = getStorageKey(tripId, undefined, 'cover');
+    const storageKey = await getStorageKey(tripId, undefined, 'cover');
     const data = localStorage.getItem(storageKey);
     
     if (!data) {
@@ -147,11 +157,11 @@ export async function getCoverImages(tripId: string): Promise<{ cover1?: string;
 }
 
 /**
- * Get all images for a specific step
+ * 🔐 NIVEAU 2 : Get all images for a specific step (with user_id protection)
  */
 export async function getStepImages(tripId: string, stepId: string): Promise<TripImage[]> {
   try {
-    const storageKey = getStorageKey(tripId, stepId);
+    const storageKey = await getStorageKey(tripId, stepId);
     const data = localStorage.getItem(storageKey);
     
     if (!data) {
@@ -166,7 +176,7 @@ export async function getStepImages(tripId: string, stepId: string): Promise<Tri
 }
 
 /**
- * Delete an image from local storage
+ * 🔐 NIVEAU 2 : Delete an image from local storage (with user_id protection)
  */
 export async function deleteTripImage(storagePath: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -176,7 +186,7 @@ export async function deleteTripImage(storagePath: string): Promise<{ success: b
     const isCover = storagePath.includes('cover-');
     const stepId = !isCover && parts.length > 2 ? parts[2] : undefined;
 
-    const storageKey = getStorageKey(tripId, stepId, isCover ? 'cover' : 'step');
+    const storageKey = await getStorageKey(tripId, stepId, isCover ? 'cover' : 'step');
     const data = localStorage.getItem(storageKey);
     
     if (!data) {

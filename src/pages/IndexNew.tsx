@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
+import { UserMenu } from '@/components/auth/UserMenu';
 
 import { 
   Upload, 
@@ -249,7 +250,12 @@ export default function IndexNew() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <header className="text-center mb-12">
-          <div className="flex items-center justify-center space-x-3 mb-4">
+          <div className="flex items-center justify-center space-x-3 mb-4 relative">
+            {/* User Menu - Position absolue en haut à droite */}
+            <div className="absolute right-0 top-0">
+              <UserMenu />
+            </div>
+            
             <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white">
               <FileText className="h-8 w-8" />
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,8 @@ import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { TravelSegment } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUserId } from '@/utils/authHelpers';
 
 
 interface ManualStep {
@@ -38,24 +40,32 @@ interface ManualStepGrouperProps {
   undatedSegments: TravelSegment[];
   tripId: string;
   onStepsCreated: () => void;
+  onSegmentCreated?: () => Promise<void>; // ✅ Nouveau callback pour notifier le parent
 }
 
 export default function ManualStepGrouper({
   timeline,
   undatedSegments,
   tripId,
-  onStepsCreated
+  onStepsCreated,
+  onSegmentCreated
 }: ManualStepGrouperProps) {
   const [manualSteps, setManualSteps] = useState<ManualStep[]>([]);
   const [currentStepTitle, setCurrentStepTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [isCreatingSegment, setIsCreatingSegment] = useState(false);
+  const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // ❌ SUPPRIMÉ : State local pour undatedSegments (on utilise directement la prop)
+  // ❌ SUPPRIMÉ : refreshUndatedSegments() (le parent gère le refresh)
 
   // Initialize with first step
   useEffect(() => {
     if (manualSteps.length === 0) {
-      createNewStep();
+      const newStep = createNewStep();
+      // Make the freshly created step active
+      setActiveStepId(newStep.id);
     }
   }, []);
 
@@ -67,6 +77,8 @@ export default function ManualStepGrouper({
     };
     setManualSteps(prev => [...prev, newStep]);
     setCurrentStepTitle(newStep.title);
+    setActiveStepId(newStep.id);
+    return newStep;
   };
 
   const updateStepDates = (step: ManualStep, allSteps: ManualStep[], stepIndex: number) => {
@@ -118,19 +130,66 @@ export default function ManualStepGrouper({
   };
 
   const addSegmentToCurrentStep = (segment: TravelSegment) => {
-    if (manualSteps.length === 0) return;
+    console.log('➕ addSegmentToCurrentStep called');
+    console.log('  - Segment to add:', segment);
+    console.log('  - Current manualSteps count:', manualSteps.length);
+    
+    if (manualSteps.length === 0) {
+      console.warn('⚠️ Cannot add segment: no manual steps exist');
+      return;
+    }
 
-    setManualSteps(prev => prev.map((step, index) => {
-      if (index === prev.length - 1) { // Current (last) step
-        const updatedStep = {
-          ...step,
-          segments: [...step.segments, segment]
-        };
-        return updateStepDates(updatedStep, prev, index);
-      }
-      return step;
-    }));
+    setManualSteps(prev => {
+      console.log('  - Previous steps:', prev);
+      
+      const updated = prev.map((step, index) => {
+        // Determine target step: activeStepId if set, otherwise fallback to last step
+        const isTarget = activeStepId ? step.id === activeStepId : index === prev.length - 1;
+        if (isTarget) { // target step to add into
+          // ✅ Vérifier si le segment n'est pas déjà présent
+          const isAlreadyAdded = step.segments.some(s => s.id === segment.id);
+          
+          if (isAlreadyAdded) {
+            console.log('  - ⚠️ Segment already in step, skipping');
+            return step;
+          }
+          
+          console.log('  - Adding to step:', step);
+          const updatedStep = {
+            ...step,
+            segments: [...step.segments, segment]
+          };
+          console.log('  - Updated step:', updatedStep);
+          return updateStepDates(updatedStep, prev, index);
+        }
+        return step;
+      });
+      
+      console.log('  - Final updated steps:', updated);
+      return updated;
+    });
   };
+
+  // ✅ Calculer les segments disponibles (non utilisés dans les étapes)
+  const availableSegments = useMemo(() => {
+    console.log('🔢 Calculating available segments...');
+    console.log('  - Total undated segments:', undatedSegments.length);
+    console.log('  - Total manual steps:', manualSteps.length);
+    
+    // Récupérer tous les IDs des segments déjà utilisés
+    const usedSegmentIds = new Set(
+      manualSteps.flatMap(step => step.segments.map(seg => seg.id))
+    );
+    
+    console.log('  - Used segment IDs:', Array.from(usedSegmentIds));
+    
+    // Filtrer pour ne garder que les segments non utilisés
+    const available = undatedSegments.filter(seg => !usedSegmentIds.has(seg.id));
+    
+    console.log('  - Available segments:', available.length);
+    
+    return available;
+  }, [undatedSegments, manualSteps]);
 
   const removeSegmentFromStep = (stepId: string, segmentId: string) => {
     setManualSteps(prev => prev.map((step, index) => {
@@ -235,22 +294,22 @@ export default function ManualStepGrouper({
     }
   };
 
-  const handleSegmentCreated = (newSegment: TravelSegment) => {
-    setIsCreatingSegment(false);
+  // ✅ Callback après création de segment : notifier le parent
+  const handleSegmentCreated = async (newSegment: TravelSegment) => {
+    console.log('🎯 Segment created:', newSegment.title);
     
-    // Ajouter le nouveau segment à l'étape courante
-    if (manualSteps.length > 0) {
-      const currentStep = manualSteps[manualSteps.length - 1];
-      addSegmentToCurrentStep(newSegment);
+    setIsCreatingSegment(false);
+
+    // ✅ Notifier le parent pour qu'il recharge les segments depuis la BDD
+    if (onSegmentCreated) {
+      await onSegmentCreated();
     }
     
+    // ✅ Toast de succès
     toast({
-      title: "Segment créé",
-      description: `Le segment "${newSegment.title}" a été ajouté avec succès`
+      title: "Segment créé !",
+      description: `"${newSegment.title}" a été ajouté avec succès`,
     });
-    
-    // Rafraîchir la page pour afficher le nouveau segment
-    window.location.reload();
   };
 
   return (
@@ -274,23 +333,19 @@ export default function ManualStepGrouper({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
-          {/* Section Informations générales */}
-          {undatedSegments.length > 0 && (
+          {/* ✅ Section Segments Disponibles (utilise availableSegments au lieu de undatedSegments) */}
+          {availableSegments.length > 0 ? (
             <div>
               <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center">
                 <FileText className="h-4 w-4 mr-1" />
-                Informations générales ({undatedSegments.length})
+                Segments disponibles ({availableSegments.length})
               </h4>
               <div className="space-y-2">
-                {undatedSegments.map(segment => (
+                {availableSegments.map(segment => (
                   <div
                     key={segment.id}
-                    className={`p-2 border rounded-lg cursor-pointer transition-all hover:shadow-sm ${
-                      isSegmentUsed(segment.id) 
-                        ? 'opacity-50 bg-muted cursor-not-allowed' 
-                        : 'hover:border-primary bg-background'
-                    }`}
-                    onClick={() => !isSegmentUsed(segment.id) && addSegmentToCurrentStep(segment)}
+                    className="p-2 border rounded-lg cursor-pointer transition-all hover:shadow-sm hover:border-primary bg-background"
+                    onClick={() => addSegmentToCurrentStep(segment)}
                   >
                     <div className="flex items-start space-x-2">
                       <div className={`p-1 rounded border ${getSegmentColor(segment.segment_type)}`}>
@@ -306,10 +361,8 @@ export default function ManualStepGrouper({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Segments par date */}
+          </div>
+        ) : null}          {/* Segments par date */}
           {timeline.map((day, dayIndex) => (
             <div key={dayIndex}>
               <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center">
@@ -388,13 +441,17 @@ export default function ManualStepGrouper({
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4">
           {manualSteps.map((step, stepIndex) => (
-            <Card key={step.id} className={`${stepIndex === manualSteps.length - 1 ? 'border-primary' : 'border-border'}`}>
+            <Card 
+              key={step.id} 
+              className={`${stepIndex === manualSteps.length - 1 ? 'border-primary' : 'border-border'} ${activeStepId === step.id ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setActiveStepId(step.id)}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Badge variant={stepIndex === manualSteps.length - 1 ? "default" : "secondary"}>
-                      {step.title}
-                    </Badge>
+                      <Badge variant={stepIndex === manualSteps.length - 1 ? "default" : "secondary"}>
+                        {step.title}
+                      </Badge>
                     {step.startDate && step.endDate && (
                       <Badge variant="outline" className="text-xs">
                         {format(step.startDate, 'dd/MM', { locale: fr })}
@@ -404,16 +461,16 @@ export default function ManualStepGrouper({
                       </Badge>
                     )}
                   </div>
-                  {manualSteps.length > 1 && (
-                    <Button
-                      onClick={() => deleteStep(step.id)}
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
+                    {manualSteps.length > 1 && (
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -425,7 +482,7 @@ export default function ManualStepGrouper({
                 ) : (
                   <div className="space-y-2">
                     {step.segments.map(segment => (
-                      <div key={segment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded border">
+                        <div key={segment.id} className="flex items-center justify-between p-2 bg-muted/50 rounded border">
                         <div className="flex items-center space-x-2 flex-1">
                           <div className={`p-1 rounded border ${getSegmentColor(segment.segment_type)}`}>
                             {getSegmentIcon(segment.segment_type)}
@@ -437,14 +494,14 @@ export default function ManualStepGrouper({
                             )}
                           </div>
                         </div>
-                        <Button
-                          onClick={() => removeSegmentFromStep(step.id, segment.id)}
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); removeSegmentFromStep(step.id, segment.id); }}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                       </div>
                     ))}
                   </div>
