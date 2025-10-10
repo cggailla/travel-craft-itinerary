@@ -7,69 +7,115 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// --- 🔒 Authentification sécurisée + Vérifications ownership ---
+async function authenticateRequest(req: Request, supabaseUrl: string) {
+  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseAnonKey) {
+    throw new Error("Server misconfiguration: missing SUPABASE_ANON_KEY");
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: userData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !userData?.user) {
+    throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  return { user: userData.user, supabase };
+}
+
+async function verifyTripOwnership(supabase: any, userId: string, tripId: string) {
+  const { data: trip, error: tripError } = await supabase
+    .from("trips")
+    .select("user_id")
+    .eq("id", tripId)
+    .single();
+
+  if (tripError || !trip || trip.user_id !== userId) {
+    throw new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+
+async function verifyStepOwnership(supabase: any, userId: string, stepId: string) {
+  const { data: step, error: stepError } = await supabase
+    .from("travel_steps")
+    .select("trip_id")
+    .eq("id", stepId)
+    .single();
+
+  if (stepError || !step) {
+    throw new Response(JSON.stringify({ success: false, error: "Step not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const { data: trip, error: tripError } = await supabase
+    .from("trips")
+    .select("user_id")
+    .eq("id", step.trip_id)
+    .single();
+
+  if (tripError || !trip || trip.user_id !== userId) {
+    throw new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+// --- 🔒 Fin bloc sécurité ---
+
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Generate step content function called');
-    
+    console.log("Generate step content function called");
+
     const { tripId, stepId } = await req.json();
     console.log(`Request for trip ${tripId}, step ${stepId}`);
-    
+
     if (!tripId) throw new Error("Trip ID is required");
     if (!stepId) throw new Error("Step ID is required");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const { user, supabase } = await authenticateRequest(req, supabaseUrl);
 
-        const { trip_id, step_id } = body;
+    // Vérifie la propriété du trip et du step
+    await verifyTripOwnership(supabase, user.id, tripId);
+    await verifyStepOwnership(supabase, user.id, stepId);
 
-        // Auth: require Bearer token and use anon client so RLS applies
-        const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-        }
-        const token = authHeader.replace(/^Bearer\s+/i, '');
-
-        const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
-        const { data: userData, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !userData?.user) {
-          return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-        }
-        const user = userData.user;
-
-        // Verify step/trip ownership
-        if (trip_id) {
-          const { data: trip, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', trip_id).single();
-          if (tripErr || !trip || trip.user_id !== user.id) {
-            return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
-          }
-        }
-        if (step_id) {
-          const { data: step, error: stepErr } = await supabase.from('travel_steps').select('trip_id').eq('id', step_id).single();
-          if (stepErr || !step) {
-            return new Response(JSON.stringify({ success: false, error: 'Step not found' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 })
-          }
-          const { data: trip, error: tripErr2 } = await supabase.from('trips').select('user_id').eq('id', step.trip_id).single();
-          if (tripErr2 || !trip || trip.user_id !== user.id) {
-            return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
-          }
-        }
+    // === Business logic continues ===
+    const { data: step, error: stepError } = await supabase
       .from("travel_steps")
       .select("*")
       .eq("trip_id", tripId)
-      .eq("step_id", stepId)
+      .eq("id", stepId)
       .single();
 
     if (stepError || !step) {
       console.error("Error fetching step:", stepError);
       throw new Error(`Failed to fetch step: ${stepError?.message || "Step not found"}`);
     }
+
+    console.log("Step fetched successfully:", step);
+
 
     // 2) Fetch segments
     const { data: stepSegments, error: segmentsError } = await supabase
