@@ -9,9 +9,11 @@ const corsHeaders = {
 
 const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// NOTE: do NOT use SUPABASE_SERVICE_ROLE_KEY in edge functions that serve user requests.
+// The service role key bypasses RLS and must only be used in secure server-side contexts.
+// Use the ANON key and verify the user's JWT instead so RLS can enforce row-level security.
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -35,10 +37,18 @@ serve(async (req) => {
     const token = authHeader.replace(/^Bearer\s+/i, '');
 
     // Use ANON key so RLS is enforced
-    const supabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    if (!SUPABASE_ANON_KEY) {
+      return new Response(JSON.stringify({ success: false, error: 'Server misconfiguration: missing SUPABASE_ANON_KEY' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Verify token and get user
-    const { data: userData, error: authError } = await supabase.auth.getUser(token as string);
+  const { data: userData, error: authError } = await supabase.auth.getUser(token as string);
     if (authError || !userData?.user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,

@@ -42,8 +42,6 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
 
     if (!perplexityApiKey) {
@@ -54,7 +52,6 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get trip and destination zone
     console.log(`Fetching trip ${tripId}`);

@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
     console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`)
     console.log(`Received trip_id: ${tripId}, user_id: ${userId}`)
 
+
+
     // If no trip_id provided, get the most recent trip for this user
     if (!tripId) {
       console.log('No trip_id provided, getting most recent trip for user...')
@@ -61,6 +63,20 @@ Deno.serve(async (req) => {
 
       tripId = recentTrip.id
       console.log(`Using most recent trip_id: ${tripId}`)
+    }
+
+        // --- Verify trip ownership ---
+    const { data: tripOwner, error: tripErr } = await supabase
+      .from('trips')
+      .select('user_id')
+      .eq('id', tripId)
+      .single();
+
+    if (tripErr || !tripOwner || tripOwner.user_id !== userId) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403
+      });
     }
 
     // Sanitize filename for storage (remove spaces, special chars)
