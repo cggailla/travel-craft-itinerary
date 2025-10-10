@@ -32,10 +32,22 @@ Deno.serve(async (req) => {
     const document_id = bodyJson?.document_id;
     if (!document_id) throw new Error('Missing document_id');
 
+    // Auth: require Bearer token and use anon key so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const user = userData.user;
 
     console.log('Processing document:', document_id);
 

@@ -24,7 +24,43 @@ serve(async (req) => {
       throw new Error('tripId is required');
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // --- Auth + ownership verification ---
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
+    // Use ANON key so RLS is enforced
+    const supabase = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+
+    // Verify token and get user
+    const { data: userData, error: authError } = await supabase.auth.getUser(token as string);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    const user = userData.user;
+
+    // Verify trip ownership
+    const { data: trip, error: tripError } = await supabase
+      .from('trips')
+      .select('user_id')
+      .eq('id', tripId)
+      .single();
+
+    if (tripError || !trip || trip.user_id !== user.id) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    // --- end auth/ownership verification ---
 
     // Récupérer les travel_steps validés + leurs travel_segments
     const { data: steps, error: stepsError } = await supabase

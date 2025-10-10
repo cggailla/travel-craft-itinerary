@@ -15,6 +15,26 @@ serve(async (req) => {
   try {
     const { tripId } = await req.json();
 
+    // Auth: require Bearer token and use anon client so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const user = userData.user;
+
+    // Verify trip ownership
+    const { data: trip, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', tripId).single();
+    if (tripErr || !trip || trip.user_id !== user.id) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+    }
+
     if (!tripId) {
       return new Response(
         JSON.stringify({ success: false, error: "tripId is required" }),

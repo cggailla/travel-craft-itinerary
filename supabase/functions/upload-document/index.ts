@@ -14,25 +14,23 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extract user ID from JWT token (server-side authentication)
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Unauthorized: No authorization header')
+    // Extract user ID from JWT token and use anon client so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
     }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Unauthorized: Invalid token')
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
     }
-    
-    const userId = user.id
+    const userId = userData.user.id
 
     const formData = await req.formData()
     const file = formData.get('file') as File
