@@ -17,6 +17,33 @@ serve(async (req) => {
     console.log('Generate step AI content function called');
     
     const { stepId, stepTitle, primaryLocation, sections, tripSummary } = await req.json();
+
+    // Auth: require Bearer token and use ANON client so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const user = userData.user;
+
+    // Verify step -> trip -> ownership
+    if (!stepId) {
+      return new Response(JSON.stringify({ success: false, error: 'stepId is required' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 })
+    }
+    const { data: stepRow, error: stepErr } = await supabase.from('travel_steps').select('trip_id').eq('id', stepId).single();
+    if (stepErr || !stepRow) {
+      return new Response(JSON.stringify({ success: false, error: 'Step not found' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 })
+    }
+    const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', stepRow.trip_id).single();
+    if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+    }
     
     console.log('📍 Input parameters:');
     console.log(`  - Step ID: ${stepId}`);

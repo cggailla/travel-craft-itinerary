@@ -20,10 +20,31 @@ Deno.serve(async (req) => {
       throw new Error('Segment IDs array is required')
     }
 
+    // Auth: require Bearer token and use anon key so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
+
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const user = userData.user;
+
+    // If trip_id provided, verify ownership
+    if (trip_id) {
+      const { data: trip, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', trip_id).single();
+      if (tripErr || !trip || trip.user_id !== user.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+      }
+    }
 
     console.log(`Validating ${segment_ids.length} segments`)
 
