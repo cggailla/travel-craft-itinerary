@@ -1,39 +1,24 @@
 /**
  * Service pour gérer les images avec Supabase Storage
- * Version test avec gestion de session
+ * Version sécurisée avec authentification utilisateur
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { requireAuth } from '@/utils/authHelpers';
 
 export interface SupabaseImage {
-  storage_path: string;      // Chemin dans le bucket (ex: "session_abc123/trip_xyz/cover_1.jpg")
+  storage_path: string;      // Chemin dans le bucket (ex: "userId/trip_xyz/cover_1.jpg")
   public_url: string;         // URL publique de l'image
   file_name: string;          // Nom du fichier original
   uploaded_at: string;        // Timestamp d'upload
 }
 
 /**
- * Génère un ID de session unique stocké dans sessionStorage
- * La session est unique par onglet/fenêtre du navigateur
- */
-export function getOrCreateSessionId(): string {
-  let sessionId = sessionStorage.getItem('upload_session_id');
-  
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    sessionStorage.setItem('upload_session_id', sessionId);
-    console.log('🆕 Nouvelle session créée:', sessionId);
-  }
-  
-  return sessionId;
-}
-
-/**
  * Construit le chemin de stockage dans le bucket
- * Format: {sessionId}/{tripId}/{imageType}_{position/stepId}.{extension}
+ * Format: {userId}/{tripId}/{imageType}_{position/stepId}.{extension}
  */
 function buildStoragePath(
-  sessionId: string,
+  userId: string,
   tripId: string,
   imageType: 'cover' | 'step' | 'test',
   fileName: string,
@@ -52,7 +37,7 @@ function buildStoragePath(
     baseName = `${imageType}_${Date.now()}.${extension}`;
   }
   
-  return `${sessionId}/${tripId}/${baseName}`;
+  return `${userId}/${tripId}/${baseName}`;
 }
 
 /**
@@ -68,6 +53,9 @@ export async function uploadImageToSupabase(params: {
   try {
     const { file, tripId, imageType, position, stepId } = params;
     
+    // Vérifier l'authentification
+    const userId = await requireAuth();
+    
     // Valider le fichier
     if (!file.type.startsWith('image/')) {
       return { success: false, error: 'Le fichier doit être une image' };
@@ -79,8 +67,7 @@ export async function uploadImageToSupabase(params: {
       return { success: false, error: 'L\'image ne doit pas dépasser 10 MB' };
     }
 
-    const sessionId = getOrCreateSessionId();
-    const storagePath = buildStoragePath(sessionId, tripId, imageType, file.name, position, stepId);
+    const storagePath = buildStoragePath(userId, tripId, imageType, file.name, position, stepId);
 
     console.log('📤 Upload vers Supabase:', storagePath);
 
@@ -156,22 +143,20 @@ export async function deleteImageFromSupabase(
 }
 
 /**
- * Nettoie toutes les images de la session en cours
- * À appeler quand on ferme le booklet ou démarre une nouvelle session
+ * Nettoie toutes les images d'un voyage pour l'utilisateur connecté
+ * À appeler quand on ferme le booklet ou supprime un voyage
  */
-export async function cleanupSessionImages(): Promise<{ success: boolean; deletedCount: number; error?: string }> {
+export async function cleanupTripImages(tripId: string): Promise<{ success: boolean; deletedCount: number; error?: string }> {
   try {
-    const sessionId = sessionStorage.getItem('upload_session_id');
-    if (!sessionId) {
-      return { success: true, deletedCount: 0 };
-    }
+    const userId = await requireAuth();
+    const prefix = `${userId}/${tripId}`;
 
-    console.log('🧹 Nettoyage de la session:', sessionId);
+    console.log('🧹 Nettoyage des images du voyage:', prefix);
 
-    // Lister tous les fichiers de la session
+    // Lister tous les fichiers du voyage
     const { data: files, error: listError } = await supabase.storage
       .from('trip-images')
-      .list(sessionId, {
+      .list(prefix, {
         limit: 1000,
         offset: 0,
       });
@@ -187,7 +172,7 @@ export async function cleanupSessionImages(): Promise<{ success: boolean; delete
     }
 
     // Supprimer tous les fichiers
-    const pathsToDelete = files.map(file => `${sessionId}/${file.name}`);
+    const pathsToDelete = files.map(file => `${prefix}/${file.name}`);
     
     const { error: deleteError } = await supabase.storage
       .from('trip-images')
@@ -199,9 +184,6 @@ export async function cleanupSessionImages(): Promise<{ success: boolean; delete
     }
 
     console.log(`✅ ${pathsToDelete.length} fichiers supprimés`);
-    
-    // Supprimer l'ID de session
-    sessionStorage.removeItem('upload_session_id');
 
     return { success: true, deletedCount: pathsToDelete.length };
 
@@ -216,12 +198,12 @@ export async function cleanupSessionImages(): Promise<{ success: boolean; delete
 }
 
 /**
- * Liste toutes les images de la session pour un voyage
+ * Liste toutes les images d'un voyage pour l'utilisateur connecté
  */
 export async function listSessionImages(tripId: string): Promise<{ success: boolean; data?: SupabaseImage[]; error?: string }> {
   try {
-    const sessionId = getOrCreateSessionId();
-    const prefix = `${sessionId}/${tripId}`;
+    const userId = await requireAuth();
+    const prefix = `${userId}/${tripId}`;
 
     const { data: files, error } = await supabase.storage
       .from('trip-images')

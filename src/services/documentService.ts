@@ -81,23 +81,30 @@ export async function uploadDocument(file: File, tripId: string | null = null): 
   try {
     console.log('🔐 [NIVEAU 2] Vérification authentification pour upload document...');
     
-    // ✅ NIVEAU 2 : Get current user session ID for secure access
-    const userId = await requireAuth();
-    console.log('✅ [NIVEAU 2] User authentifié:', userId);
+    // ✅ NIVEAU 2 : Get current user session for JWT token
+    await requireAuth(); // Verify authentication
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
     
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('user_id', userId) // ✅ NIVEAU 2 : Lié à l'utilisateur
+    // ✅ NIVEAU 3 : user_id is extracted from JWT token on server side (removed from FormData)
     if (tripId) {
       formData.append('trip_id', tripId)
     }
 
-    // ✅ NIVEAU 2 : Use fetch directly for file uploads to avoid Supabase JS issues with FormData
+    // ✅ NIVEAU 2 : Include JWT token in Authorization header
     const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`, // ✅ NIVEAU 3 : JWT verification
+      },
       body: formData
     })
-    // ✅ NIVEAU 3 : Edge function vérifie auth via JWT
+    // ✅ NIVEAU 3 : Edge function extracts user_id from JWT token
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -118,10 +125,16 @@ export async function uploadDocument(file: File, tripId: string | null = null): 
 // Extract text via OCR
 export const extractText = async (documentId: string): Promise<{ success: boolean; error?: string; ocrText?: string; confidence?: number }> => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ document_id: documentId })
     })
@@ -151,10 +164,16 @@ export const extractText = async (documentId: string): Promise<{ success: boolea
  */
 export async function processDocument(documentId: string): Promise<ProcessingResult> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/process-document`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ document_id: documentId })
     })
@@ -183,6 +202,11 @@ export async function getTravelSegments(
   status?: 'all' | 'validated' | 'unvalidated'
 ): Promise<TravelSegmentResponse> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const params = new URLSearchParams()
     if (tripId) params.append('trip_id', tripId)
     if (status) params.append('status', status)
@@ -191,6 +215,9 @@ export async function getTravelSegments(
     
     const response = await fetch(url, {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
     })
 
     if (!response.ok) {
@@ -217,10 +244,16 @@ export async function getTravelSegments(
  */
 export async function validateSegments(segmentIds: string[], tripId: string | null = null): Promise<{ success: boolean; error?: string }> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ segment_ids: segmentIds, trip_id: tripId })
     })

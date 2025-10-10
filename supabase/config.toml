@@ -1,34 +1,34 @@
 project_id = "jjlhsikgczigvtdzfroa"
 
 [functions.upload-document]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-document]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-text]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-travel-segments]
-verify_jwt = false
+verify_jwt = true
 
 [functions.validate-segments]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-trip-summary]
-verify_jwt = false
+verify_jwt = true
 
 [functions.consolidate-step-segments]
-verify_jwt = false
+verify_jwt = true
 
 [functions.enrich-timeline]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-step-ai-content]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-trip-general-info]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-static-booklet]
-verify_jwt = false
+verify_jwt = true

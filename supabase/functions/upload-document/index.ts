@@ -14,22 +14,32 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Extract user ID from JWT token (server-side authentication)
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Unauthorized: No authorization header')
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      throw new Error('Unauthorized: Invalid token')
+    }
+    
+    const userId = user.id
+
     const formData = await req.formData()
     const file = formData.get('file') as File
     let tripId = formData.get('trip_id') as string
-    const userId = formData.get('user_id') as string
     
     if (!file) {
       throw new Error('No file provided')
-    }
-    
-    if (!userId) {
-      throw new Error('No user_id provided')
     }
 
     console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`)
@@ -64,10 +74,10 @@ Deno.serve(async (req) => {
         .replace(/_+/g, '_')            // Replace multiple underscores with single
     }
 
-    // Generate unique storage path
+    // Generate unique storage path with user isolation
     const timestamp = new Date().getTime()
     const sanitizedFilename = sanitizeFilename(file.name)
-    const storagePath = `${timestamp}-${sanitizedFilename}`
+    const storagePath = `${userId}/${timestamp}-${sanitizedFilename}`
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage

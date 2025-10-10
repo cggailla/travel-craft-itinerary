@@ -131,6 +131,7 @@ export function StaticItinerary({
           <div key={step.stepId}>
             <StepTemplate
               step={step}
+              tripId={tripId}
               aiContent={step.aiContent}
               isLoading={false}
               nextStepStartDate={nextStep?.startDate}

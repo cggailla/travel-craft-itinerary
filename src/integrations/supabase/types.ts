@@ -173,7 +173,7 @@ export type Database = {
           created_at: string
           departure_times: string[] | null
           description: string | null
-          document_id: string
+          document_id: string | null
           duration: string | null
           end_date: string | null
           enriched: Json | null
@@ -214,7 +214,7 @@ export type Database = {
           created_at?: string
           departure_times?: string[] | null
           description?: string | null
-          document_id: string
+          document_id?: string | null
           duration?: string | null
           end_date?: string | null
           enriched?: Json | null
@@ -255,7 +255,7 @@ export type Database = {
           created_at?: string
           departure_times?: string[] | null
           description?: string | null
-          document_id?: string
+          document_id?: string | null
           duration?: string | null
           end_date?: string | null
           enriched?: Json | null
@@ -354,6 +354,7 @@ export type Database = {
       }
       travel_steps: {
         Row: {
+          ai_content: Json | null
           created_at: string
           end_date: string | null
           id: string
@@ -366,6 +367,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_content?: Json | null
           created_at?: string
           end_date?: string | null
           id?: string
@@ -378,6 +380,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_content?: Json | null
           created_at?: string
           end_date?: string | null
           id?: string
