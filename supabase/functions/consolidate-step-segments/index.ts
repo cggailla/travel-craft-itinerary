@@ -1,57 +1,106 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  console.log("⚙️ Segment consolidation function called");
+
+  // --- 1️⃣ Handle CORS preflight ---
+  if (req.method === "OPTIONS") {
+    console.log("🟡 OPTIONS preflight → returning CORS headers");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // --- 2️⃣ Parse request body ---
     const { tripId } = await req.json();
+    console.log("🔧 Consolidating segments for trip:", tripId);
 
     if (!tripId) {
-      throw new Error('Trip ID is required');
+      console.warn("❌ Missing tripId in request");
+      return new Response(
+        JSON.stringify({ success: false, error: "Trip ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Auth: require Bearer token and use ANON client so RLS applies
-    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    // --- 3️⃣ Auth + secure Supabase client setup ---
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error("❌ Missing Supabase environment variables");
+      return new Response(
+        JSON.stringify({ success: false, error: "Server misconfiguration: missing Supabase keys" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- 4️⃣ Verify Authorization header ---
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("❌ Missing or malformed Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+
+    // --- 5️⃣ Validate token with base client ---
+    const baseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: userData, error: authError } = await baseClient.auth.getUser(token);
+
     if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+      console.error("❌ Invalid or expired token:", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
     const user = userData.user;
+    console.log("✅ Authenticated user:", user.id);
 
-    console.log(`Starting segment consolidation for trip: ${tripId}`);
+    // --- 6️⃣ Create RLS-aware client ---
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-    // Verify trip ownership
-    const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', tripId).single();
-    if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
-      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+    // --- 7️⃣ Verify trip ownership ---
+    console.log("🔍 Verifying trip ownership...");
+    const { data: tripOwner, error: tripErr } = await supabase
+      .from("trips")
+      .select("user_id")
+      .eq("id", tripId)
+      .single();
+
+    if (tripErr || !tripOwner) {
+      console.error("❌ Trip not found or DB error:", tripErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Trip not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Get all travel steps for this trip
-    const { data: steps, error: stepsError } = await supabase
-      .from('travel_steps')
-      .select('id, step_title')
-      .eq('trip_id', tripId)
-      .order('step_id');
-
-    if (stepsError) {
-      throw new Error(`Failed to fetch steps: ${stepsError.message}`);
+    if (tripOwner.user_id !== user.id) {
+      console.warn("🚫 Trip ownership mismatch → Forbidden");
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    console.log("✅ Trip ownership verified for user:", user.id);
 
     let totalConsolidated = 0;
 

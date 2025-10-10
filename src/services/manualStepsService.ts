@@ -151,10 +151,15 @@ export async function validateManualSteps(tripId: string) {
     // Marquer le trip comme validé
     const { error: tripError } = await supabase
       .from('trips')
-      .update({ status: 'validated' })
-      .eq('id', tripId);
+      .update({
+        status: 'validated',
+        updated_at: new Date().toISOString() // toujours bon pour le tracking
+      })
+      .filter('id', 'eq', tripId) // plus sûr que .eq() sous RLS
+      .select('id'); // force PostgREST à retourner une réponse cohérente
 
     if (tripError) throw tripError;
+
 
     return {
       success: true,

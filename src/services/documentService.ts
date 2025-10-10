@@ -75,52 +75,78 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
 }
 
 /**
- * 🔐 NIVEAU 2 : Upload a document to the backend for processing (avec vérification auth)
+ * 🔐 Upload a document to the backend for processing (avec logs détaillés)
  */
 export async function uploadDocument(file: File, tripId: string | null = null): Promise<DocumentUploadResult> {
+  console.group('📤 Upload Document Debug');
+
   try {
-    console.log('🔐 [NIVEAU 2] Vérification authentification pour upload document...');
-    
-    // ✅ NIVEAU 2 : Get current user session for JWT token
-    await requireAuth(); // Verify authentication
-    
+    console.log('Step 1️⃣ Vérification authentification...');
+    await requireAuth();
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      throw new Error('No valid session token');
+      throw new Error('Aucun token de session valide trouvé');
     }
-    
-    const formData = new FormData()
-    formData.append('file', file)
-    // ✅ NIVEAU 3 : user_id is extracted from JWT token on server side (removed from FormData)
+
+    console.log('✅ Utilisateur connecté, token récupéré :', session.access_token.slice(0, 15) + '...');
+
+    // --- Préparation du FormData ---
+    console.log('Step 2️⃣ Préparation du FormData...');
+    const formData = new FormData();
+    formData.append('file', file);
     if (tripId) {
-      formData.append('trip_id', tripId)
+      formData.append('trip_id', tripId);
     }
 
-    // ✅ NIVEAU 2 : Include JWT token in Authorization header
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
+    console.log('📦 FormData contenu :');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  - ${key}: File(name="${value.name}", size=${value.size}, type=${value.type})`);
+      } else {
+        console.log(`  - ${key}: ${value}`);
+      }
+    }
+
+    const targetUrl = `${SUPABASE_URL}/functions/v1/upload-document`;
+    console.log('🎯 URL cible :', targetUrl);
+
+    // --- Envoi de la requête ---
+    console.log('Step 3️⃣ Envoi de la requête fetch...');
+    const response = await fetch(targetUrl, {
       method: 'POST',
+      mode: 'cors', // Important pour debug CORS
       headers: {
-        'Authorization': `Bearer ${session.access_token}`, // ✅ NIVEAU 3 : JWT verification
+        'Authorization': `Bearer ${session.access_token}`,
       },
-      body: formData
-    })
-    // ✅ NIVEAU 3 : Edge function extracts user_id from JWT token
+      body: formData,
+    });
 
+    console.log('📡 Requête envoyée, statut HTTP reçu :', response.status);
+
+    // --- Gestion de la réponse ---
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Upload failed: ${response.status} - ${errorText}`)
+      console.warn('⚠️ Réponse non OK, lecture du message d’erreur...');
+      const errorText = await response.text();
+      console.error('Réponse complète du serveur :', errorText);
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
     }
 
-    const data = await response.json()
-    return data as DocumentUploadResult
+    const data = await response.json();
+    console.log('✅ Réponse JSON parsée avec succès :', data);
+
+    console.groupEnd();
+    return data as DocumentUploadResult;
   } catch (error) {
-    console.error('Upload error:', error)
+    console.error('❌ Erreur pendant l’upload :', error);
+    console.groupEnd();
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed'
-    }
+      error: error instanceof Error ? error.message : 'Upload failed',
+    };
   }
 }
+
 
 // Extract text via OCR
 export const extractText = async (documentId: string): Promise<{ success: boolean; error?: string; ocrText?: string; confidence?: number }> => {
@@ -129,6 +155,8 @@ export const extractText = async (documentId: string): Promise<{ success: boolea
     if (!session?.access_token) {
       throw new Error('No valid session token');
     }
+
+
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-text`, {
       method: 'POST',
