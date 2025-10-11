@@ -6,68 +6,90 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-interface TravelDocumentData {
-  segment_type: 'flight' | 'hotel' | 'activity' | 'car' | 'train' | 'boat' | 'pass' | 'transfer' | 'other'
-  title: string
-  start_date: string | null
-  end_date?: string | null
-  provider?: string
-  reference_number?: string
-  address?: string
-  description?: string
-  confidence: number
-}
+const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
 Deno.serve(async (req) => {
-  // Handle CORS
+  console.log('⚙️ Process document function called');
+
   if (req.method === 'OPTIONS') {
+    console.log('🟡 OPTIONS preflight → returning CORS headers');
     return new Response(null, { headers: corsHeaders });
   }
 
-  let bodyJson: { document_id?: string } = {};
-
   try {
-    console.log('Process document function called');
-    bodyJson = await req.json().catch(() => ({}));
-    const document_id = bodyJson?.document_id;
-    if (!document_id) throw new Error('Missing document_id');
 
-    // Auth: require Bearer token and use anon key so RLS applies
-    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    const bodyJson = await req.json().catch(() => ({}));
+    const document_id = bodyJson?.document_id;
+    if (!document_id) {
+      throw new Error('Missing document_id');
+    }
+
+    // ------------------------------------------------------------
+    // 1️⃣ Authentification
+    // ------------------------------------------------------------
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization') || '';
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+      console.warn('❌ Missing or malformed Authorization header');
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
     }
     const token = authHeader.replace(/^Bearer\s+/i, '');
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
-    const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+    // Client sans RLS pour vérifier le token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const { data: userData, error: authError } = await supabase.auth.getUser(token);
     if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+      console.error('❌ Token invalid', authError);
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
     }
     const user = userData.user;
+    const userId = user.id;
+    console.log('✅ Authenticated user id:', userId);
 
-    console.log('Processing document:', document_id);
+    // ✅ Client avec RLS (portant le token du user)
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-    const { data: document, error: docError } = await supabase
+    // ------------------------------------------------------------
+    // 2️⃣ Lecture du document (avec RLS active)
+    // ------------------------------------------------------------
+    console.log('🔍 Fetching document:', document_id);
+    const { data: document, error: docError } = await supabaseUser
       .from('documents')
       .select('*')
       .eq('id', document_id)
       .single();
 
-    if (docError || !document) throw new Error(`Document not found: ${docError?.message}`);
+    if (docError || !document) {
+      console.error('❌ Document not found or access denied', docError);
+      throw new Error(`Document not found: ${docError?.message}`);
+    }
 
-    const { data: job, error: jobError } = await supabase
+    console.log('✅ Document loaded:', document.id, 'for user', userId);
+
+    // ------------------------------------------------------------
+    // 3️⃣ Lecture / mise à jour du job associé
+    // ------------------------------------------------------------
+    const { data: job, error: jobError } = await supabaseUser
       .from('document_processing_jobs')
       .select('*')
       .eq('document_id', document_id)
       .single();
 
-    if (jobError || !job) throw new Error(`Processing job not found: ${jobError?.message}`);
+    if (jobError || !job) {
+      console.error('❌ Job not found', jobError);
+      throw new Error(`Processing job not found: ${jobError?.message}`);
+    }
 
-    await supabase
+    await supabaseUser
       .from('document_processing_jobs')
       .update({
         status: 'processing',
@@ -75,47 +97,34 @@ Deno.serve(async (req) => {
       })
       .eq('id', job.id);
 
-    console.log('Job status updated to processing');
+    console.log('🟢 Job status updated to processing');
 
-    /******************************************************************
-     * 📥 Téléchargement du fichier depuis Supabase Storage
-     ******************************************************************/
-    const storageBucket: string = document.storage_bucket || document.bucket || 'travel-documents';
+    // ------------------------------------------------------------
+    // 4️⃣ Téléchargement du fichier depuis Storage
+    // ------------------------------------------------------------
+    const storageBucket = document.storage_bucket || 'travel-documents';
+    const storagePath = document.storage_path || document.path;
+    if (!storagePath) throw new Error('No storage path found on document');
 
-    let rawPath: string =
-      document.storage_path ||
-      document.path ||
-      document.file_path ||
-      document.relative_path ||
-      document.object_path ||
-      document.key ||
-      '';
-
-    if (!rawPath) throw new Error('No storage path found on document');
-
-    const storagePath = String(rawPath).replace(/^public\//, '').replace(/^\/+/, '');
-    const bucketClient = supabase.storage.from(storageBucket);
+    console.log('📦 Downloading file from storage:', storageBucket, storagePath);
+    const bucketClient = supabaseUser.storage.from(storageBucket);
 
     let fileBlob: Blob | null = null;
-    let downloadErr: any = null;
-
     try {
-      const downloadRes = await bucketClient.download(storagePath);
-      if (downloadRes.error) downloadErr = downloadRes.error;
-      else fileBlob = downloadRes.data!;
+      const { data: blobData, error: blobError } = await bucketClient.download(storagePath);
+      if (blobError) throw blobError;
+      fileBlob = blobData;
     } catch (e) {
-      downloadErr = e;
-    }
-
-    if (!fileBlob) {
-      console.warn('Direct download failed, trying signed URL fallback', downloadErr);
+      console.error('❌ Direct download failed, trying signed URL fallback', e);
       const { data: signed, error: signErr } = await bucketClient.createSignedUrl(storagePath, 60);
       if (signErr || !signed?.signedUrl) throw new Error(`Signed URL creation failed: ${signErr?.message}`);
       const httpRes = await fetch(signed.signedUrl);
       if (!httpRes.ok) throw new Error(`Signed URL fetch failed (${httpRes.status})`);
       fileBlob = await httpRes.blob();
-      console.log('Signed URL fetch succeeded');
+      console.log('✅ Signed URL fetch succeeded');
     }
+
+    console.log('✅ File downloaded successfully, size:', fileBlob?.size);
 
     /******************************************************************
      * 🧠 Détection du type de fichier
@@ -452,7 +461,7 @@ confidence:
       validated: false,
     }));
 
-    const { data: createdSegments, error: segmentError } = await supabase
+    const { data: createdSegments, error: segmentError } = await supabaseUser
       .from('travel_segments')
       .insert(segmentInserts)
       .select();
@@ -461,7 +470,7 @@ confidence:
       throw new Error(`Failed to create travel segments: ${segmentError?.message}`);
 
     if (document.trip_id) {
-      await supabase
+      await supabaseUser
         .from('trips')
         .update({ status: 'processing', updated_at: new Date().toISOString() })
         .eq('id', document.trip_id);

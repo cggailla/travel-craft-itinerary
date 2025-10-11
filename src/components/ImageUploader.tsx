@@ -140,6 +140,12 @@ export function ImageUploader({
             src={currentImage.public_url}
             alt="Image uploadée"
             className="w-full h-auto object-contain"
+            onError={(e) => {
+              console.error('❌ Échec du chargement de l\'image:', currentImage.public_url, e);
+              // fallback to placeholder
+              const target = e.currentTarget as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
           />
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex items-center justify-center">
             <X className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />

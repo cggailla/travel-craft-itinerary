@@ -93,9 +93,44 @@ export async function uploadImageToSupabase(params: {
       return { success: false, error: 'Impossible d\'obtenir l\'URL publique' };
     }
 
+    // Vérifier rapidement si l'URL publique est accessible (HEAD request)
+    let publicUrl = urlData.publicUrl as string;
+    try {
+      const headRes = await fetch(publicUrl, { method: 'HEAD' });
+      if (!headRes.ok) {
+        console.warn('⚠️ Public URL returned non-OK status, trying signed URL fallback', headRes.status);
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('trip-images')
+          .createSignedUrl(storagePath, 60); // 60s
+
+        if (signedError || !signedData?.signedUrl) {
+          console.error('❌ Failed to create signed URL fallback:', signedError);
+        } else {
+          publicUrl = signedData.signedUrl;
+          console.log('🔑 Using signed URL fallback for image', publicUrl);
+        }
+      }
+    } catch (err) {
+      // Network/CORS errors may happen; try signed URL as fallback
+      console.warn('⚠️ Error while checking public URL, attempting signed URL fallback', err);
+      try {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('trip-images')
+          .createSignedUrl(storagePath, 60);
+        if (!signedError && signedData?.signedUrl) {
+          publicUrl = signedData.signedUrl;
+          console.log('🔑 Using signed URL fallback for image', publicUrl);
+        } else {
+          console.error('❌ Failed to create signed URL in fallback path', signedError);
+        }
+      } catch (e) {
+        console.error('❌ Unexpected error creating signed URL fallback', e);
+      }
+    }
+
     const image: SupabaseImage = {
       storage_path: storagePath,
-      public_url: urlData.publicUrl,
+      public_url: publicUrl,
       file_name: file.name,
       uploaded_at: new Date().toISOString(),
     };

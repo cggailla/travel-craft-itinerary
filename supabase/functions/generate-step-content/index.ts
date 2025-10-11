@@ -1,16 +1,21 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
-// --- 🔒 Authentification sécurisée + Vérifications ownership ---
-async function authenticateRequest(req: Request, supabaseUrl: string) {
-  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+// 🔒 --- Authentification et vérifications ownership ---
+async function authenticateRequest(req: Request) {
+  const authHeader =
+    req.headers.get("authorization") || req.headers.get("Authorization") || "";
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.warn("❌ Missing or malformed Authorization header");
     throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -18,36 +23,45 @@ async function authenticateRequest(req: Request, supabaseUrl: string) {
   }
 
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabaseAnonKey) {
-    throw new Error("Server misconfiguration: missing SUPABASE_ANON_KEY");
-  }
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const { data: userData, error: authError } = await supabase.auth.getUser(token);
+
   if (authError || !userData?.user) {
+    console.error("❌ Invalid token", authError);
     throw new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  return { user: userData.user, supabase };
+  console.log("✅ Authenticated user:", userData.user.id);
+
+  // Client RLS-aware (autorisation sur les tables)
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  return { user: userData.user, supabaseUser };
 }
 
 async function verifyTripOwnership(supabase: any, userId: string, tripId: string) {
-  const { data: trip, error: tripError } = await supabase
+  const { data: trip, error } = await supabase
     .from("trips")
     .select("user_id")
     .eq("id", tripId)
     .single();
 
-  if (tripError || !trip || trip.user_id !== userId) {
+  if (error || !trip || trip.user_id !== userId) {
+    console.warn("🚫 Forbidden access to trip", { tripId, userId, error });
     throw new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  console.log("✅ Trip ownership confirmed for user:", userId);
 }
 
 async function verifyStepOwnership(supabase: any, userId: string, stepId: string) {
@@ -58,6 +72,7 @@ async function verifyStepOwnership(supabase: any, userId: string, stepId: string
     .single();
 
   if (stepError || !step) {
+    console.error("❌ Step not found:", stepError);
     throw new Response(JSON.stringify({ success: false, error: "Step not found" }), {
       status: 404,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -71,38 +86,61 @@ async function verifyStepOwnership(supabase: any, userId: string, stepId: string
     .single();
 
   if (tripError || !trip || trip.user_id !== userId) {
+    console.warn("🚫 Forbidden access to step", { stepId, userId, tripError });
     throw new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
       status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  console.log("✅ Step ownership confirmed for user:", userId);
 }
-// --- 🔒 Fin bloc sécurité ---
+// --- Fin bloc sécurité ---
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  console.log("🧩 Generate step content function called");
+
+  // ------------------------------------------------------------
+  // 1️⃣ CORS preflight
+  // ------------------------------------------------------------
   if (req.method === "OPTIONS") {
+    console.log("🟡 OPTIONS preflight detected");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Generate step content function called");
+    // ------------------------------------------------------------
+    // 2️⃣ Lecture du body JSON
+    // ------------------------------------------------------------
+    const { tripId, stepId } = await req.json().catch(() => ({}));
+    console.log(`📦 Request for trip: ${tripId}, step: ${stepId}`);
 
-    const { tripId, stepId } = await req.json();
-    console.log(`Request for trip ${tripId}, step ${stepId}`);
+    if (!tripId || !stepId) {
+      console.warn("❌ Missing required IDs");
+      return new Response(
+        JSON.stringify({ success: false, error: "Trip ID and Step ID are required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-    if (!tripId) throw new Error("Trip ID is required");
-    if (!stepId) throw new Error("Step ID is required");
+    // ------------------------------------------------------------
+    // 3️⃣ Authentification + clients RLS
+    // ------------------------------------------------------------
+    const { user, supabaseUser } = await authenticateRequest(req);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const { user, supabase } = await authenticateRequest(req, supabaseUrl);
+    // ------------------------------------------------------------
+    // 4️⃣ Vérification ownership
+    // ------------------------------------------------------------
+    await verifyTripOwnership(supabaseUser, user.id, tripId);
+    await verifyStepOwnership(supabaseUser, user.id, stepId);
 
-    // Vérifie la propriété du trip et du step
-    await verifyTripOwnership(supabase, user.id, tripId);
-    await verifyStepOwnership(supabase, user.id, stepId);
-
-    // === Business logic continues ===
-    const { data: step, error: stepError } = await supabase
+    // ------------------------------------------------------------
+    // 5️⃣ Récupération du step
+    // ------------------------------------------------------------
+    console.log("🔍 Fetching step data from DB...");
+    const { data: step, error: stepError } = await supabaseUser
       .from("travel_steps")
       .select("*")
       .eq("trip_id", tripId)
@@ -110,11 +148,12 @@ serve(async (req) => {
       .single();
 
     if (stepError || !step) {
-      console.error("Error fetching step:", stepError);
-      throw new Error(`Failed to fetch step: ${stepError?.message || "Step not found"}`);
+      console.error("❌ Error fetching step:", stepError);
+      throw new Error(`Failed to fetch step: ${stepError?.message || "Not found"}`);
     }
 
-    console.log("Step fetched successfully:", step);
+    console.log("✅ Step fetched successfully:", step.id);
+
 
 
     // 2) Fetch segments

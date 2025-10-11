@@ -534,19 +534,23 @@ export default function ManualStepGrouper({
 // Service function to save manual steps
 async function saveManualSteps(tripId: string, steps: ManualStep[]) {
   const { supabase } = await import('@/integrations/supabase/client');
+  const rid = Date.now().toString();
+  console.info('[saveManualSteps:start]', { rid, tripId, stepCount: steps.length });
   
   // Delete existing steps for this trip
+  const existingStepsRes = await supabase.from('travel_steps').select('id').eq('trip_id', tripId);
+  console.info('[saveManualSteps:existingSteps]', { rid, tripId, existingStepsCount: existingStepsRes.data?.length || 0, error: existingStepsRes.error });
+
   await supabase
     .from('travel_step_segments')
     .delete()
-    .in('step_id', 
-      (await supabase.from('travel_steps').select('id').eq('trip_id', tripId)).data?.map(s => s.id) || []
-    );
-  
-  await supabase
+    .in('step_id', existingStepsRes.data?.map((s: any) => s.id) || []);
+
+  const delStepsRes = await supabase
     .from('travel_steps')
     .delete()
     .eq('trip_id', tripId);
+  console.info('[saveManualSteps:deletedStepsResult]', { rid, tripId, deletedCount: delStepsRes.data?.length || 0, error: delStepsRes.error });
 
   // Create new steps
   for (let i = 0; i < steps.length; i++) {
@@ -567,7 +571,12 @@ async function saveManualSteps(tripId: string, steps: ManualStep[]) {
       .select()
       .single();
 
-    if (stepError) throw stepError;
+    if (stepError) {
+      console.error('[saveManualSteps:insertStepError]', { rid, tripId, stepIndex: i, stepError });
+      throw stepError;
+    } else {
+      console.info('[saveManualSteps:insertStepOk]', { rid, tripId, stepIndex: i, stepId: stepData?.id });
+    }
 
     // Insert step segments
     for (let j = 0; j < step.segments.length; j++) {
@@ -581,7 +590,10 @@ async function saveManualSteps(tripId: string, steps: ManualStep[]) {
           role: segment.segment_type,
         });
 
-      if (segmentError) throw segmentError;
+      if (segmentError) {
+        console.error('[saveManualSteps:insertStepSegmentError]', { rid, tripId, stepIndex: i, segmentId: segment.id, segmentError });
+        throw segmentError;
+      }
     }
   }
 }

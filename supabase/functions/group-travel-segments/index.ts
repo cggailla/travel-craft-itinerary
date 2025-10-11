@@ -1,84 +1,130 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
+};
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openAIApiKey = Deno.env.get("OPENAI_API_KEY");
 
 Deno.serve(async (req) => {
-  console.log('Group travel segments function called')
-  
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  console.log("🧩 Group travel segments function called");
+
+  if (req.method === "OPTIONS") {
+    console.log("🟡 OPTIONS preflight detected");
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // ------------------------------------------------------------
+    // 1️⃣ Vérification clé OpenAI
+    // ------------------------------------------------------------
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured')
+      console.error("❌ OpenAI API key not configured");
+      throw new Error("OpenAI API key not configured");
     }
 
-    const { trip_id } = await req.json()
-    
+    // ------------------------------------------------------------
+    // 2️⃣ Lecture du corps JSON
+    // ------------------------------------------------------------
+    const { trip_id } = await req.json().catch(() => ({}));
     if (!trip_id) {
-      throw new Error('Trip ID is required')
-    }
-
-    // Auth: require Bearer token and use ANON client so RLS applies
-    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-
-    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '')
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-    }
-    const user = userData.user;
-
-    console.log(`Grouping segments for trip: ${trip_id}`)
-
-    // Verify trip ownership
-    const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', trip_id).single();
-    if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
-      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
-    }
-
-    // Fetch validated segments for the trip
-    const { data: segments, error: segmentsError } = await supabase
-      .from('travel_segments')
-      .select('*')
-      .eq('trip_id', trip_id)
-      .eq('validated', true)
-      .order('start_date', { ascending: true })
-      .order('sequence_order', { ascending: true })
-
-    if (segmentsError) {
-      console.error('Error fetching segments:', segmentsError)
-      throw new Error(`Failed to fetch segments: ${segmentsError.message}`)
-    }
-
-    if (!segments || segments.length === 0) {
-      console.log('No validated segments found for trip')
       return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'No validated segments found',
-          steps_created: 0
-        }),
+        JSON.stringify({ success: false, error: "Trip ID is required" }),
         {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      )
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        },
+      );
     }
 
-    console.log(`Found ${segments.length} validated segments`)
+    // ------------------------------------------------------------
+    // 3️⃣ Authentification
+    // ------------------------------------------------------------
+    const authHeader =
+      req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("❌ Missing or malformed Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
+    }
+
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+    // Client temporaire sans RLS pour décoder le user
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: authError } = await supabase.auth.getUser(
+      token,
+    );
+
+    if (authError || !userData?.user) {
+      console.error("❌ Invalid token", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
+    }
+
+    const userId = userData.user.id;
+    console.log("✅ Authenticated user id:", userId);
+
+    // ✅ Client RLS-aware avec JWT
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    // ------------------------------------------------------------
+    // 4️⃣ Vérification ownership du trip
+    // ------------------------------------------------------------
+    console.log("🔍 Checking trip ownership for trip_id:", trip_id);
+    const { data: trip, error: tripErr } = await supabaseUser
+      .from("trips")
+      .select("user_id")
+      .eq("id", trip_id)
+      .single();
+
+    if (tripErr || !trip || trip.user_id !== userId) {
+      console.warn("🚫 Forbidden access to trip", tripErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        },
+      );
+    }
+
+    console.log("✅ Trip ownership confirmed, fetching travel segments...");
+
+    // ------------------------------------------------------------
+    // 5️⃣ Récupération des segments
+    // ------------------------------------------------------------
+    const { data: segments, error: segErr } = await supabaseUser
+      .from("travel_segments")
+      .select("*")
+      .eq("trip_id", trip_id)
+      .order("start_date", { ascending: true });
+
+    if (segErr) {
+      console.error("❌ Error fetching segments:", segErr);
+      throw new Error(`Failed to fetch segments: ${segErr.message}`);
+    }
+
+    console.log(`✅ Found ${segments?.length || 0} segments to group`);
 
     // Prepare segments data for LLM
     const segmentsForLLM = segments.map((segment, index) => ({

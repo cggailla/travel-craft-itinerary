@@ -1,56 +1,117 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  console.log("⚙️ Segment consolidation function called");
+
+  // --- 1️⃣ CORS preflight ---
+  if (req.method === "OPTIONS") {
+    console.log("🟡 OPTIONS preflight → returning CORS headers");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { tripId } = await req.json();
+    // --- 2️⃣ Parse body JSON ---
+    const { tripId } = await req.json().catch(() => ({}));
 
     if (!tripId) {
-      throw new Error('Trip ID is required');
+      console.warn("❌ Missing tripId in request");
+      return new Response(
+        JSON.stringify({ success: false, error: "Trip ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Auth: require Bearer token and use ANON client so RLS applies
-    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    // --- 3️⃣ Vérifie Authorization header ---
+    const authHeader =
+      req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("❌ Missing or malformed Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-    const token = authHeader.replace(/^Bearer\s+/i, '');
 
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+    // --- 4️⃣ Client temporaire pour décoder le token (pas de RLS) ---
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(token);
+
     if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+      console.error("❌ Invalid or expired token:", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
     const user = userData.user;
+    console.log("✅ Authenticated user:", user.id);
 
-    console.log(`Starting segment consolidation for trip: ${tripId}`);
+    // --- 5️⃣ Création du client RLS-aware (sécurisé) ---
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
-    // Verify trip ownership
-    const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', tripId).single();
-    if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
-      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+    // --- 6️⃣ Vérifie que le trip existe et appartient au user ---
+    const { data: trip, error: tripError } = await supabaseUser
+      .from("trips")
+      .select("id, user_id")
+      .eq("id", tripId)
+      .single();
+
+    if (tripError) {
+      console.error("❌ Database error when fetching trip:", tripError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Get all travel steps for this trip
-    const { data: steps, error: stepsError } = await supabase
+    if (!trip) {
+      console.warn("❌ Trip not found");
+      return new Response(
+        JSON.stringify({ success: false, error: "Trip not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (trip.user_id !== user.id) {
+      console.warn("🚫 Forbidden: user does not own this trip");
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`✅ User ${user.id} owns trip ${tripId}`);
+
+    // --- 7️⃣ Suite du traitement: fetch steps and consolidate their segments ---
+    const { data: steps, error: stepsError } = await supabaseUser
       .from('travel_steps')
       .select('id, step_title')
       .eq('trip_id', tripId)
-      .order('step_id');
+      .order('id');
 
     if (stepsError) {
-      throw new Error(`Failed to fetch steps: ${stepsError.message}`);
+      console.error('❌ Error fetching steps for trip:', stepsError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Database error fetching steps' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     let totalConsolidated = 0;
@@ -60,7 +121,7 @@ serve(async (req) => {
       console.log(`Processing step: ${step.step_title} (${step.id})`);
 
       // Get all segments for this step with their positions
-      const { data: stepSegments, error: segmentsError } = await supabase
+      const { data: stepSegments, error: segmentsError } = await supabaseUser
         .from('travel_step_segments')
         .select(`
           id,
@@ -134,7 +195,7 @@ serve(async (req) => {
             currentSubgroup.push(current);
           } else {
             if (currentSubgroup.length > 1) {
-              const consolidated = await consolidateSegmentGroup(supabase, currentSubgroup);
+              const consolidated = await consolidateSegmentGroup(supabaseUser, currentSubgroup);
               consolidated.segmentsToDelete.forEach(id => segmentsToDeleteSet.add(id));
               totalConsolidated += consolidated.segmentsToDelete.length;
             }
@@ -143,7 +204,7 @@ serve(async (req) => {
         }
         // Flush last subgroup
         if (currentSubgroup.length > 1) {
-          const consolidated = await consolidateSegmentGroup(supabase, currentSubgroup);
+          const consolidated = await consolidateSegmentGroup(supabaseUser, currentSubgroup);
           consolidated.segmentsToDelete.forEach(id => segmentsToDeleteSet.add(id));
           totalConsolidated += consolidated.segmentsToDelete.length;
         }
@@ -153,7 +214,7 @@ serve(async (req) => {
 
       // Delete duplicate segments from travel_step_segments and reorder
       if (segmentsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseUser
           .from('travel_step_segments')
           .delete()
           .in('id', segmentsToDelete);
@@ -165,15 +226,15 @@ serve(async (req) => {
         }
 
         // Reorder remaining segments
-        await reorderStepSegments(supabase, step.id);
+        await reorderStepSegments(supabaseUser, step.id);
       }
     }
 
     console.log(`Segment consolidation completed. Total segments consolidated: ${totalConsolidated}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         totalConsolidated,
         message: `Successfully consolidated ${totalConsolidated} duplicate segments`
       }),
@@ -183,14 +244,14 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error in consolidate-step-segments function:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
+      JSON.stringify({
+        success: false,
         error: error.message,
         totalConsolidated: 0
       }),
-      { 
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

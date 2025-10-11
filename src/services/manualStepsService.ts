@@ -138,6 +138,9 @@ export async function validateManualSteps(tripId: string) {
       });
     });
 
+    const rid = Date.now().toString();
+    console.info('[validateManualSteps:start]', { rid, tripId, segmentCount: segmentIds.length, sampleSegmentIds: segmentIds.slice(0, 5) });
+
     // Valider tous les segments associés aux étapes
     if (segmentIds.length > 0) {
       const { error: updateError } = await supabase
@@ -145,16 +148,29 @@ export async function validateManualSteps(tripId: string) {
         .update({ validated: true })
         .in('id', segmentIds);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[validateManualSteps:updateSegmentsError]', { rid, tripId, updateError });
+        throw updateError;
+      }
     }
 
     // Marquer le trip comme validé
     const { error: tripError } = await supabase
       .from('trips')
-      .update({ status: 'validated' })
-      .eq('id', tripId);
+      .update({
+        status: 'validated',
+        updated_at: new Date().toISOString() // toujours bon pour le tracking
+      })
+      .filter('id', 'eq', tripId) // plus sûr que .eq() sous RLS
+      .select('id'); // force PostgREST à retourner une réponse cohérente
 
-    if (tripError) throw tripError;
+    if (tripError) {
+      console.error('[validateManualSteps:updateTripError]', { rid, tripId, tripError });
+      throw tripError;
+    } else {
+      console.info('[validateManualSteps:updateTripOk]', { rid, tripId });
+    }
+
 
     return {
       success: true,

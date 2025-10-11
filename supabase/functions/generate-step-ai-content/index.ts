@@ -1,88 +1,168 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
+// 🔒 --- Authentification & Ownership checks ---
+async function authenticateRequest(req: Request) {
+  const authHeader =
+    req.headers.get("authorization") || req.headers.get("Authorization") || "";
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.warn("❌ Missing or malformed Authorization header");
+    throw new Response(
+      JSON.stringify({ success: false, error: "Unauthorized" }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: userData, error: authError } = await supabase.auth.getUser(
+    token,
+  );
+
+  if (authError || !userData?.user) {
+    console.error("❌ Invalid token", authError);
+    throw new Response(
+      JSON.stringify({ success: false, error: "Unauthorized" }),
+      {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  console.log("✅ Authenticated user:", userData.user.id);
+
+  // Client RLS-aware
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  return { user: userData.user, supabaseUser };
+}
+
+async function verifyStepOwnership(supabase: any, userId: string, stepId: string) {
+  const { data: step, error: stepError } = await supabase
+    .from("travel_steps")
+    .select("trip_id")
+    .eq("id", stepId)
+    .single();
+
+  if (stepError || !step) {
+    console.error("❌ Step not found:", stepError);
+    throw new Response(
+      JSON.stringify({ success: false, error: "Step not found" }),
+      {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const { data: trip, error: tripError } = await supabase
+    .from("trips")
+    .select("user_id")
+    .eq("id", step.trip_id)
+    .single();
+
+  if (tripError || !trip || trip.user_id !== userId) {
+    console.warn("🚫 Forbidden access to step", { stepId, userId, tripError });
+    throw new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  console.log("✅ Step ownership confirmed for user:", userId);
+}
+// --- Fin bloc sécurité ---
+
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  console.log("🧠 Generate Step AI Content Function Called");
+
+  // ------------------------------------------------------------
+  // 1️⃣ CORS preflight
+  // ------------------------------------------------------------
+  if (req.method === "OPTIONS") {
+    console.log("🟡 OPTIONS preflight detected");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Generate step AI content function called');
-    
-    const { stepId, stepTitle, primaryLocation, sections, tripSummary } = await req.json();
+    // ------------------------------------------------------------
+    // 2️⃣ Lecture du body JSON
+    // ------------------------------------------------------------
+    const { stepId, stepTitle, primaryLocation, sections, tripSummary } =
+      await req.json().catch(() => ({}));
 
-    // Auth: require Bearer token and use ANON client so RLS applies
-    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    console.log("📦 Input parameters:", {
+      stepId,
+      stepTitle,
+      primaryLocation,
+      sectionsCount: sections?.length || 0,
+      hasTripSummary: !!tripSummary,
+    });
 
-    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
-    }
-    const user = userData.user;
-
-    // Verify step -> trip -> ownership
-    if (!stepId) {
-      return new Response(JSON.stringify({ success: false, error: 'stepId is required' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 })
-    }
-    const { data: stepRow, error: stepErr } = await supabase.from('travel_steps').select('trip_id').eq('id', stepId).single();
-    if (stepErr || !stepRow) {
-      return new Response(JSON.stringify({ success: false, error: 'Step not found' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 })
-    }
-    const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', stepRow.trip_id).single();
-    if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
-      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
-    }
-    
-    console.log('📍 Input parameters:');
-    console.log(`  - Step ID: ${stepId}`);
-    console.log(`  - Step Title: ${stepTitle}`);
-    console.log(`  - Primary Location: ${primaryLocation}`);
-    console.log(`  - Sections count: ${sections?.length || 0}`);
-    console.log(`  - Trip Summary provided: ${!!tripSummary}`);
-    
     if (!stepId || !stepTitle || !sections) {
-      console.error('❌ Missing required fields:', { stepId: !!stepId, stepTitle: !!stepTitle, sections: !!sections });
+      console.warn("❌ Missing required fields");
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Missing required fields: stepId, stepTitle, or sections' 
+        JSON.stringify({
+          success: false,
+          error: "Missing required fields: stepId, stepTitle, or sections",
         }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+    // ------------------------------------------------------------
+    // 3️⃣ Authentification + client RLS-aware
+    // ------------------------------------------------------------
+    const { user, supabaseUser } = await authenticateRequest(req);
+
+    // ------------------------------------------------------------
+    // 4️⃣ Vérification ownership du step
+    // ------------------------------------------------------------
+    await verifyStepOwnership(supabaseUser, user.id, stepId);
+
+    // ------------------------------------------------------------
+    // 5️⃣ Vérification de la clé API Perplexity
+    // ------------------------------------------------------------
+    const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
     if (!perplexityApiKey) {
+      console.error("❌ PERPLEXITY_API_KEY not configured");
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Perplexity API key not configured' 
+        JSON.stringify({
+          success: false,
+          error: "Perplexity API key not configured",
         }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    console.log(`🚀 Generating AI content for step: ${stepTitle} in ${primaryLocation}`);
-    console.log('🌐 Perplexity API request configuration:');
-    console.log('  - Model: sonar');
+    // ------------------------------------------------------------
+    // 6️⃣ Construction de la requête pour Perplexity
+    // ------------------------------------------------------------
+    console.log(`🚀 Generating AI content for step "${stepTitle}" in ${primaryLocation}`);
 
 
     // Create structured prompt for targeted content generation
