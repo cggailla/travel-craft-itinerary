@@ -10,15 +10,21 @@ const corsHeaders = {
   "Access-Control-Allow-Credentials": "true",
 };
 
+const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
+
+
 serve(async (req) => {
   console.log("🌍 Generate general info function called");
 
   // ------------------------------------------------------------
   // 1️⃣ CORS preflight
   // ------------------------------------------------------------
+    // --- Global CORS handler ---
   if (req.method === "OPTIONS") {
-    console.log("🟡 OPTIONS preflight detected");
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -109,7 +115,6 @@ serve(async (req) => {
     // ------------------------------------------------------------
     // 5️⃣ Vérification clé API Perplexity
     // ------------------------------------------------------------
-    const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
     if (!perplexityApiKey) {
       console.error("❌ PERPLEXITY_API_KEY not configured");
       return new Response(
@@ -337,7 +342,7 @@ CONSIGNES:
     }
 
     // Check if general info already exists
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseUser
       .from("trip_general_info")
       .select("id")
       .eq("trip_id", tripId)
@@ -346,7 +351,7 @@ CONSIGNES:
     if (existing) {
       // Update existing
       console.log("Updating existing general info");
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseUser
         .from("trip_general_info")
         .update({
           destination_country: destinationZone,
@@ -366,7 +371,7 @@ CONSIGNES:
     } else {
       // Insert new
       console.log("Inserting new general info");
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseUser
         .from("trip_general_info")
         .insert({
           trip_id: tripId,

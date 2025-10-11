@@ -107,7 +107,7 @@ serve(async (req) => {
     console.log(`✅ Trip ownership confirmed for trip ${tripId}`);
 
     // Get all travel steps for the trip with their segments
-    const { data: steps, error: stepsError } = await supabase
+    const { data: steps, error: stepsError } = await supabaseUser
       .from('travel_steps')
       .select(`
         *,

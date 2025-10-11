@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -174,23 +174,36 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
     }
   };
 
+  // Keep a ref to the latest `info` so the polling interval can read up-to-date state
+  const infoRef = useRef<GeneralInfo | null>(info);
+  useEffect(() => {
+    infoRef.current = info;
+  }, [info]);
+
   useEffect(() => {
     // Initial fetch
+    let intervalId: number | undefined;
+
     const initialFetch = async () => {
-      await fetchGeneralInfo();
+      const found = await fetchGeneralInfo();
       setLoading(false);
-    };
-    initialFetch();
-    
-    // Poll every 5 seconds for new data if none is loaded
-    const interval = setInterval(async () => {
-      if (!info) {
-        await fetchGeneralInfo();
+
+      // If nothing found, start polling every 5s until data appears
+      if (!found) {
+        intervalId = window.setInterval(async () => {
+          if (!infoRef.current) {
+            await fetchGeneralInfo();
+          }
+        }, 5000);
       }
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [tripId, info]);
+    };
+
+    initialFetch();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [tripId]);
 
   const DeleteButton = ({ cardId }: { cardId: string }) => (
     <button

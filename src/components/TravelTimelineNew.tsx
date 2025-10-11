@@ -231,8 +231,11 @@ export default function TravelTimelineNew({
 
     try {
       setValidatingSteps(true);
+      const rid = Date.now().toString();
+      console.info('[validate:start]', { rid, tripId });
       const { validateManualSteps } = await import('@/services/manualStepsService');
       const result = await validateManualSteps(tripId);
+      console.info('[validate:result]', { rid, tripId, result: !!result && { success: result.success, validatedSegments: result.validatedSegments, error: result.error } });
       
       if (result.success) {
         toast({
@@ -245,7 +248,7 @@ export default function TravelTimelineNew({
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Validation error:', error);
+      console.error('[validate:error]', { tripId, error });
       toast({
         title: "Erreur de validation",
         description: "Impossible de valider les étapes",

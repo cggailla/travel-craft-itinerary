@@ -9,11 +9,7 @@ import {
   BookletOptions, 
   defaultBookletOptions 
 } from "@/services/bookletService";
-import { 
-  getPDFBookletData, 
-  PDFBookletData 
-} from "@/services/pdfBookletService";
-import { PDFDownloadButton } from "@/components/pdf/PDFDownloadButton";
+// pdfBookletService removed: do not import getPDFBookletData or PDFDownloadButton to avoid blocking the AI pipeline
 import { 
   Download, 
   FileText,
@@ -34,7 +30,7 @@ interface BookletGeneratorProps {
 
 export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [bookletData, setBookletData] = useState<BookletData | null>(null);
-  const [pdfBookletData, setPdfBookletData] = useState<PDFBookletData | null>(null);
+  // pdfBookletData removed to avoid calling blocking PDF preparation
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -51,9 +47,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       const data = await getBookletData(tripId);
       setBookletData(data);
       
-      // Charger aussi les données pour le PDF react-pdf
-      const pdfData = await getPDFBookletData(tripId);
-      setPdfBookletData(pdfData);
+  // Note: PDF data preparation removed to avoid blocking pipeline. AI enrichment runs separately.
     } catch (error) {
       toast({
         title: "Erreur",
@@ -285,15 +279,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
           <div className="flex gap-2">
-            {/* Nouveau bouton PDF avec react-pdf */}
-            {pdfBookletData && (
-              <PDFDownloadButton 
-                bookletData={pdfBookletData}
-                disabled={isGeneratingPdf}
-              />
-            )}
-            
-            {/* Ancien bouton PDF (html2pdf) - pour comparaison */}
+            {/* Ancien bouton PDF (html2pdf) - PDF generation kept as manual fallback */}
             <Button 
               onClick={handleGeneratePdf}
               disabled={isGeneratingPdf}

@@ -276,6 +276,9 @@ export async function validateSegments(segmentIds: string[], tripId: string | nu
     if (!session?.access_token) {
       throw new Error('No valid session token');
     }
+    const rid = Date.now().toString();
+    const payload = { segment_ids: segmentIds, trip_id: tripId };
+    console.info('[validateSegments:call]', { rid, payload: { tripId, segmentCount: segmentIds.length } });
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
       method: 'POST',
@@ -283,15 +286,19 @@ export async function validateSegments(segmentIds: string[], tripId: string | nu
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ segment_ids: segmentIds, trip_id: tripId })
+      body: JSON.stringify(payload)
     })
+
+    console.info('[validateSegments:response]', { rid, status: response.status, url: response.url });
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('[validateSegments:responseError]', { rid, status: response.status, errorText });
       throw new Error(`Validation failed: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
+    console.info('[validateSegments:responseJson]', { rid, dataSummary: { success: data.success, validated_count: data.validated_count } });
     return data
   } catch (error) {
     console.error('Validate segments error:', error)

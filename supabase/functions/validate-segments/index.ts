@@ -9,7 +9,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  console.log("⚙️ Validate segments function called");
+  const rid = Date.now().toString();
+  console.log("⚙️ Validate segments function called", { rid, url: req.url });
 
   // --- 1️⃣ Handle CORS preflight ---
   if (req.method === "OPTIONS") {
@@ -18,9 +19,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // --- 2️⃣ Parse JSON body ---
-    const { segment_ids, trip_id } = await req.json();
-    console.log("📦 Received payload:", { segment_count: segment_ids?.length, trip_id });
+  // --- 2️⃣ Parse JSON body ---
+  const { segment_ids, trip_id } = await req.json();
+  console.log("📦 Received payload:", { rid, segment_count: segment_ids?.length, trip_id });
 
     if (!segment_ids || !Array.isArray(segment_ids)) {
       console.warn("❌ Missing or invalid segment_ids array");
@@ -66,8 +67,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const user = userData.user;
-    console.log("✅ Authenticated user:", user.id);
+  const user = userData.user;
+  console.log("✅ Authenticated user:", { rid, userId: user.id });
 
     // --- 6️⃣ Create RLS-aware client ---
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -102,8 +103,8 @@ Deno.serve(async (req) => {
       console.log("✅ Trip ownership verified for user:", user.id);
     }
 
-    // --- ✅ Auth complete: continue business logic ---
-    console.log(`🧩 Validating ${segment_ids.length} segments...`);
+  // --- ✅ Auth complete: continue business logic ---
+  console.log(`🧩 Validating ${segment_ids.length} segments...`, { rid });
 
     // Update segments as validated
     const { data: updatedSegments, error } = await supabase
@@ -116,11 +117,11 @@ Deno.serve(async (req) => {
       .select('id, trip_id')
 
     if (error) {
-      console.error('Database error:', error)
+      console.error('[validate-fn:updateSegmentsError]', { rid, error })
       throw new Error(`Failed to validate segments: ${error.message}`)
     }
 
-    console.log(`Successfully validated ${updatedSegments?.length || 0} segments`)
+    console.log(`Successfully validated ${updatedSegments?.length || 0} segments`, { rid, updatedSegmentsSample: updatedSegments?.slice(0,5) })
 
     // Update trip status - use trip_id from segments if not provided
     const tripIdToUpdate = trip_id || updatedSegments?.[0]?.trip_id;
@@ -135,17 +136,17 @@ Deno.serve(async (req) => {
         .eq('id', tripIdToUpdate)
 
       if (tripError) {
-        console.error('Failed to update trip status:', tripError)
+        console.error('[validate-fn:updateTripError]', { rid, tripIdToUpdate, tripError })
         // Don't throw error for trip update failure
       } else {
-        console.log(`Trip ${tripIdToUpdate} status updated to validated`)
+        console.log(`Trip ${tripIdToUpdate} status updated to validated`, { rid, tripIdToUpdate })
         
         // Trigger cleanup after trip validation
         try {
           await supabase.rpc('cleanup_abandoned_data')
-          console.log('Cleanup triggered after trip validation')
+          console.log('Cleanup triggered after trip validation', { rid })
         } catch (cleanupError) {
-          console.error('Cleanup failed:', cleanupError)
+          console.error('[validate-fn:cleanupFailed]', { rid, cleanupError })
           // Don't fail the main operation if cleanup fails
         }
       }
