@@ -11,7 +11,7 @@ import {
 } from "@/services/bookletService";
 import { PDFDownloadButton } from "./pdf/PDFDownloadButton";
 import { extractBookletDataFromDOM } from "@/services/domExtractorService";
-import { PDFBookletData } from "@/services/pdfBookletService";
+import { BookletData as PDFBookletData } from "@/components/pdf/BookletPDF";
 import { 
   FileText,
   Loader2,

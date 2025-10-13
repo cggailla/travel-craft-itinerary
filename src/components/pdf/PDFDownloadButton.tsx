@@ -6,11 +6,10 @@ import React from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { BookletPDF } from './BookletPDF';
-import { PDFBookletData } from '@/services/pdfBookletService';
+import { StaticBookletTemplate, BookletData } from './BookletPDF';
 
 interface PDFDownloadButtonProps {
-  bookletData: PDFBookletData;
+  bookletData: BookletData;
   disabled?: boolean;
 }
 
@@ -19,7 +18,7 @@ export function PDFDownloadButton({ bookletData, disabled }: PDFDownloadButtonPr
 
   return (
     <PDFDownloadLink
-      document={<BookletPDF data={bookletData} />}
+      document={<StaticBookletTemplate data={bookletData} />}
       fileName={fileName}
     >
       {({ loading, error }) => (

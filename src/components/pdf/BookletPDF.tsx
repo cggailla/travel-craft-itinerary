@@ -2,23 +2,23 @@ import React from "react";
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 
 /* ----------------------------- TYPES DE DONNÉES ----------------------------- */
-type Segment = {
+export type Segment = {
   type: "flight" | "transfer" | "hotel" | "train" | "activity" | "transport" | "other";
   title: string;
   info: string[]; // lignes indentées (• …)
 };
 
-type Step = {
+export type Step = {
   dateLabel: string; // ex: "Lundi 12 mai 2025"
   title: string;
-  overview?: string; // texte enrichi d’aperçu
+  overview?: string; // texte enrichi d'aperçu
   segments: Segment[]; // chaque segment est insécable
   tips?: string[]; // conseils (bloc jaune)
   localInfo?: string; // info locale (bloc vert)
   photos?: string[]; // 0..n URLs / dataURI
 };
 
-type BookletData = {
+export type BookletData = {
   logoUrl: string; // URL/dataURI du logo
   tripTitle: string;
   startDateLabel: string; // "10/04/2025"
@@ -29,7 +29,7 @@ type BookletData = {
   thankYouText: string; // texte brut
   generalInfoText: string; // texte brut (peut contenir des listes en lignes)
   emergencyContactsText: string; // texte brut hiérarchisé (contacts)
-  emergencyNotesText: string; // “notes d’urgence”
+  emergencyNotesText: string; // "notes d'urgence"
 };
 
 /* --------------------------------- STYLES ---------------------------------- */
@@ -236,7 +236,7 @@ export const StaticBookletTemplate: React.FC<{ data: BookletData }> = ({ data })
               </View>
             )}
 
-            {/* Photos d’étape (chaque photo est insécable) */}
+            {/* Photos d'étape (chaque photo est insécable) */}
             {step.photos?.map((src, i) => (
               <View key={i} wrap={false}>
                 <Image src={src} style={styles.stepPhoto} />
@@ -264,18 +264,18 @@ export const StaticBookletTemplate: React.FC<{ data: BookletData }> = ({ data })
         <Text style={styles.paragraph}>{data.generalInfoText}</Text>
       </Page>
 
-      {/* ============================== CONTACTS D’URGENCE ======================== */}
+      {/* ============================== CONTACTS D'URGENCE ======================== */}
       <Page size="A4" style={styles.page}>
         <Text style={styles.sectionTitle} break>
-          Contacts d’urgence
+          Contacts d'urgence
         </Text>
         <Text style={styles.paragraph}>{data.emergencyContactsText}</Text>
       </Page>
 
-      {/* =============================== NOTES D’URGENCE ========================== */}
+      {/* =============================== NOTES D'URGENCE ========================== */}
       <Page size="A4" style={styles.page}>
         <Text style={styles.sectionTitle} break>
-          Notes d’urgence
+          Notes d'urgence
         </Text>
         <Text style={styles.paragraph}>{data.emergencyNotesText}</Text>
         {/* page lignée simple */}

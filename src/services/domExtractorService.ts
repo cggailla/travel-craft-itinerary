@@ -1,11 +1,12 @@
-import { PDFBookletData, PDFStep, PDFSection, PDFSegment } from './pdfBookletService';
+import { BookletData, Segment, Step } from '@/components/pdf/BookletPDF';
+import logoAdgentes from '@/assets/logo-adgentes.png';
 
 /**
  * Extrait les données du carnet de voyage depuis le DOM
  * @param root Element HTML racine (#booklet-content)
  * @returns Données structurées pour le PDF
  */
-export function extractBookletDataFromDOM(root: HTMLElement | null): PDFBookletData {
+export function extractBookletDataFromDOM(root: HTMLElement | null): BookletData {
   if (!root) {
     throw new Error('Element #booklet-content introuvable');
   }
@@ -35,110 +36,101 @@ export function extractBookletDataFromDOM(root: HTMLElement | null): PDFBookletD
   const tripTitle = clone.querySelector('[data-pdf-title]')?.getAttribute('data-pdf-title') || 'Carnet de voyage';
   const startDateStr = clone.querySelector('[data-pdf-start-date]')?.getAttribute('data-pdf-start-date');
   const endDateStr = clone.querySelector('[data-pdf-end-date]')?.getAttribute('data-pdf-end-date');
-  const destination = clone.querySelector('[data-pdf-destination]')?.getAttribute('data-pdf-destination');
+
+  // Format dates as "dd/MM/yyyy"
+  const formatDateLabel = (dateStr: string | undefined): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const startDateLabel = formatDateLabel(startDateStr);
+  const endDateLabel = formatDateLabel(endDateStr);
+
+  // Calculate total days
+  let totalDays = 1;
+  if (startDateStr && endDateStr) {
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+  }
 
   // Extraction des images de couverture
-  const coverImages: any[] = [];
+  const coverPhotos: string[] = [];
   clone.querySelectorAll('[data-pdf-cover-image]').forEach((img: Element) => {
     const src = (img as HTMLImageElement).src || (img as HTMLElement).style.backgroundImage?.match(/url\(["']?([^"']*)["']?\)/)?.[1];
     if (src) {
-      coverImages.push({ url: src });
+      coverPhotos.push(src);
     }
   });
 
   // Extraction des informations générales
-  const generalInfo = extractGeneralInfo(clone);
+  const generalInfoText = clone.querySelector('[data-pdf-general-info]')?.textContent?.trim() || '';
+
+  // Extraction des contacts d'urgence
+  const emergencyContactsText = clone.querySelector('[data-pdf-emergency-contacts]')?.textContent?.trim() || '';
+
+  // Extraction du message de remerciement
+  const thankYouText = clone.querySelector('[data-pdf-thank-you]')?.textContent?.trim() || '';
 
   // Extraction des étapes
   const steps = extractSteps(clone);
 
-  // Extraction des contacts d'urgence
-  const emergencyContacts = extractEmergencyContacts(clone);
-
-  // Extraction du message de remerciement
-  const thankYouMessage = clone.querySelector('[data-pdf-thank-you]')?.textContent?.trim();
-
-  // Validate trip dates
-  let tripStartDate: Date | undefined;
-  let tripEndDate: Date | undefined;
-  
-  if (startDateStr) {
-    const tempDate = new Date(startDateStr);
-    if (!isNaN(tempDate.getTime())) {
-      tripStartDate = tempDate;
-    }
-  }
-  
-  if (endDateStr) {
-    const tempDate = new Date(endDateStr);
-    if (!isNaN(tempDate.getTime())) {
-      tripEndDate = tempDate;
-    }
-  }
-
   return {
+    logoUrl: logoAdgentes,
     tripTitle,
-    startDate: tripStartDate,
-    endDate: tripEndDate,
-    destination,
-    coverImages: coverImages.length > 0 ? coverImages : undefined,
-    generalInfo,
+    startDateLabel,
+    endDateLabel,
+    totalDays,
+    coverPhotos: coverPhotos.slice(0, 2),
     steps,
-    emergencyContacts: emergencyContacts.length > 0 ? emergencyContacts : undefined,
-    thankYouMessage,
+    thankYouText,
+    generalInfoText,
+    emergencyContactsText,
+    emergencyNotesText: '', // Page vierge pour notes personnelles
   };
-}
-
-/**
- * Extrait les informations générales du voyage
- */
-function extractGeneralInfo(clone: HTMLElement): any {
-  const generalInfoSection = clone.querySelector('[data-pdf-general-info]');
-  if (!generalInfoSection) return undefined;
-
-  const info: any = {};
-  
-  // Extraction de sections spécifiques
-  const sections = [
-    'climate',
-    'currency',
-    'language',
-    'entry-requirements',
-    'health',
-    'safety',
-    'culture'
-  ];
-
-  sections.forEach(section => {
-    const element = generalInfoSection.querySelector(`[data-pdf-info="${section}"]`);
-    if (element) {
-      info[section] = element.textContent?.trim();
-    }
-  });
-
-  return Object.keys(info).length > 0 ? info : undefined;
 }
 
 /**
  * Extrait toutes les étapes du voyage
  */
-function extractSteps(clone: HTMLElement): PDFStep[] {
-  const steps: PDFStep[] = [];
+function extractSteps(clone: HTMLElement): Step[] {
+  const steps: Step[] = [];
   const stepElements = clone.querySelectorAll('[data-pdf-step]');
 
   stepElements.forEach((stepEl: Element, index: number) => {
-    const stepId = stepEl.getAttribute('data-pdf-step-id') || `step-${index}`;
     const stepTitle = stepEl.querySelector('[data-pdf-step-title]')?.textContent?.trim() || `Étape ${index + 1}`;
     const startDateStr = stepEl.querySelector('[data-pdf-step-start-date]')?.getAttribute('data-pdf-step-start-date');
     const endDateStr = stepEl.querySelector('[data-pdf-step-end-date]')?.getAttribute('data-pdf-step-end-date');
 
-    // Extraction du contenu AI
-    const aiContent: any = {};
+    // Format date label (e.g., "Lundi 12 mai 2025")
+    const formatLongDateLabel = (dateStr: string | undefined): string => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
+      
+      const options: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      };
+      return date.toLocaleDateString('fr-FR', options);
+    };
+
+    const dateLabel = formatLongDateLabel(startDateStr) || `Jour ${index + 1}`;
+
+    // Extraction du contenu AI (overview)
     const overview = stepEl.querySelector('[data-pdf-step-overview]')?.textContent?.trim();
-    const localContext = stepEl.querySelector('[data-pdf-step-local-context]')?.textContent?.trim();
-    
-    if (overview) aiContent.overview = overview;
-    if (localContext) aiContent.localContext = localContext;
+
+    // Extraction de l'info locale
+    const localInfo = stepEl.querySelector('[data-pdf-step-local-context]')?.textContent?.trim();
 
     // Extraction des tips
     const tips: string[] = [];
@@ -146,46 +138,27 @@ function extractSteps(clone: HTMLElement): PDFStep[] {
       const text = tip.textContent?.trim();
       if (text) tips.push(text);
     });
-    if (tips.length > 0) aiContent.tips = tips;
 
-    // Extraction des sections et segments
-    const sections = extractSections(stepEl as HTMLElement);
+    // Extraction des segments
+    const segments = extractSegments(stepEl as HTMLElement);
 
     // Extraction des images de l'étape
-    const images: any[] = [];
+    const photos: string[] = [];
     stepEl.querySelectorAll('[data-pdf-step-image]').forEach((img: Element) => {
       const src = (img as HTMLImageElement).src || (img as HTMLElement).style.backgroundImage?.match(/url\(["']?([^"']*)["']?\)/)?.[1];
       if (src) {
-        images.push({ url: src });
+        photos.push(src);
       }
     });
 
-    // Validate dates before creating Date objects
-    let startDate: Date | undefined;
-    let endDate: Date | undefined;
-    
-    if (startDateStr) {
-      const tempStartDate = new Date(startDateStr);
-      if (!isNaN(tempStartDate.getTime())) {
-        startDate = tempStartDate;
-      }
-    }
-    
-    if (endDateStr) {
-      const tempEndDate = new Date(endDateStr);
-      if (!isNaN(tempEndDate.getTime())) {
-        endDate = tempEndDate;
-      }
-    }
-
     steps.push({
-      stepId,
-      stepTitle,
-      startDate,
-      endDate,
-      aiContent: Object.keys(aiContent).length > 0 ? aiContent : undefined,
-      sections,
-      images: images.length > 0 ? images : undefined,
+      dateLabel,
+      title: stepTitle,
+      overview,
+      segments,
+      tips: tips.length > 0 ? tips : undefined,
+      localInfo,
+      photos: photos.length > 0 ? photos : undefined,
     });
   });
 
@@ -193,77 +166,77 @@ function extractSteps(clone: HTMLElement): PDFStep[] {
 }
 
 /**
- * Extrait les sections d'une étape (Transport, Hébergement, Activités, etc.)
+ * Map segment role to type
  */
-function extractSections(stepEl: HTMLElement): PDFSection[] {
-  const sections: PDFSection[] = [];
-  const sectionElements = stepEl.querySelectorAll('[data-pdf-section]');
+function mapRoleToType(role: string): Segment['type'] {
+  const roleMap: Record<string, Segment['type']> = {
+    'vol': 'flight',
+    'flight': 'flight',
+    'transfert': 'transfer',
+    'transfer': 'transfer',
+    'hotel': 'hotel',
+    'hébergement': 'hotel',
+    'accommodation': 'hotel',
+    'train': 'train',
+    'activité': 'activity',
+    'activity': 'activity',
+    'visite': 'activity',
+    'transport': 'transport',
+  };
 
-  sectionElements.forEach((sectionEl: Element) => {
-    const title = sectionEl.getAttribute('data-pdf-section-title') || 
-                  sectionEl.querySelector('[data-pdf-section-title]')?.textContent?.trim() || 
-                  'Section';
-
-    const segments = extractSegments(sectionEl as HTMLElement);
-
-    if (segments.length > 0) {
-      sections.push({ title, segments });
-    }
-  });
-
-  return sections;
+  return roleMap[role.toLowerCase()] || 'other';
 }
 
 /**
- * Extrait les segments d'une section
+ * Extrait les segments de tous les niveaux (sections et directement dans step)
  */
-function extractSegments(sectionEl: HTMLElement): PDFSegment[] {
-  const segments: PDFSegment[] = [];
-  const segmentElements = sectionEl.querySelectorAll('[data-pdf-segment]');
+function extractSegments(stepEl: HTMLElement): Segment[] {
+  const segments: Segment[] = [];
+  const segmentElements = stepEl.querySelectorAll('[data-pdf-segment]');
 
-  segmentElements.forEach((segmentEl: Element, index: number) => {
-    const id = segmentEl.getAttribute('data-pdf-segment-id') || `segment-${index}`;
+  segmentElements.forEach((segmentEl: Element) => {
     const role = segmentEl.getAttribute('data-pdf-segment-role') || 'autre';
     const isExcluded = segmentEl.getAttribute('data-pdf-segment-excluded') === 'true';
 
     // Ne pas inclure les segments exclus
     if (isExcluded) return;
 
-    const segment: PDFSegment = {
-      id,
-      role,
-      title: segmentEl.querySelector('[data-pdf-segment-title]')?.textContent?.trim(),
-      provider: segmentEl.querySelector('[data-pdf-segment-provider]')?.textContent?.trim(),
-      description: segmentEl.querySelector('[data-pdf-segment-description]')?.textContent?.trim(),
-      address: segmentEl.querySelector('[data-pdf-segment-address]')?.textContent?.trim(),
-      startTime: segmentEl.querySelector('[data-pdf-segment-start-time]')?.textContent?.trim(),
-      endTime: segmentEl.querySelector('[data-pdf-segment-end-time]')?.textContent?.trim(),
-      phone: segmentEl.querySelector('[data-pdf-segment-phone]')?.textContent?.trim(),
-      duration: segmentEl.querySelector('[data-pdf-segment-duration]')?.textContent?.trim(),
-    };
+    const title = segmentEl.getAttribute('data-pdf-segment-title') || 
+                  segmentEl.querySelector('[data-pdf-segment-title]')?.textContent?.trim() || 
+                  'Prestation';
 
-    segments.push(segment);
+    // Collecter les informations (provider, address, time, etc.)
+    const info: string[] = [];
+    
+    const provider = segmentEl.getAttribute('data-pdf-segment-provider');
+    if (provider) info.push(`Prestataire: ${provider}`);
+
+    const address = segmentEl.getAttribute('data-pdf-segment-address');
+    if (address) info.push(`Adresse: ${address}`);
+
+    const startTime = segmentEl.getAttribute('data-pdf-segment-start-time');
+    const endTime = segmentEl.getAttribute('data-pdf-segment-end-time');
+    if (startTime && endTime) {
+      info.push(`Horaires: ${startTime} - ${endTime}`);
+    } else if (startTime) {
+      info.push(`Horaire: ${startTime}`);
+    }
+
+    const phone = segmentEl.getAttribute('data-pdf-segment-phone');
+    if (phone) info.push(`Téléphone: ${phone}`);
+
+    const duration = segmentEl.getAttribute('data-pdf-segment-duration');
+    if (duration) info.push(`Durée: ${duration}`);
+
+    const description = segmentEl.getAttribute('data-pdf-segment-description');
+    if (description) info.push(description);
+
+    segments.push({
+      type: mapRoleToType(role),
+      title,
+      info,
+    });
   });
 
   return segments;
-}
-
-/**
- * Extrait les contacts d'urgence
- */
-function extractEmergencyContacts(clone: HTMLElement): any[] {
-  const contacts: any[] = [];
-  const contactElements = clone.querySelectorAll('[data-pdf-emergency-contact]');
-
-  contactElements.forEach((contactEl: Element) => {
-    const name = contactEl.querySelector('[data-pdf-contact-name]')?.textContent?.trim();
-    const phone = contactEl.querySelector('[data-pdf-contact-phone]')?.textContent?.trim();
-    const description = contactEl.querySelector('[data-pdf-contact-description]')?.textContent?.trim();
-
-    if (name || phone) {
-      contacts.push({ name, phone, description });
-    }
-  });
-
-  return contacts;
 }
