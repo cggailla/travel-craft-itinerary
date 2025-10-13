@@ -32,10 +32,10 @@ export function extractBookletDataFromDOM(root: HTMLElement | null): PDFBookletD
   });
 
   // Extraction du titre et des dates
-  const tripTitle = clone.querySelector('[data-pdf-title]')?.textContent?.trim() || 'Carnet de voyage';
-  const startDateStr = clone.querySelector('[data-pdf-start-date]')?.textContent?.trim();
-  const endDateStr = clone.querySelector('[data-pdf-end-date]')?.textContent?.trim();
-  const destination = clone.querySelector('[data-pdf-destination]')?.textContent?.trim();
+  const tripTitle = clone.querySelector('[data-pdf-title]')?.getAttribute('data-pdf-title') || 'Carnet de voyage';
+  const startDateStr = clone.querySelector('[data-pdf-start-date]')?.getAttribute('data-pdf-start-date');
+  const endDateStr = clone.querySelector('[data-pdf-end-date]')?.getAttribute('data-pdf-end-date');
+  const destination = clone.querySelector('[data-pdf-destination]')?.getAttribute('data-pdf-destination');
 
   // Extraction des images de couverture
   const coverImages: any[] = [];
@@ -58,10 +58,28 @@ export function extractBookletDataFromDOM(root: HTMLElement | null): PDFBookletD
   // Extraction du message de remerciement
   const thankYouMessage = clone.querySelector('[data-pdf-thank-you]')?.textContent?.trim();
 
+  // Validate trip dates
+  let tripStartDate: Date | undefined;
+  let tripEndDate: Date | undefined;
+  
+  if (startDateStr) {
+    const tempDate = new Date(startDateStr);
+    if (!isNaN(tempDate.getTime())) {
+      tripStartDate = tempDate;
+    }
+  }
+  
+  if (endDateStr) {
+    const tempDate = new Date(endDateStr);
+    if (!isNaN(tempDate.getTime())) {
+      tripEndDate = tempDate;
+    }
+  }
+
   return {
     tripTitle,
-    startDate: startDateStr ? new Date(startDateStr) : undefined,
-    endDate: endDateStr ? new Date(endDateStr) : undefined,
+    startDate: tripStartDate,
+    endDate: tripEndDate,
     destination,
     coverImages: coverImages.length > 0 ? coverImages : undefined,
     generalInfo,
@@ -111,8 +129,8 @@ function extractSteps(clone: HTMLElement): PDFStep[] {
   stepElements.forEach((stepEl: Element, index: number) => {
     const stepId = stepEl.getAttribute('data-pdf-step-id') || `step-${index}`;
     const stepTitle = stepEl.querySelector('[data-pdf-step-title]')?.textContent?.trim() || `Étape ${index + 1}`;
-    const startDateStr = stepEl.querySelector('[data-pdf-step-start-date]')?.textContent?.trim();
-    const endDateStr = stepEl.querySelector('[data-pdf-step-end-date]')?.textContent?.trim();
+    const startDateStr = stepEl.querySelector('[data-pdf-step-start-date]')?.getAttribute('data-pdf-step-start-date');
+    const endDateStr = stepEl.querySelector('[data-pdf-step-end-date]')?.getAttribute('data-pdf-step-end-date');
 
     // Extraction du contenu AI
     const aiContent: any = {};
@@ -142,11 +160,29 @@ function extractSteps(clone: HTMLElement): PDFStep[] {
       }
     });
 
+    // Validate dates before creating Date objects
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    
+    if (startDateStr) {
+      const tempStartDate = new Date(startDateStr);
+      if (!isNaN(tempStartDate.getTime())) {
+        startDate = tempStartDate;
+      }
+    }
+    
+    if (endDateStr) {
+      const tempEndDate = new Date(endDateStr);
+      if (!isNaN(tempEndDate.getTime())) {
+        endDate = tempEndDate;
+      }
+    }
+
     steps.push({
       stepId,
       stepTitle,
-      startDate: startDateStr ? new Date(startDateStr) : undefined,
-      endDate: endDateStr ? new Date(endDateStr) : undefined,
+      startDate,
+      endDate,
       aiContent: Object.keys(aiContent).length > 0 ? aiContent : undefined,
       sections,
       images: images.length > 0 ? images : undefined,

@@ -264,8 +264,15 @@ interface BookletPDFProps {
 }
 
 export const BookletPDF: React.FC<BookletPDFProps> = ({ data }) => {
-  const formatDate = (date: Date) => format(date, 'dd/MM');
-  const formatLongDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', { locale: fr });
+  const formatDate = (date?: Date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    return format(date, 'dd/MM');
+  };
+  
+  const formatLongDate = (date?: Date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    return format(date, 'EEEE d MMMM yyyy', { locale: fr });
+  };
 
   return (
     <Document>
