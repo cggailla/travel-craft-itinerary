@@ -1,0 +1,15 @@
+{
+  "name": "html-extractor",
+  "version": "1.0.0",
+  "description": "Extract important travel booklet data from dom.html into JSON",
+  "main": "scripts/extract.js",
+  "scripts": {
+    "extract": "node scripts/extract.js dom.html extracted.json"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "minimist": "^1.2.8"
+  }
+}

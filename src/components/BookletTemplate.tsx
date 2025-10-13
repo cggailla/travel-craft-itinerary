@@ -10,6 +10,13 @@ import { ImageUploader } from "./ImageUploader";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
 import { listSessionImages, SupabaseImage } from "@/services/supabaseImageService";
+import {
+  getBookletDOMSnapshot,
+  debugLogBookletDOM,
+  openBookletSnapshotWindow,
+  getBookletDOMFullSnapshot,
+  getBookletDOMRawExport,
+} from "@/services/domExtractorService";
 
 interface BookletTemplateProps {
   data: BookletData;
@@ -236,7 +243,99 @@ export function BookletTemplate({
           >
             {editableTitle}
           </h1>
-          <div className="w-24"></div>
+          {/* Dev-only helpers: inspect/copy cleaned DOM used for PDF extraction */}
+          {import.meta.env && import.meta.env.DEV ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50"
+                onClick={() => {
+                  try {
+                    const root = document.getElementById('booklet-content');
+                    openBookletSnapshotWindow(root);
+                  } catch (err) {
+                    console.error('open snapshot failed', err);
+                  }
+                }}
+              >
+                Ouvrir snapshot
+              </button>
+
+              <button
+                type="button"
+                className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50"
+                onClick={async () => {
+                  try {
+                    const root = document.getElementById('booklet-content');
+                    const snapshot = getBookletDOMSnapshot(root);
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      await navigator.clipboard.writeText(snapshot);
+                      // small UX feedback
+                      // eslint-disable-next-line no-alert
+                      alert('Booklet snapshot copié dans le presse-papier (HTML)');
+                    } else {
+                      // fallback: open in new window so dev can copy manually
+                      const w = window.open('', '_blank');
+                      if (w) {
+                        w.document.open();
+                        w.document.write('<pre style="white-space:pre-wrap;">' + snapshot.replace(/</g, '&lt;') + '</pre>');
+                        w.document.close();
+                      }
+                    }
+                  } catch (err) {
+                    console.error('copy snapshot failed', err);
+                  }
+                }}
+              >
+                Copier HTML
+              </button>
+
+              <button
+                type="button"
+                className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50"
+                onClick={async () => {
+                  try {
+                    const root = document.getElementById('booklet-content');
+                    // New: export strict raw HTML without any modification
+                    const raw = getBookletDOMRawExport(root);
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      await navigator.clipboard.writeText(raw);
+                      // eslint-disable-next-line no-alert
+                      alert('HTML brut (exact) copié dans le presse-papier');
+                    } else {
+                      const w = window.open('', '_blank');
+                      if (w) {
+                        w.document.open();
+                        w.document.write('<pre style="white-space:pre-wrap;">' + raw.replace(/</g, '&lt;') + '</pre>');
+                        w.document.close();
+                      }
+                    }
+                  } catch (err) {
+                    console.error('copy raw html failed', err);
+                  }
+                }}
+              >
+                Copier HTML brut (exact)
+              </button>
+
+              <button
+                type="button"
+                className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50"
+                onClick={() => {
+                  try {
+                    const root = document.getElementById('booklet-content');
+                    debugLogBookletDOM(root);
+                  } catch (err) {
+                    console.error('debug snapshot failed', err);
+                  }
+                }}
+              >
+                Log
+              </button>
+            </div>
+          ) : (
+            <div className="w-24" />
+          )}
         </div>
 
         {/* Images de couverture - Zone d'upload (masquée à l'impression) */}

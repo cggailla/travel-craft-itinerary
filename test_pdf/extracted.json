@@ -1,0 +1,419 @@
+{
+  "cover": {
+    "destination": "",
+    "startDate": "",
+    "endDate": "",
+    "agency": "",
+    "travelers": "",
+    "reference": "",
+    "imageUrl": "https://jjlhsikgczigvtdzfroa.supabase.co/storage/v1/object/public/trip-images/54af0169-8b95-44bc-b2c6-40cc600d7b57/d9bce7db-90ac-461b-a4d9-32bcbdf56cf4/cover_1.jpg"
+  },
+  "general_info": {
+    "capital": "Nairobi",
+    "population": "environ 55 millions d'habitants",
+    "surface_area": "environ 580 000 km²",
+    "timezone": {
+      "main": "",
+      "offset": ""
+    },
+    "entry": {
+      "passport": "",
+      "visa": "",
+      "validity": ""
+    },
+    "health": {
+      "vaccines": "",
+      "insurance": "",
+      "water": ""
+    },
+    "currency": {
+      "name": "",
+      "rate": ""
+    },
+    "budget": {
+      "coffee": "50-150 KES",
+      "meal": "",
+      "restaurant": "500-1500 KES par personne"
+    },
+    "tipping": {
+      "required": "Attendu",
+      "restaurants": "10% du montant de l'addition si le service n'est pas inclus",
+      "taxis": "10% ou arrondir la course",
+      "guides": "500-1000 KES par personne par jour",
+      "porters": "100-200 KES par bagage"
+    },
+    "electricity": {
+      "voltage": "240 volts",
+      "plugs": "Type G",
+      "adapter": "Nécessaire"
+    },
+    "religion": "Majoritairement chrétienne, avec des communautés musulmanes et animistes. Respecter les lieux de culte, tenue modeste recommandée.",
+    "shopping": "Artisanat local : perles masaï, sculptures en bois, tissus kanga et kikoy. Marchander dans les marchés locaux est courant.",
+    "phone": {
+      "to": "+254",
+      "from": "+41",
+      "tips": "Acheter une carte SIM locale pour un meilleur tarif internet et appels, roaming coûteux"
+    },
+    "languages": {
+      "official": "Swahili, Anglais",
+      "french": "Oui",
+      "notes": "De nombreuses langues locales sont parlées, notamment le kikuyu, le luo, le kalenjin"
+    },
+    "cultural_sites": [
+      {
+        "name": "Fort Jesus (Mombasa)",
+        "description": "Fort portugais du XVIe siècle, site historique majeur sur la côte."
+      },
+      {
+        "name": "Musée national de Nairobi",
+        "description": "Expositions sur la culture, l'histoire et la faune du Kenya."
+      },
+      {
+        "name": "Village masaï",
+        "description": "Immersion dans la culture traditionnelle masaï."
+      }
+    ],
+    "natural_attractions": "Parcs nationaux célèbres comme le Masai Mara, Amboseli, Tsavo avec faune sauvage (éléphants, lions, girafes). Mont Kenya, plages de l'océan Indien, paysages variés entre savane, montagnes et littoral.",
+    "safety": "Éviter les zones à risque la nuit, surveiller ses effets personnels, suivre les conseils locaux. Numéro d'urgence : 999 ou 112.",
+    "climate": {
+      "current": "Octobre : fin de la saison sèche, températures agréables, possibilité de pluies légères",
+      "summer": "Chaud et sec, températures entre 20-30°C, saison idéale pour safaris",
+      "winter": "Plus frais surtout en altitude, nuits fraîches, peu de pluie",
+      "autumn": "Début de la saison des pluies, températures douces",
+      "spring": "Saison des pluies, humidité élevée, paysages verdoyants"
+    }
+  },
+  "itinerary": [
+    {
+      "id": "6b2d11d8-0696-412b-b6b6-f3a292fa328d",
+      "title": "Arrivée à Nairobi",
+      "overview": "Après un vol direct d'Addis-Abeba vers Nairobi avec une arrivée prévue à 13h10, votre étape d'arrivée au Kenya s'ouvre sur une immersion progressive entre modernité et nature urbaine. À votre atterrissage, le transfert non privé jusqu'à l'hôtel Ole Sereni vous permettra de ressentir l'effervescence de la capitale kenyane, véritable porte d'entrée vers la riche mosaïque culturelle et sauvage du pays. Situé aux abords du célèbre parc Nairobi National Park, l'hôtel Ole Sereni propose un cadre confortable et serein, idéal pour récupérer du voyage et vous préparer pour les prochaines aventures. La chambre Cozy avec petit-déjeuner inclus vous offrira un havre de paix après votre trajet, tout en vous mettant au cœur de Nairobi, une ville où la vie sauvage côtoie l'urbanisme en un équilibre unique. Sans contrainte d'activités programmées ce jour-là, profitez de ce moment pour absorber les ambiances locales, en vous imprégnant de la capitale qui est aussi la porte d'entrée à des safaris inoubliables et aux plages de la côte kenyane. Cette première étape est une transition soignée entre l'arrivée africaine et la découverte imminente des richesses naturelles et culturelles du Kenya.",
+      "start_date": "2025-07-16T00:00:00.000Z",
+      "end_date": "",
+      "segments": [
+        {
+          "id": "752f35e7-9976-4065-90ea-128bde046805",
+          "role": "flight",
+          "title": "Vol de Addis-Abeba à Nairobi",
+          "description": "ET 318, départ à 10h45, arrivée à 13h10",
+          "provider": "Ethiopian Airlines",
+          "address": "Addis Ababa Bole International Airport, Bole District, 6 km southeast of Addis Ababa city center, Ethiopia",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "7ca69dc3-e659-494b-82b3-cbc710ae70e7",
+          "role": "transfer",
+          "title": "Transfert pas privé de l'aéroport de Nairobi à Ole Sereni",
+          "description": "Contact: +254 724 415 757",
+          "provider": "Mike",
+          "address": "Nairobi",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "0ea5dd59-b95e-463c-b636-beddb20543ec",
+          "role": "hotel",
+          "title": "Séjour à l'hôtel Ole Sereni",
+          "description": "Chambre Cozy, BB",
+          "provider": "",
+          "address": "Mombasa Road, P.O. Box 18187-00500, Nairobi, Kenya",
+          "phone": "+254 732 191 000",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        }
+      ],
+      "tips": [
+        "Prenez le temps de négocier le prix des taxis à l'aéroport; les tarifs ne sont pas fixes et un bon échange peut réduire considérablement le coût.",
+        "Pour une introduction culturelle, visitez rapidement le marché local (comme le Maasai Market) proche de l'hôtel Ole Sereni si le timing le permet, où l'on trouve artisanat et rencontres authentiques.",
+        "Gardez votre argent liquide en shillings kenyans, la carte n'est pas toujours acceptée dans les petites échoppes ou pour les pourboires."
+      ],
+      "local_context": "Nairobi, fondée en 1899 comme camp de chemin de fer, est devenue la capitale dynamique du Kenya, réputée pour être la seule métropole au monde à posséder un parc national abritant des lions et des rhinocéros, à seulement quelques kilomètres du centre-ville. Ce mélange unique d'urbanité et de nature sauvage reflète le patrimoine colonial, la diversité ethnique et le rôle stratégique de Nairobi comme hub économique et culturel de la région de l'Afrique de l'Est. Historiquement, la ville a vu naître des mouvements de défense des droits environnementaux et a abrité la maison de l'écrivaine Karen Blixen, immortalisée dans \"Out of Africa\". Ce contexte fait de Nairobi un point de départ fascinant pour découvrir la richesse culturelle et la biodiversité du Kenya.",
+      "images": []
+    },
+    {
+      "id": "89152f9a-165c-4065-a93c-aa79b6def6d3",
+      "title": "Safari à Tsavo West",
+      "overview": "Votre deuxième journée au Kenya démarre en beauté par un transfert privé depuis l'hôtel Ole Sereni vers l'aéroport Wilson à Nairobi, un vol court mais pittoresque vous conduisant jusqu'à l'airstrip Tsavo Finch Hatton, porte d'entrée vers l'immense Tsavo West National Park. Une fois arrivé, un transfert privé vous dépose au Kilaguni Serena Lodge, votre refuge au cœur de ce parc à la nature sauvage encore préservée. Le parc Tsavo West est réputé pour la diversité de ses paysages, alternant zones montagneuses, savanes, marécages et sources naturelles, comme les célèbres Mzima Springs où vous pouvez apercevoir hippos et poissons à travers des bassins d’eau cristalline. Lors de vos safaris en matinée et en soirée, vous aurez la chance d’observer les emblématiques Big Five (éléphant, lion, léopard, buffle et rhinocéros noir) tout en profitant des panoramas époustouflants des champs de lave et des formations volcaniques uniques comme les coulées de lave Shetani. Les frais d'entrée au parc, déjà confirmés pour vous, assurent un accès fluide à ces environnements où la faune est protégée par des programmes de conservation très actifs. Après ces explorations entre savanes et jungles, le Kilaguni Serena Lodge vous offre un confort chaleureux et une cuisine locale riche en saveurs, pour une soirée reposante au plus près de la nature kenyane.",
+      "start_date": "2025-07-17T00:00:00.000Z",
+      "end_date": "2025-07-18T00:00:00.000Z",
+      "segments": [
+        {
+          "id": "e51b86d7-d391-4f0f-8293-1eabfb9c3f18",
+          "role": "transfer",
+          "title": "Transfert privé de Ole Sereni à NBO Wilson",
+          "description": "Pick up à 05h20, Contact: +254 724 415 757",
+          "provider": "Mike",
+          "address": "Nairobi",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "2666f0ae-c312-477c-9665-aa8728c0e7d8",
+          "role": "flight",
+          "title": "Vol de Nairobi Wilson à Tsavo Finch Hatton",
+          "description": "Départ à 07h05, arrivée à 08h05",
+          "provider": "Safarilink",
+          "address": "Finch Hattons Airfield, Northwestern boundary of Tsavo West National Park, Kenya",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "e1c93cdd-cc0b-444e-bc48-5893c40ffa6a",
+          "role": "transfer",
+          "title": "Transfert privé de Tsavo Finch Hatton airstrip",
+          "description": "Pick up à 08h05, Contact: +254 722 983 777",
+          "provider": "Ahmed",
+          "address": "Tsavo",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "f87caadc-7739-4f6e-ab59-5affa407d535",
+          "role": "activity",
+          "title": "Frais d'entrée au parc Tsavo",
+          "description": "Frais confirmés",
+          "provider": "",
+          "address": "Tsavo National Park, situé entre Nairobi et Mombasa, comté de Taita-Taveta, Kenya. Principales entrées : Mtito Andei, Voi, Buchuma, Sala, et Manyani pour Tsavo Est ; Mtito Andei, Chyulu, Maktau, Tsavo, Lake Jipe, et Ziwani pour Tsavo Ouest.",
+          "phone": "0800 597 000",
+          "duration": "24h",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "edfad0f9-a66c-42d8-a813-3f69631f36ef",
+          "role": "hotel",
+          "title": "Séjour au Kilaguni Serena Lodge",
+          "description": "FB (LDBB)",
+          "provider": "",
+          "address": "Tsavo West National Park, P.O. Box 48690, Nairobi, Kenya",
+          "phone": "+254 734 699698",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        }
+      ],
+      "tips": [
+        "Pour optimiser vos observations, privilégiez les sorties tôt le matin et en fin d'après-midi lorsque les animaux sont les plus actifs et la lumière douce sublime les couleurs du parc.",
+        "N'hésitez pas à échanger avec vos guides pour en apprendre plus sur les efforts de conservation notamment autour des rhinocéros noirs, une espèce menacée qui bénéficie de sanctuaires protégés dans le parc.",
+        "Apportez des jumelles de bonne qualité et une crème solaire biodégradable, afin de respecter au mieux l'environnement fragile tout en profitant pleinement des safaris."
+      ],
+      "local_context": "Tsavo West National Park, créé en 1948, est chargé d'une riche histoire mêlant légendes et défis environnementaux. Célèbre pour les lions mangeurs d'hommes des années 1890 qui terrorisaient les travailleurs sur la ligne ferroviaire Nairobi-Mombasa, le parc a su renaître pour devenir un bastion vital pour la protection des espèces menacées. Sa géologie fascinante se révèle à travers les champs de lave Shetani, dont le nom signifie “diable” en kiswahili, témoignant de l'origine volcanique récente du lieu. Mzima Springs, une oasis naturelle aux eaux limpides, représente non seulement une beauté naturelle mais aussi un sanctuaire vital pour hippopotames et crocodiles. Les communautés Maasai et Taita habitent les abords du parc, apportant une dimension culturelle riche qui souligne la coexistence entre la faune sauvage et les traditions ancestrales locales.",
+      "images": []
+    },
+    {
+      "id": "ec0adf21-179e-4e31-8372-a5d96d7c1c6a",
+      "title": "Exploration de Tsavo East",
+      "overview": "Après un séjour intense au Kilaguni Serena Lodge à Tsavo West, cette étape vous conduit vers l'immense réserve sauvage de Tsavo East, proposant une toute autre expérience du safari kenyan. Le transfert privé en Landcruiser vous immerge dans une atmosphère d’aventure, avec des arrêts stratégiques pour observer la faune sur le chemin. Tsavo East, réputé pour ses vastes plaines arides traversées par la rivière Galana, offre un paysage spectaculaire propre à ce parc national historique. La journée se poursuit au Sentrim Tsavo, un lodge bien intégré dans l'environnement naturel, où vous êtes accueillis en pension complète avec une lunchbox pour vos excursions. L’après-midi est consacrée à un premier safari dans ce terrain de jeu sauvage, propice à l’observation du « Big Five », mais aussi d’espèces emblématiques comme l’hippopotame, le zèbre ou la girafe masaï. Tsavo East est reconnu pour sa biodiversité et son ambiance authentique, loin des foules, ce qui renouvelle intensément le plaisir du safari initié à Tsavo West. Ce passage entre deux parcs emblématiques illustre parfaitement la richesse et la diversité des paysages kenyans, ponctuée d’expériences à la fois intimistes et grandioses.",
+      "start_date": "2025-07-19T00:00:00.000Z",
+      "end_date": "2025-07-20T00:00:00.000Z",
+      "segments": [
+        {
+          "id": "b527d778-2ff3-4795-8d61-241b2bf62498",
+          "role": "transfer",
+          "title": "Transfert privé à Tsavo East",
+          "description": "Landcruiser privé",
+          "provider": "",
+          "address": "Tsavo East",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "1f091435-43a1-417b-aa31-5172b2fa165d",
+          "role": "hotel",
+          "title": "Séjour au Sentrim Tsavo",
+          "description": "FB (LDBB) + Lunchbox",
+          "provider": "",
+          "address": "Tsavo East National Park, 11 km from Voi Gate, Voi, Kenya",
+          "phone": "0796890890",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        }
+      ],
+      "tips": [
+        "Profitez du transfert en Landcruiser pour rester à l’affût des observations d’animaux sauvages, car le trajet entre Tsavo West et Tsavo East est souvent animé par des rencontres inattendues.",
+        "Au lodge Sentrim Tsavo, adoptez les horaires des safaris traditionnels : les premières heures du matin et la fin d’après-midi sont les meilleures pour voir les animaux actifs, notamment les prédateurs.",
+        "N’oubliez pas d’emporter une bonne paire de jumelles et de la crème solaire, car l’environnement de Tsavo East est plus sec et exposé au soleil que Tsavo West."
+      ],
+      "local_context": "Tsavo East, créé en 1948, est l'un des plus anciens parcs nationaux du Kenya, célèbre pour sa large étendue de savane et de forêts clairsemées, traversée par la rivière Galana. Ce parc joue un rôle clé dans la conservation des espèces menacées, notamment grâce à sa taille – plus de 13 700 km² – qui en fait l’un des plus vastes au monde. Cette région fut aussi le théâtre historique des « lions mangeurs d'hommes » célèbres, légendaires prédatrices qui attirèrent l’attention internationale à la fin du 19e siècle. La coexistence entre les communautés masaï et une faune sauvage abondante illustre la richesse culturelle et écologique de la zone, où traditions et nature sauvage s’entrelacent dans un équilibre parfois fragile.",
+      "images": []
+    },
+    {
+      "id": "c278c675-91b4-420d-a21c-cb574edecc3c",
+      "title": "Voyage vers Mombasa",
+      "overview": "Après trois journées intenses dédiées au safari dans les parcs de Tsavo, cette étape vous invite à une transition tout en douceur vers la côte kenyane, avec un voyage riche en contrastes et en découvertes. Le transfert privé depuis votre lodge jusqu'à Voi, ville charnière, offre un dernier aperçu authentique de la savane kenyane et de ses paysages ouverts. Là, vous embarquerez à bord du célèbre train standard gauge railway (SGR), un moyen moderne et confortable qui relie l'intérieur des terres à Mombasa, la vibrante métropole portuaire, en traversant des panoramas typiques de la région du sud-est du Kenya. Le trajet ferroviaire de plusieurs heures est une expérience en soi, alliant l'efficacité moderne à la beauté naturelle. À votre arrivée en gare de Mombasa, un transfert vous conduira jusqu'à l'Indian Ocean Beach Resort (IOBR), un havre de paix situé en bord de mer. Là, dans une chambre avec vue sur l'océan Indien, vous profiterez d'un hébergement en demi-pension où le doux rythme des vagues et la fraîcheur marine vous permettront de vous détendre pleinement après l'aventure. Ce passage du safari à la plage marque l’un des plus beaux contrastes du Kenya et offre une immersion totale dans la diversité du pays, depuis les plaines sauvages jusqu’aux plages immaculées de la côte swahilie.",
+      "start_date": "2025-07-21T00:00:00.000Z",
+      "end_date": "2025-07-28T00:00:00.000Z",
+      "segments": [
+        {
+          "id": "e3c676a8-6b2a-4e69-9d99-5bc688a34897",
+          "role": "transfer",
+          "title": "Transfert privé à Voi",
+          "description": "Landcruiser privé",
+          "provider": "",
+          "address": "Voi",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "549a6b7a-a6e2-44ea-a6f7-4eb49ed51154",
+          "role": "train",
+          "title": "Train de Voi à Mombasa",
+          "description": "Départ à 12h08, arrivée à 14h00, 1ère classe",
+          "provider": "",
+          "address": "Voi - Mombasa",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "461798ff-aadd-46ee-a462-2398d9245bdf",
+          "role": "transfer",
+          "title": "Transfert de la gare de Mombasa à IOBR",
+          "description": "Pick up à 14h00, Contact: +254 720 758 572",
+          "provider": "Erick",
+          "address": "Mombasa",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "14df033f-e85b-4a54-8110-355cb7d374ea",
+          "role": "hotel",
+          "title": "Séjour à l'IOBR",
+          "description": "Chambre vue mer, HB (DBB), 2 chambres côte à côte",
+          "provider": "",
+          "address": "P.O. Box 73 – 80400, Ukunda, Diani Beach Road, Diani, Kenya",
+          "phone": "+254 722 226 478",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        }
+      ],
+      "tips": [
+        "À Voi, la gare du SGR dispose de petits stands alimentaires où goûter des snacks kenyans typiques, parfaits pour patienter avant le départ du train.",
+        "Lors du voyage en train vers Mombasa, installez-vous près des fenêtres du côté gauche pour admirer les vastes paysages de savane et les collines environnantes du Taita Hills.",
+        "À Mombasa, privilégiez une balade en soirée sur la plage de Nyali ou Diani, accessible en taxi depuis l’IOBR, pour profiter de l'air marin et de la fraîcheur loin de l’effervescence de la ville."
+      ],
+      "local_context": "Mombasa est la deuxième plus importante ville du Kenya et revêt une importance historique capitale grâce à son rôle de port principal sur l’océan Indien depuis des siècles. Fondée au 12ᵉ siècle, la ville fut un carrefour commercial majeur entre l’Afrique, le Moyen-Orient et l’Asie, notamment dans la traite des épices, des perles et des esclaves. Cette richesse historique est encore visible dans son architecture swahilie, ses forts portugais comme Fort Jesus, et ses influences culturelles arabes, indiennes et africaines. Aujourd’hui, Mombasa incarne un mélange cosmopolite où la diversité linguistique et culinaire reflète ce passé de carrefour maritime. La ligne ferroviaire moderne qui relie Voi à Mombasa prolonge cette tradition de connexion, revitalisant les échanges et facilitant l’accès à la côte depuis l’intérieur du pays.",
+      "images": []
+    },
+    {
+      "id": "bf5e868d-af7f-4b6a-a6e4-db041b1b92e7",
+      "title": "Retour à Addis-Abeba",
+      "overview": "À l'issue de ce séjour entre safari et bord de mer, la dernière étape vous mène à la charmante ville côtière de Mombasa. Après un transfert depuis l'Indian Ocean Beach Resort (IOBR), situé en bord de mer avec une vue splendide, vous serez conduit à l'aéroport international Moi de Mombasa, un trajet qui offre souvent une dernière occasion d'apprécier le mélange unique entre mer, culture swahilie et vie locale. Le vol de retour vers Addis-Abeba en fin d'après-midi marque la conclusion de cette expérience immersive dans la diversité kényane, entre nature sauvage et paysages marins. Mombasa, avec ses plages dorées et son histoire de carrefour commercial de l'océan Indien, vous aura laissé un souvenir éblouissant avant de reprendre la route vers la capitale éthiopienne, en emportant avec vous le charme inaltéré de la côte kenyane.",
+      "start_date": "2025-07-29T00:00:00.000Z",
+      "end_date": "",
+      "segments": [
+        {
+          "id": "1dbdfd37-cfc0-49f6-8404-4f6c8d7f80ad",
+          "role": "transfer",
+          "title": "Transfert de l'IOBR à l'aéroport de Mombasa",
+          "description": "Pick up à 14h00, Contact: +254 720 758 572",
+          "provider": "Erick",
+          "address": "Mombasa",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        },
+        {
+          "id": "7712ee18-3c31-4dba-b91f-bcab9c44530f",
+          "role": "flight",
+          "title": "Vol de Mombasa à Addis-Abeba",
+          "description": "ET 325, départ à 18h45, arrivée à 21h05",
+          "provider": "Ethiopian Airlines",
+          "address": "Addis Ababa Bole International Airport, Bole district, Addis Ababa, Ethiopia",
+          "phone": "",
+          "duration": "",
+          "start_time": "02:00",
+          "end_time": "",
+          "excluded": false
+        }
+      ],
+      "tips": [
+        "Prévoyez d'arriver à l'aéroport de Mombasa au moins deux heures avant le vol pour éviter tout stress lié à la sécurité et à l'enregistrement, surtout aux heures de pointe.",
+        "Lors de votre transfert, gardez un œil ouvert sur les marchés locaux en bord de route où vous pouvez apercevoir des artisans swahilis vendant des épices telles que le clou de girofle et la cardamome, symboles du riche commerce historique de Mombasa.",
+        "Pour un dernier moment détente avant le départ, profitez du jardin de l'hôtel IOBR en matinée pour un bain de soleil tranquille ou une promenade au bord de l’océan indien, moment idéal pour ressentir l’atmosphère paisible de la baie."
+      ],
+      "local_context": "Mombasa, fondée au XIe siècle, est un port clé de l'océan Indien doté d'une histoire riche marquée par la présence des commerçants arabes, portugais et britanniques. Cette ville cosmopolite reflète un métissage culturel swahili influencé par ces échanges maritimes. Le fort Jésus, construit par les Portugais au XVIe siècle, est un emblème historique majeur qui témoigne des luttes pour le contrôle de cette route commerciale stratégique. La population locale, en majorité swahilie, perpétue une tradition chaleureuse et accueillante, riche en musique taarab et artisanat d'épices, faisant de Mombasa une escale culturelle unique à la croisée des chemins entre Afrique et monde arabe.",
+      "images": []
+    }
+  ],
+  "emergency_contacts": {
+    "title": "Qui contacter pendant votre voyage en cas de nécessité ?",
+    "before_departure": {
+      "title": "1. Avant votre départ",
+      "text": "Avant votre départ, votre voyagiste reste le contact à privilégier en cas de changement à réaliser ou d'annulations à effectuer."
+    },
+    "departure_day": {
+      "flights": {
+        "title": "a. Les vols",
+        "text": "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      },
+      "agency": {
+        "title": "b. Votre voyagiste"
+      }
+    },
+    "after_departure": {
+      "title": "3. Après votre départ",
+      "intro": "Afin de pouvoir répondre au mieux et le plus rapidement à vos besoins, veuillez contacter dans l'ordre suivant :",
+      "flights": {
+        "title": "a. Les vols",
+        "text": "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      },
+      "local": {
+        "title": "b. Nos correspondants locaux",
+        "phone": "Numéro non défini",
+        "items": [],
+        "note": ""
+      },
+      "agency": {
+        "title": "c. Votre voyagiste"
+      }
+    },
+    "emergency": {
+      "title": "4. Pour les cas d'extrême urgence",
+      "text1": "*Sont considérées comme extrême urgence (maladie, accident, décès…), veuillez contacter votre assurance voyage.",
+      "text2": "Si notre correspondant local ou votre assurance ne peut résoudre votre problème, vous pouvez nous contacter sur notre numéro d'urgence au 0041 76 296 25 40."
+    }
+  },
+  "thank_you": {
+    "greeting": "",
+    "paragraphs": [],
+    "closing": ""
+  }
+}

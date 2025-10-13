@@ -194,6 +194,44 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
               <PDFDownloadButton bookletData={pdfBookletData} />
             )}
             
+            <Button
+              onClick={async () => {
+                try {
+                  const element = document.getElementById('booklet-content');
+                  if (!element) throw new Error("Element #booklet-content introuvable");
+                  const html = element.outerHTML;
+
+                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(html);
+                  } else {
+                    // Fallback for older browsers
+                    const ta = document.createElement('textarea');
+                    ta.value = html;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                  }
+
+                  toast({
+                    title: "Copié",
+                    description: "Le HTML complet du carnet a été copié dans le presse-papiers.",
+                  });
+                } catch (err) {
+                  console.error('Erreur copie HTML:', err);
+                  toast({
+                    title: "Erreur",
+                    description: "Impossible de copier le HTML du carnet.",
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              variant="outline"
+              className="flex items-center"
+            >
+              Copier l'HTML
+            </Button>
+
             <Button 
               onClick={handleGenerateShareableLink}
               disabled={isGeneratingLink}
