@@ -550,7 +550,7 @@ async function saveManualSteps(tripId: string, steps: ManualStep[]) {
     .from('travel_steps')
     .delete()
     .eq('trip_id', tripId);
-  console.info('[saveManualSteps:deletedStepsResult]', { rid, tripId, deletedCount: delStepsRes.data?.length || 0, error: delStepsRes.error });
+  console.info('[saveManualSteps:deletedStepsResult]', { rid, tripId, error: delStepsRes.error });
 
   // Create new steps
   for (let i = 0; i < steps.length; i++) {

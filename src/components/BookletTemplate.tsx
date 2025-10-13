@@ -63,7 +63,14 @@ export function BookletTemplate({
   const templateStyles = { classic: "font-serif", modern: "font-sans", minimal: "font-mono" as const };
 
   return (
-    <div id="booklet-content" className={`${templateStyles[options.template]} text-gray-900`}>
+    <div 
+      id="booklet-content" 
+      className={`${templateStyles[options.template]} text-gray-900`}
+      data-pdf-title={editableTitle}
+      data-pdf-start-date={data.startDate?.toISOString()}
+      data-pdf-end-date={data.endDate?.toISOString()}
+      data-pdf-destination={data.destinations?.[0]}
+    >
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -260,6 +267,7 @@ export function BookletTemplate({
                 src={coverImage1.public_url}
                 alt="Couverture 1"
                 className="w-full h-auto object-contain"
+                data-pdf-cover-image="1"
               />
             </div>
           )}
@@ -269,6 +277,7 @@ export function BookletTemplate({
                 src={coverImage2.public_url}
                 alt="Couverture 2"
                 className="w-full h-auto object-contain"
+                data-pdf-cover-image="2"
               />
             </div>
           )}
@@ -302,12 +311,12 @@ export function BookletTemplate({
       </div>
 
       {/* Section de remerciement */}
-      <div className="section-break mb-12">
+      <div className="section-break mb-12" data-pdf-thank-you>
         <ThankYouSection />
       </div>
 
       {/* Informations générales */}
-      <div className="section-break mb-12">
+      <div className="section-break mb-12" data-pdf-general-info>
         <h2 className="text-lg font-bold mb-4 text-gray-900 uppercase">
           Informations complémentaires
         </h2>

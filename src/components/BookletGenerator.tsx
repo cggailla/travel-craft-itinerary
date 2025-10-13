@@ -9,9 +9,10 @@ import {
   BookletOptions, 
   defaultBookletOptions 
 } from "@/services/bookletService";
-// pdfBookletService removed: do not import getPDFBookletData or PDFDownloadButton to avoid blocking the AI pipeline
+import { PDFDownloadButton } from "./pdf/PDFDownloadButton";
+import { extractBookletDataFromDOM } from "@/services/domExtractorService";
+import { PDFBookletData } from "@/services/pdfBookletService";
 import { 
-  Download, 
   FileText,
   Loader2,
   Calendar,
@@ -21,8 +22,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import html2pdf from "html2pdf.js";
-import { optimizeAllImages, restoreOriginalImages } from "@/utils/imageOptimizer";
 
 interface BookletGeneratorProps {
   tripId: string;
@@ -30,10 +29,9 @@ interface BookletGeneratorProps {
 
 export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [bookletData, setBookletData] = useState<BookletData | null>(null);
-  // pdfBookletData removed to avoid calling blocking PDF preparation
+  const [pdfBookletData, setPdfBookletData] = useState<PDFBookletData | null>(null);
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const { toast } = useToast();
 
@@ -59,118 +57,23 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
-  const handleGeneratePdf = async () => {
-    if (!bookletData) return;
-    
+  const handleExtractPdfData = () => {
     try {
-      setIsGeneratingPdf(true);
-      
-      // Récupérer l'élément HTML à convertir
       const element = document.getElementById('booklet-content');
-      if (!element) {
-        throw new Error('Contenu du carnet introuvable');
-      }
-
-      toast({
-        title: "Optimisation en cours",
-        description: "Préparation des images...",
-      });
-
-      // Optimiser les images avant génération
-      await optimizeAllImages(element);
-
-      // Masquer uniquement les zones d'upload vides (data-has-image="false")
-      const emptyUploadZones = element.querySelectorAll('.no-print[data-has-image="false"]');
-      emptyUploadZones.forEach((el) => {
-        (el as HTMLElement).style.display = 'none';
-      });
-
-      // Afficher les éléments .print-only
-      const printOnlyElements = element.querySelectorAll('.print-only');
-      printOnlyElements.forEach((el) => {
-        (el as HTMLElement).style.display = 'block';
-      });
-
-      toast({
-        title: "Génération en cours",
-        description: "Création du PDF...",
-      });
-
-      // Configuration PDF optimisée
-      const opt = {
-        margin: [15, 12, 15, 12] as [number, number, number, number],
-        filename: `carnet-voyage-${bookletData.tripTitle.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.90 }, // Réduit légèrement pour perf
-        html2canvas: { 
-          scale: 1.75, // ✅ Réduit de 2.5 à 1.75 pour réduire mémoire
-          useCORS: true,
-          logging: false,
-          letterRendering: true,
-          allowTaint: false,
-          imageTimeout: 15000,
-          windowWidth: 1200
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait' as const,
-          compress: true,
-          precision: 2
-        },
-        pagebreak: { 
-          mode: 'css', // ✅ Uniquement CSS (pas de 'legacy')
-          before: '.section-break',
-          avoid: '.keep-together', // ✅ Simplifié (retiré .step-header)
-          after: []
-        }
-      };
-
-      // Générer le PDF
-      await html2pdf().set(opt).from(element).save();
-
-      // Restaurer les images originales
-      restoreOriginalImages(element);
-
-      // Réafficher les zones d'upload vides après génération
-      emptyUploadZones.forEach((el) => {
-        (el as HTMLElement).style.display = '';
-      });
-
-      // Masquer à nouveau les éléments .print-only
-      printOnlyElements.forEach((el) => {
-        (el as HTMLElement).style.display = '';
-      });
+      const extracted = extractBookletDataFromDOM(element);
+      setPdfBookletData(extracted);
       
       toast({
-        title: "PDF généré",
-        description: "Votre carnet de voyage a été téléchargé avec succès.",
+        title: "Données extraites",
+        description: "Le PDF est prêt à être téléchargé.",
       });
     } catch (error) {
-      console.error('Erreur génération PDF:', error);
-      
-      // En cas d'erreur, restaurer l'affichage normal
-      const element = document.getElementById('booklet-content');
-      if (element) {
-        restoreOriginalImages(element);
-        
-        const emptyUploadZones = element.querySelectorAll('.no-print[data-has-image="false"]');
-        emptyUploadZones.forEach((el) => {
-          (el as HTMLElement).style.display = '';
-        });
-        
-        const printOnlyElements = element.querySelectorAll('.print-only');
-        printOnlyElements.forEach((el) => {
-          (el as HTMLElement).style.display = '';
-        });
-      }
-      
+      console.error('Erreur extraction données:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de générer le PDF. Essayez de réduire le nombre d'images.",
+        description: "Impossible d'extraire les données du carnet.",
         variant: "destructive",
       });
-    } finally {
-      setIsGeneratingPdf(false);
     }
   };
 
@@ -279,20 +182,17 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
           <div className="flex gap-2">
-            {/* Ancien bouton PDF (html2pdf) - PDF generation kept as manual fallback */}
-            <Button 
-              onClick={handleGeneratePdf}
-              disabled={isGeneratingPdf}
-              variant="outline"
-              className="flex items-center"
-            >
-              {isGeneratingPdf ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              {isGeneratingPdf ? 'Génération...' : 'PDF (ancien)'}
-            </Button>
+            {!pdfBookletData ? (
+              <Button 
+                onClick={handleExtractPdfData}
+                variant="default"
+                className="flex items-center"
+              >
+                Préparer le PDF
+              </Button>
+            ) : (
+              <PDFDownloadButton bookletData={pdfBookletData} />
+            )}
             
             <Button 
               onClick={handleGenerateShareableLink}

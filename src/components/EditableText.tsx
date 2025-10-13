@@ -8,6 +8,7 @@ interface EditableTextProps {
   placeholder?: string;
   as?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'span' | 'div' | 'li';
   inline?: boolean; // Pour texte inline sans bordure visible
+  [key: string]: any; // Allow data-* attributes
 }
 
 /**
@@ -21,7 +22,8 @@ export function EditableText({
   multiline = false,
   placeholder = '',
   as: Component = 'span',
-  inline = false
+  inline = false,
+  ...rest
 }: EditableTextProps) {
   const [localValue, setLocalValue] = useState(value);
   const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +66,7 @@ export function EditableText({
       className={editableClassName}
       data-placeholder={placeholder}
       title="Cliquer pour éditer"
+      {...rest}
     >
       {localValue}
     </Component>
