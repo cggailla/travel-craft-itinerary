@@ -240,6 +240,7 @@ export function BookletTemplate({
             contentEditable
             suppressContentEditableWarning
             onBlur={(e) => setEditableTitle(e.currentTarget.textContent || data.tripTitle)}
+            data-pdf-cover-destination
           >
             {editableTitle}
           </h1>
@@ -386,14 +387,22 @@ export function BookletTemplate({
         <div className="p-4 bg-gray-50 text-center text-sm text-gray-700">
           {data.startDate && (
             <p className="mb-1">
-              {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
+              <span data-pdf-cover-start-date>
+                {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
+              </span>
               {data.endDate && data.endDate !== data.startDate && (
-                <> - {format(data.endDate, "dd/MM/yyyy", { locale: fr })}</>
+                <>
+                  {" - "}
+                  <span data-pdf-cover-end-date>
+                    {format(data.endDate, "dd/MM/yyyy", { locale: fr })}
+                  </span>
+                </>
               )}
             </p>
           )}
           <p>{data.totalDays} jour{data.totalDays > 1 ? "s" : ""}</p>
         </div>
+
       </div>
 
       {/* Itinéraire */}

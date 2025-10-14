@@ -4,12 +4,18 @@
   "description": "Extract important travel booklet data from dom.html into JSON",
   "main": "scripts/extract.js",
   "scripts": {
-    "extract": "node scripts/extract.js dom.html extracted.json"
+    "extract": "node scripts/extract.js dom.html extracted.json",
+    "generate-pdf": "node generate_pdf.js extracted.json booklet.pdf"
+  },
+  "bin": {
+    "run-booklet": "run_all.js"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "minimist": "^1.2.8"
+    "minimist": "^1.2.8",
+    "react": "^18.2.0",
+    "@react-pdf/renderer": "^3.0.0"
   }
 }

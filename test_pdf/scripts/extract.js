@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const minimist = require('minimist');
+const { get } = require('http');
 
 // Lightweight extractor that mirrors the client-side `extractBookletData()`
 // This version uses cheerio to query the snapshot DOM (dom.html) and outputs
@@ -47,10 +48,11 @@ function extract(html) {
   cover.destination = getText('[data-pdf-cover-destination]');
   cover.startDate = getText('[data-pdf-cover-start-date]');
   cover.endDate = getText('[data-pdf-cover-end-date]');
-  cover.agency = getText('[data-pdf-cover-agency]');
-  cover.travelers = getText('[data-pdf-cover-travelers]');
-  cover.reference = getText('[data-pdf-cover-reference]');
-  cover.imageUrl = getAttr('[data-pdf-cover-image]', 'src') || null;
+  cover.images = [];
+  root.find('[data-pdf-cover-image]').each((i, el) => {
+    const src = $(el).attr('src') || '';
+    if (src) cover.images.push(src);
+  });
   data.cover = cover;
 
   // 2) GENERAL INFORMATION
@@ -59,26 +61,56 @@ function extract(html) {
   general.population = getText('[data-pdf-info-population]');
   general.surface_area = getText('[data-pdf-info-surface]');
   general.timezone = {
-    main: getText('[data-pdf-info-timezone-main]'),
-    offset: getText('[data-pdf-info-timezone-offset]')
+    main: getText('[data-pdf-info-timezone]'),
+    offset: getText('[data-pdf-info-offset]')
   };
   general.entry = {
-    passport: getText('[data-pdf-info-entry-passport]'),
-    visa: getText('[data-pdf-info-entry-visa]'),
-    validity: getText('[data-pdf-info-entry-validity]')
+    passport: getText('[data-pdf-info-passport]'),
+    visa: getText('[data-pdf-info-visa]'),
+    validity: getText('[data-pdf-info-validity]')
   };
   general.health = {
-    vaccines: getText('[data-pdf-info-health-vaccines]'),
-    insurance: getText('[data-pdf-info-health-insurance]'),
-    water: getText('[data-pdf-info-health-water]')
+    vaccines: getText('[data-pdf-info-vaccines]'),
+    insurance: getText('[data-pdf-info-insurance]'),
+    water: getText('[data-pdf-info-water]')
   };
+
+  general.clothing = {
+    season: getText('[data-pdf-info-clothing-season]'),
+    temperature: getText('[data-pdf-info-clothing-temperatures]'),
+    items: []
+  };
+  // plusieurs éléments avec la même clé [data-pdf-info-clothing-item]
+  root.find('[data-pdf-info-clothing-item]').each((i, el) => {
+    const txt = $(el).text().trim() || '';
+    if (txt) general.clothing.items.push(txt);
+  });
+
+  general.food = { specialties: [] };
+  root.find('[data-pdf-info-food-item]').each((i, el) => {
+    const region = $(el).find('[data-pdf-info-food-region]').first().text().trim() || '';
+    const specialty = $(el).find('[data-pdf-info-food-specialty]').first().text().trim() || '';
+    if (region || specialty) general.food.specialties.push({ region, specialty });
+  });
+
   general.currency = {
-    name: getText('[data-pdf-info-currency-name]'),
-    rate: getText('[data-pdf-info-currency-rate]')
+    name: getText('[data-pdf-info-currency]'),
+    rate: [],
+    exchange:[]
   };
+  root.find('[data-pdf-info-currency]').each((i, el) => {
+    const txt = $(el).text().trim() || '';
+    if (txt) general.currency.rate.push(txt);
+  });
+
+    root.find('[data-pdf-info-exchange-rate]').each((i, el) => {
+    const txt = $(el).text().trim() || '';
+    if (txt) general.currency.exchange.push(txt);
+  });
+  
   general.budget = {
     coffee: getText('[data-pdf-info-budget-coffee]'),
-    meal: getText('[data-pdf-info-budget-meal]'),
+    meal: getText('[data-pdf-info-budget-simple-meal]'),
     restaurant: getText('[data-pdf-info-budget-restaurant]')
   };
   general.tipping = {
@@ -142,8 +174,6 @@ function extract(html) {
       s.address = $(seg).find('[data-pdf-segment-address]').first().text().trim() || '';
       s.phone = $(seg).find('[data-pdf-segment-phone]').first().text().trim() || '';
       s.duration = $(seg).find('[data-pdf-segment-duration]').first().text().trim() || '';
-      s.start_time = $(seg).find('[data-pdf-segment-start-time]').attr('data-pdf-segment-start-time') || '';
-      s.end_time = $(seg).find('[data-pdf-segment-end-time]').attr('data-pdf-segment-end-time') || '';
       s.excluded = ($(seg).attr('data-pdf-segment-excluded') || '') === 'true';
       step.segments.push(s);
     });
@@ -194,10 +224,11 @@ function extract(html) {
 
   // 5) THANK YOU
   const thanks = {};
-  thanks.greeting = getText('[data-pdf-thank-greeting]');
-  thanks.paragraphs = [];
-  root.find('[data-pdf-thank-paragraph]').each((i, p) => { thanks.paragraphs.push($(p).text().trim()); });
-  thanks.closing = getText('[data-pdf-thank-closing]');
+  thanks.greeting = getText('[data-pdf-thankyou-greeting]');
+  thanks.para1 = getText('[data-pdf-thankyou-para1]');
+  thanks.para2 = getText('[data-pdf-thankyou-para2]');
+  thanks.para3 = getText('[data-pdf-thankyou-para3]')
+  thanks.closing = getText('[data-pdf-thankyou-closing]');
   data.thank_you = thanks;
 
   return data;

@@ -3,36 +3,66 @@
     "destination": "",
     "startDate": "",
     "endDate": "",
-    "agency": "",
-    "travelers": "",
-    "reference": "",
-    "imageUrl": "https://jjlhsikgczigvtdzfroa.supabase.co/storage/v1/object/public/trip-images/54af0169-8b95-44bc-b2c6-40cc600d7b57/d9bce7db-90ac-461b-a4d9-32bcbdf56cf4/cover_1.jpg"
+    "images": [
+      "https://jjlhsikgczigvtdzfroa.supabase.co/storage/v1/object/public/trip-images/54af0169-8b95-44bc-b2c6-40cc600d7b57/d9bce7db-90ac-461b-a4d9-32bcbdf56cf4/cover_1.jpg"
+    ]
   },
   "general_info": {
     "capital": "Nairobi",
     "population": "environ 55 millions d'habitants",
     "surface_area": "environ 580 000 km²",
     "timezone": {
-      "main": "",
-      "offset": ""
+      "main": "UTC+3",
+      "offset": "Décalage avec la Suisse : +2 heures en hiver, +1 heure en été"
     },
     "entry": {
-      "passport": "",
-      "visa": "",
-      "validity": ""
+      "passport": "Passeport valide au moins 6 mois après la date d'entrée",
+      "visa": "Visa obligatoire, à demander en ligne via le système eVisa/eTA avant le voyage. Visa touristique simple entrée valable jusqu'à 90 jours. Exemption de visa pour certains ressortissants africains pour 90 jours.",
+      "validity": "Séjour touristique jusqu'à 90 jours"
     },
     "health": {
-      "vaccines": "",
-      "insurance": "",
-      "water": ""
+      "vaccines": "Fièvre jaune (certificat exigé si provenance d'une zone à risque), Hépatite A, Typhoïde recommandées",
+      "insurance": "Assurance santé voyage fortement recommandée, incluant rapatriement",
+      "water": "Eau du robinet non potable, privilégier eau en bouteille ou traitement"
+    },
+    "clothing": {
+      "season": "Saison sèche (juin à octobre) recommandée pour voyager",
+      "temperature": "Fourchette de 15-28°C selon altitude et saison",
+      "items": [
+        "Vêtements légers et couvrants",
+        "Chapeau ou casquette",
+        "Chaussures de marche",
+        "Veste légère pour soirées fraîches"
+      ]
+    },
+    "food": {
+      "specialties": [
+        {
+          "region": "Nairobi",
+          "specialty": "Nyama Choma (viande grillée)"
+        },
+        {
+          "region": "Côte (Mombasa)",
+          "specialty": "Sambusa (beignets farcis), pilau (riz épicé)"
+        },
+        {
+          "region": "Régions rurales",
+          "specialty": "Ugali (polenta de maïs), sukuma wiki (chou frisé)"
+        }
+      ]
     },
     "currency": {
-      "name": "",
-      "rate": ""
+      "name": "Shilling kényan (KES)",
+      "rate": [
+        "Shilling kényan (KES)"
+      ],
+      "exchange": [
+        "1 CHF ≈ 150 KES (taux approximatif en 2025)"
+      ]
     },
     "budget": {
       "coffee": "50-150 KES",
-      "meal": "",
+      "meal": "150-400 KES",
       "restaurant": "500-1500 KES par personne"
     },
     "tipping": {
@@ -100,8 +130,6 @@
           "address": "Addis Ababa Bole International Airport, Bole District, 6 km southeast of Addis Ababa city center, Ethiopia",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -113,8 +141,6 @@
           "address": "Nairobi",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -126,8 +152,6 @@
           "address": "Mombasa Road, P.O. Box 18187-00500, Nairobi, Kenya",
           "phone": "+254 732 191 000",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         }
       ],
@@ -155,8 +179,6 @@
           "address": "Nairobi",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -168,8 +190,6 @@
           "address": "Finch Hattons Airfield, Northwestern boundary of Tsavo West National Park, Kenya",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -181,8 +201,6 @@
           "address": "Tsavo",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -194,8 +212,6 @@
           "address": "Tsavo National Park, situé entre Nairobi et Mombasa, comté de Taita-Taveta, Kenya. Principales entrées : Mtito Andei, Voi, Buchuma, Sala, et Manyani pour Tsavo Est ; Mtito Andei, Chyulu, Maktau, Tsavo, Lake Jipe, et Ziwani pour Tsavo Ouest.",
           "phone": "0800 597 000",
           "duration": "24h",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -207,8 +223,6 @@
           "address": "Tsavo West National Park, P.O. Box 48690, Nairobi, Kenya",
           "phone": "+254 734 699698",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         }
       ],
@@ -236,8 +250,6 @@
           "address": "Tsavo East",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -249,8 +261,6 @@
           "address": "Tsavo East National Park, 11 km from Voi Gate, Voi, Kenya",
           "phone": "0796890890",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         }
       ],
@@ -278,8 +288,6 @@
           "address": "Voi",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -291,8 +299,6 @@
           "address": "Voi - Mombasa",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -304,8 +310,6 @@
           "address": "Mombasa",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -317,8 +321,6 @@
           "address": "P.O. Box 73 – 80400, Ukunda, Diani Beach Road, Diani, Kenya",
           "phone": "+254 722 226 478",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         }
       ],
@@ -346,8 +348,6 @@
           "address": "Mombasa",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         },
         {
@@ -359,8 +359,6 @@
           "address": "Addis Ababa Bole International Airport, Bole district, Addis Ababa, Ethiopia",
           "phone": "",
           "duration": "",
-          "start_time": "02:00",
-          "end_time": "",
           "excluded": false
         }
       ],
@@ -412,8 +410,10 @@
     }
   },
   "thank_you": {
-    "greeting": "",
-    "paragraphs": [],
-    "closing": ""
+    "greeting": "Chers voyageurs",
+    "para1": "Je tiens à vous remercier sincèrement d'avoir fait confiance à notre agence pour l'organisation de votre voyage. J'espère que ce séjour vous a apporté d'émerveillement, de découvertes et de belles émotions en famille, et que vous en garderez de précieux souvenirs.",
+    "para2": "N'hésitez pas à me faire part de vos impressions : vos retours sont essentiels pour continuer à améliorer nos services et proposer des expériences toujours plus personnalisées. Je reste bien entendu à votre disposition pour toute question ou pour vous accompagner dans la planification de vos prochaines escapades.",
+    "para3": "Au plaisir de vous retrouver pour une nouvelle aventure !",
+    "closing": "Bien à vous,"
   }
 }
