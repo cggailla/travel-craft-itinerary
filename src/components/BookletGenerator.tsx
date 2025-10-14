@@ -7,8 +7,15 @@ import {
   getBookletData, 
   BookletData, 
   BookletOptions, 
-  defaultBookletOptions 
+  defaultBookletOptions
 } from "@/services/bookletService";
+import {
+  getBookletDOMSnapshot,
+  debugLogBookletDOM,
+  openBookletSnapshotWindow,
+  getBookletDOMFullSnapshot,
+  getBookletDOMRawExport
+} from "@/services/domExtractorService";
 import { PDFDownloadButton } from "./pdf/PDFDownloadButton";
 import { extractBookletDataFromDOM } from "@/services/domExtractorService";
 import { BookletData as PDFBookletData } from "@/components/pdf/BookletPDF";
@@ -118,31 +125,60 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     try {
       setIsGeneratingPdfEdge(true);
 
-      toast({ title: 'Génération PDF', description: 'Le PDF est en cours de génération...' });
+      toast({
+        title: "Génération PDF",
+        description: "Le PDF est en cours de génération...",
+      });
 
-      const element = document.getElementById('booklet-content');
-      if (!element) throw new Error('Element #booklet-content introuvable');
-      const html = element.outerHTML;
+      const element = document.getElementById("booklet-content");
+      if (!element) throw new Error("Element #booklet-content introuvable");
 
-      const { data, error } = await supabase.functions.invoke('generate-booklet-pdf', {
+      const html = getBookletDOMRawExport(element);
+
+      const { data, error } = await supabase.functions.invoke("generate-booklet-pdf", {
         body: { html, tripId },
       });
 
       if (error) throw error;
 
-      if (data?.pdf_url) {
-        window.open(data.pdf_url, '_blank');
-        toast({ title: 'PDF Généré', description: "Le PDF s'ouvre dans un nouvel onglet." });
-      } else {
-        throw new Error(data?.error || 'Aucune URL PDF retournée par la fonction');
+      if (!data?.pdf_url) {
+        throw new Error(data?.error || "Aucune URL PDF retournée par la fonction");
       }
+
+      // ✅ Télécharger le PDF en binaire pour forcer le téléchargement
+      const response = await fetch(data.pdf_url);
+      if (!response.ok) throw new Error("Impossible de télécharger le fichier PDF");
+      const blob = await response.blob();
+
+      // ✅ Créer une URL temporaire et déclencher un téléchargement
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `booklet-${tripId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Nettoyage
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+
+      toast({
+        title: "PDF généré",
+        description: "Le fichier a été téléchargé avec succès.",
+      });
     } catch (err: any) {
-      console.error('Erreur génération edge PDF:', err);
-      toast({ title: 'Erreur', description: err.message || 'Impossible de générer le PDF', variant: 'destructive' });
+      console.error("Erreur génération edge PDF:", err);
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible de générer le PDF",
+        variant: "destructive",
+      });
     } finally {
       setIsGeneratingPdfEdge(false);
     }
   };
+
+
 
   const handleGeneratePdfServer = async () => {
     try {

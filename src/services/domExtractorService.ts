@@ -182,15 +182,27 @@ export function getBookletDOMFullSnapshot(root: HTMLElement | null): string {
  * Retourne l'HTML strictement brut tel qu'il est dans le DOM (aucune modification).
  * Utiliser avec prudence (contient tous les contrôles interactifs, commentaires, data-attrs, etc.).
  */
+/**
+ * Retourne l'HTML réellement rendu dans le navigateur,
+ * y compris les attributs dynamiques comme src, href, value, checked, etc.
+ */
 export function getBookletDOMRawExport(root: HTMLElement | null): string {
   if (!root) {
     throw new Error('Element #booklet-content introuvable');
   }
 
-  // Retourner l'outerHTML direct du root fourni sans clone ni nettoyage.
-  // Ceci permet de récupérer exactement le HTML tel qu'il est rendu par React.
-  return root.outerHTML;
+  try {
+    const serializer = new XMLSerializer();
+    const html = serializer.serializeToString(root);
+
+    console.log("🧩 [Export] HTML size:", html.length);
+    return html;
+  } catch (err) {
+    console.error("❌ XMLSerializer failed, fallback to outerHTML:", err);
+    return root.outerHTML;
+  }
 }
+
 
 /**
  * Console logs some infos utiles et le snapshot HTML nettoyé.

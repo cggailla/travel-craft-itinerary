@@ -92,16 +92,26 @@ function formatDate(dateStr?: string): string {
   })
 }
 
-function formatDateFull(dateStr?: string): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
+export function formatDateFull(date: string | Date | undefined): string {
+  if (!date) return "";
+
+  // Si c’est une string type "DD/MM/YYYY"
+  if (typeof date === "string" && date.includes("/")) {
+    const [day, month, year] = date.split("/");
+    return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+  }
+
+  // Si c’est une Date ou un format ISO
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+
+  return d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
+
 
 function formatDateRange(start?: string, end?: string): string {
   if (!start && !end) return ''
