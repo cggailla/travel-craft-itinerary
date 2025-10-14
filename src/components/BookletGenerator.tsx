@@ -33,6 +33,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
   const [options] = useState<BookletOptions>(defaultBookletOptions);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isGeneratingPdfEdge, setIsGeneratingPdfEdge] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,6 +111,72 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       });
     } finally {
       setIsGeneratingLink(false);
+    }
+  };
+
+  const handleGeneratePdfEdge = async () => {
+    try {
+      setIsGeneratingPdfEdge(true);
+
+      toast({ title: 'Génération PDF', description: 'Le PDF est en cours de génération...' });
+
+      const element = document.getElementById('booklet-content');
+      if (!element) throw new Error('Element #booklet-content introuvable');
+      const html = element.outerHTML;
+
+      const { data, error } = await supabase.functions.invoke('generate-booklet-pdf', {
+        body: { html, tripId },
+      });
+
+      if (error) throw error;
+
+      if (data?.pdf_url) {
+        window.open(data.pdf_url, '_blank');
+        toast({ title: 'PDF Généré', description: "Le PDF s'ouvre dans un nouvel onglet." });
+      } else {
+        throw new Error(data?.error || 'Aucune URL PDF retournée par la fonction');
+      }
+    } catch (err: any) {
+      console.error('Erreur génération edge PDF:', err);
+      toast({ title: 'Erreur', description: err.message || 'Impossible de générer le PDF', variant: 'destructive' });
+    } finally {
+      setIsGeneratingPdfEdge(false);
+    }
+  };
+
+  const handleGeneratePdfServer = async () => {
+    try {
+      const element = document.getElementById('booklet-content');
+      if (!element) throw new Error('Element #booklet-content introuvable');
+      const html = element.outerHTML;
+
+      toast({ title: 'Génération PDF', description: 'Le PDF est en cours de génération...' });
+
+      const resp = await fetch('/api/generate-booklet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.error || 'Erreur lors de la génération du PDF');
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'booklet.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Téléchargement', description: 'Le PDF a été généré et téléchargé.' });
+    } catch (err: any) {
+      console.error('Erreur génération serveur PDF', err);
+      toast({ title: 'Erreur', description: err.message || 'Impossible de générer le PDF', variant: 'destructive' });
     }
   };
 
@@ -230,6 +297,20 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
               className="flex items-center"
             >
               Copier l'HTML
+            </Button>
+
+            <Button 
+              onClick={handleGeneratePdfEdge}
+              disabled={isGeneratingPdfEdge}
+              variant="default"
+              className="flex items-center"
+            >
+              {isGeneratingPdfEdge ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
+              )}
+              {isGeneratingPdfEdge ? 'Génération PDF...' : 'Générer PDF'}
             </Button>
 
             <Button 
