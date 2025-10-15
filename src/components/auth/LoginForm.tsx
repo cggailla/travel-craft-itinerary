@@ -53,7 +53,7 @@ export function LoginForm() {
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <img 
-              src="/logo-adgentes.png" 
+              src="https://www.ad-gentes.ch/build/assets/images/logo-adgentes.33ba4059.png" 
               alt="Logo" 
               className="h-16 w-auto"
             />

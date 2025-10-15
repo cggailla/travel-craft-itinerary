@@ -426,34 +426,59 @@ export const Cover: React.FC<CoverProps> = (props: any) => {
       <View
         style={{
           backgroundColor: theme.primary,
-          paddingVertical: 14,
-          textAlign: 'center',
-          justifyContent: 'center',
-          alignItems: 'center',
+          paddingVertical: 8,
+          paddingHorizontal: 12,
           width: '100%',
+          position: 'relative',
+          flexDirection: 'row',
+          alignItems: 'center',
         }}
       >
-        <Text
+        {/* Left: logo */}
+        <View style={{ width: 80, height: 40, justifyContent: 'center' }}>
+          <Image
+            src={brand.logoUrl || 'https://www.ad-gentes.ch/build/assets/images/logo-adgentes.33ba4059.png'}
+            style={{ width: 80, height: 40, objectFit: 'contain' }}
+          />
+        </View>
+
+        {/* Center: title (absolutely centered between left logo and right header) */}
+        <View
           style={{
-            fontSize: 22,
-            color: 'white',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
+            position: 'absolute',
+            left: 92, // logo width (80) + left padding (12)
+            right: 152, // header width (140) + right padding (12)
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {destination || 'Carnet de voyage'}
-        </Text>
-        {headerRight && (
           <Text
             style={{
-              fontSize: 10,
+              fontSize: 20,
               color: 'white',
-              marginTop: 2,
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
             }}
           >
-            {headerRight}
+            {destination || 'Carnet de voyage'}
           </Text>
-        )}
+        </View>
+
+        {/* Right: header info */}
+        <View style={{ width: 140, alignItems: 'flex-end', justifyContent: 'center' }}>
+          {headerRight ? (
+            <Text
+              style={{
+                fontSize: 10,
+                color: 'white',
+              }}
+            >
+              {headerRight}
+            </Text>
+          ) : (
+            <View />
+          )}
+        </View>
       </View>
 
       {/* Zone centrale : 2 images demi-page */}
