@@ -65,61 +65,6 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
-  const handleExtractPdfData = () => {
-    try {
-      const element = document.getElementById('booklet-content');
-      const extracted = extractBookletDataFromDOM(element);
-      setPdfBookletData(extracted);
-      
-      toast({
-        title: "Données extraites",
-        description: "Le PDF est prêt à être téléchargé.",
-      });
-    } catch (error) {
-      console.error('Erreur extraction données:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'extraire les données du carnet.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGenerateShareableLink = async () => {
-    try {
-      setIsGeneratingLink(true);
-      
-      toast({
-        title: "Génération en cours",
-        description: "Création du lien partageable...",
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-static-booklet', {
-        body: { tripId },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        await navigator.clipboard.writeText(data.url);
-        
-        toast({
-          title: "Lien généré avec succès!",
-          description: "Le lien a été copié dans votre presse-papiers",
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      console.error('Error generating shareable link:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de générer le lien partageable",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingLink(false);
-    }
-  };
 
   const handleGeneratePdfEdge = async () => {
     try {
@@ -146,7 +91,12 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       }
 
       // ✅ Télécharger le PDF en binaire pour forcer le téléchargement
-      const response = await fetch(data.pdf_url);
+      // Bypass navigateur/CDN cache: ajouter un cache-bust param et demander `no-store`
+      const fetchUrl = data.pdf_url.includes("?")
+        ? `${data.pdf_url}&ts=${Date.now()}`
+        : `${data.pdf_url}?ts=${Date.now()}`;
+      console.log("🔁 Fetching PDF (cache-bust):", fetchUrl);
+      const response = await fetch(fetchUrl, { cache: 'no-store' });
       if (!response.ok) throw new Error("Impossible de télécharger le fichier PDF");
       const blob = await response.blob();
 
@@ -178,70 +128,6 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
     }
   };
 
-
-
-  const handleGeneratePdfServer = async () => {
-    try {
-      const element = document.getElementById('booklet-content');
-      if (!element) throw new Error('Element #booklet-content introuvable');
-      const html = element.outerHTML;
-
-      toast({ title: 'Génération PDF', description: 'Le PDF est en cours de génération...' });
-
-      const resp = await fetch('/api/generate-booklet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html }),
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body.error || 'Erreur lors de la génération du PDF');
-      }
-
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'booklet.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      toast({ title: 'Téléchargement', description: 'Le PDF a été généré et téléchargé.' });
-    } catch (err: any) {
-      console.error('Erreur génération serveur PDF', err);
-      toast({ title: 'Erreur', description: err.message || 'Impossible de générer le PDF', variant: 'destructive' });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center space-y-4">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Chargement des données du voyage...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!bookletData) {
-    return (
-      <div className="text-center py-12">
-        <FileText className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Aucune donnée disponible</h3>
-        <p className="text-muted-foreground mb-4">
-          Aucun segment validé trouvé pour ce voyage.
-        </p>
-        <Button onClick={loadBookletData} variant="outline">
-          Réessayer
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* En-tête avec informations du voyage */}
@@ -249,34 +135,42 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
         <CardHeader>
           <CardTitle className="flex items-center text-2xl">
             <FileText className="mr-3 h-6 w-6 text-primary" />
-            {bookletData.tripTitle}
+            {bookletData?.tripTitle}
           </CardTitle>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            {bookletData.startDate && (
+            {bookletData?.startDate && (
               <div className="flex items-center">
                 <Calendar className="mr-1 h-4 w-4" />
                 {bookletData.startDate.toLocaleDateString('fr-FR')}
-                {bookletData.endDate && ` - ${bookletData.endDate.toLocaleDateString('fr-FR')}`}
+                {bookletData.endDate &&
+                  ` - ${bookletData.endDate.toLocaleDateString('fr-FR')}`}
               </div>
             )}
-            <div className="flex items-center">
-              <Clock className="mr-1 h-4 w-4" />
-              {bookletData.totalDays} jour{bookletData.totalDays > 1 ? 's' : ''}
-            </div>
-            <div className="flex items-center">
-              <MapPin className="mr-1 h-4 w-4" />
-              {bookletData.segments.length} segment{bookletData.segments.length > 1 ? 's' : ''}
-            </div>
+            {bookletData && (
+              <>
+                <div className="flex items-center">
+                  <Clock className="mr-1 h-4 w-4" />
+                  {bookletData.totalDays} jour{bookletData.totalDays > 1 ? 's' : ''}
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="mr-1 h-4 w-4" />
+                  {bookletData.segments.length} segment
+                  {bookletData.segments.length > 1 ? 's' : ''}
+                </div>
+              </>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(bookletData.segmentsByType).map(([type, segments]) => (
-              <Badge key={type} variant="secondary">
-                {type}: {segments.length}
-              </Badge>
-            ))}
-          </div>
+          {bookletData && (
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(bookletData.segmentsByType).map(([type, segments]) => (
+                <Badge key={type} variant="secondary">
+                  {type}: {segments.length}
+                </Badge>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -284,92 +178,28 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
-          <div className="flex gap-2">
-            {!pdfBookletData ? (
-              <Button 
-                onClick={handleExtractPdfData}
-                variant="default"
-                className="flex items-center"
-              >
-                Préparer le PDF
-              </Button>
+          <Button
+            onClick={handleGeneratePdfEdge}
+            disabled={isGeneratingPdfEdge}
+            variant="default"
+            className="flex items-center"
+          >
+            {isGeneratingPdfEdge ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <PDFDownloadButton bookletData={pdfBookletData} />
+              <FileText className="mr-2 h-4 w-4" />
             )}
-            
-            <Button
-              onClick={async () => {
-                try {
-                  const element = document.getElementById('booklet-content');
-                  if (!element) throw new Error("Element #booklet-content introuvable");
-                  const html = element.outerHTML;
-
-                  if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(html);
-                  } else {
-                    // Fallback for older browsers
-                    const ta = document.createElement('textarea');
-                    ta.value = html;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                  }
-
-                  toast({
-                    title: "Copié",
-                    description: "Le HTML complet du carnet a été copié dans le presse-papiers.",
-                  });
-                } catch (err) {
-                  console.error('Erreur copie HTML:', err);
-                  toast({
-                    title: "Erreur",
-                    description: "Impossible de copier le HTML du carnet.",
-                    variant: 'destructive',
-                  });
-                }
-              }}
-              variant="outline"
-              className="flex items-center"
-            >
-              Copier l'HTML
-            </Button>
-
-            <Button 
-              onClick={handleGeneratePdfEdge}
-              disabled={isGeneratingPdfEdge}
-              variant="default"
-              className="flex items-center"
-            >
-              {isGeneratingPdfEdge ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="mr-2 h-4 w-4" />
-              )}
-              {isGeneratingPdfEdge ? 'Génération PDF...' : 'Générer PDF'}
-            </Button>
-
-            <Button 
-              onClick={handleGenerateShareableLink}
-              disabled={isGeneratingLink}
-              variant="secondary"
-              className="flex items-center"
-            >
-              {isGeneratingLink ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Link className="mr-2 h-4 w-4" />
-              )}
-              {isGeneratingLink ? 'Génération...' : 'Générer lien'}
-            </Button>
-          </div>
+            {isGeneratingPdfEdge ? 'Génération PDF...' : 'Générer PDF'}
+          </Button>
         </div>
-        
-        <BookletPreview 
-          data={bookletData} 
-          options={options} 
-          tripId={tripId}
-        />
+
+        {bookletData && (
+          <BookletPreview
+            data={bookletData}
+            options={options}
+            tripId={tripId}
+          />
+        )}
       </div>
     </div>
   );

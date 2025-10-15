@@ -35,9 +35,9 @@ const BODY_FONT = 'Helvetica' // 'Lato' si activé au-dessus
 
 // --- Thème Ad Gentes --------------------------------------------------------
 const theme = {
-  primary: '#7B1E1E', // Bordeaux
+  primary: '#822a62', // Bordeaux
   primaryDark: '#611717',
-  sand: '#F8F4EE', // Beige sable
+  sand: '#c084ab', // Beige sable
   gray100: '#F3F4F6',
   gray200: '#E5E7EB',
   gray300: '#D1D5DB',
@@ -132,13 +132,39 @@ function formatDateRange(start?: string, end?: string): string {
   return `${formatDateFull(start)} → ${formatDateFull(end)}`
 }
 
+function parseDateFlexible(v?: string | null): Date | null {
+  if (!v) return null
+  // already a Date-like ISO string
+  // handle DD/MM/YYYY
+  if (v.includes('/')) {
+    const parts = v.split('/')
+    if (parts.length === 3) {
+      const dd = parseInt(parts[0], 10)
+      const mm = parseInt(parts[1], 10)
+      const yyyy = parseInt(parts[2], 10)
+      if (!isNaN(dd) && !isNaN(mm) && !isNaN(yyyy)) {
+        // use Date in local then normalize via UTC components
+        return new Date(yyyy, mm - 1, dd)
+      }
+    }
+  }
+  // fallback to Date constructor (ISO / other)
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return null
+  return d
+}
+
 function daysBetween(start?: string, end?: string): number | string {
-  const s = new Date(start!)
-  const e = new Date(end!)
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return ''
-  // séjour = inclusif
-  const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  return diff > 0 ? diff : 1
+  const s = parseDateFlexible(start ?? null)
+  const e = parseDateFlexible(end ?? null)
+  if (!s || !e) return ''
+
+  // Normalize to UTC midnight to avoid DST issues
+  const utcStart = Date.UTC(s.getFullYear(), s.getMonth(), s.getDate())
+  const utcEnd = Date.UTC(e.getFullYear(), e.getMonth(), e.getDate())
+  const msPerDay = 1000 * 60 * 60 * 24
+  const diffDays = Math.floor((utcEnd - utcStart) / msPerDay) + 1 // inclusive
+  return diffDays > 0 ? diffDays : 1
 }
 
 function stringify(v: any): string {
