@@ -98,6 +98,177 @@ export function extractBookletDataFromDOM(root: HTMLElement | null): BookletData
 }
 
 /**
+ * Retourne le HTML nettoyé (string) du DOM utilisé pour l'extraction du booklet.
+ * Utile pour debug/inspection sans lancer la génération du PDF.
+ */
+export function getBookletDOMSnapshot(root: HTMLElement | null): string {
+  if (!root) {
+    throw new Error('Element #booklet-content introuvable');
+  }
+
+  const clone = root.cloneNode(true) as HTMLElement;
+
+  const selectorsToRemove = [
+    '.editable',
+    'button',
+    'input',
+    'textarea',
+    '.upload-zone',
+    '.no-print',
+    '[contenteditable]',
+    '.edit-button',
+    '.delete-button',
+    '.drag-handle'
+  ];
+
+  selectorsToRemove.forEach(selector => {
+    clone.querySelectorAll(selector).forEach(el => el.remove());
+  });
+
+  // Inline styles that could rely on app CSS (optional): keep as-is for now
+  return clone.outerHTML;
+}
+
+/**
+ * Retourne le HTML brut (string) en préservant le contenu des éléments
+ * contenteditable. Utile pour récupérer le HTML affiché tel quel (titre,
+ * aperçus, textes éditables) afin de développer l'extracteur.
+ *
+ * Contrairement à `getBookletDOMSnapshot`, cette fonction ne supprime pas
+ * les éléments possédant l'attribut `contenteditable` ; au lieu de cela
+ * elle les remplace par des éléments statiques contenant leur textContent.
+ */
+export function getBookletDOMFullSnapshot(root: HTMLElement | null): string {
+  if (!root) {
+    throw new Error('Element #booklet-content introuvable');
+  }
+
+  const clone = root.cloneNode(true) as HTMLElement;
+
+  // Retirer uniquement les contrôles/interactifs, mais garder le contenu texte
+  const selectorsToRemove = [
+    'button',
+    'input',
+    'textarea',
+    '.upload-zone',
+    '.no-print',
+    '.edit-button',
+    '.delete-button',
+    '.drag-handle'
+  ];
+
+  selectorsToRemove.forEach(selector => {
+    clone.querySelectorAll(selector).forEach(el => el.remove());
+  });
+
+  // Remplacer les éléments contenteditable par un élément statique contenant le texte
+  clone.querySelectorAll('[contenteditable]').forEach((el) => {
+    const text = (el as HTMLElement).textContent || '';
+    const replacement = document.createElement('div');
+    replacement.textContent = text;
+    // Conserver certains attributs utiles pour le debug (data-pdf-title, etc.)
+    Array.from(el.attributes).forEach(attr => {
+      if (attr.name.startsWith('data-pdf')) {
+        replacement.setAttribute(attr.name, attr.value);
+      }
+    });
+    el.replaceWith(replacement);
+  });
+
+  return clone.outerHTML;
+}
+
+/**
+ * Retourne l'HTML strictement brut tel qu'il est dans le DOM (aucune modification).
+ * Utiliser avec prudence (contient tous les contrôles interactifs, commentaires, data-attrs, etc.).
+ */
+/**
+ * Retourne l'HTML réellement rendu dans le navigateur,
+ * y compris les attributs dynamiques comme src, href, value, checked, etc.
+ */
+export function getBookletDOMRawExport(root: HTMLElement | null): string {
+  if (!root) {
+    throw new Error('Element #booklet-content introuvable');
+  }
+
+  try {
+    const serializer = new XMLSerializer();
+    const html = serializer.serializeToString(root);
+
+    console.log("🧩 [Export] HTML size:", html.length);
+    return html;
+  } catch (err) {
+    console.error("❌ XMLSerializer failed, fallback to outerHTML:", err);
+    return root.outerHTML;
+  }
+}
+
+
+/**
+ * Console logs some infos utiles et le snapshot HTML nettoyé.
+ * Affiche: titre, dates, nombre d'étapes et le HTML nettoyé (troncature si très long).
+ */
+export function debugLogBookletDOM(root: HTMLElement | null) {
+  try {
+    if (!root) {
+      console.warn('debugLogBookletDOM: Element #booklet-content introuvable');
+      return;
+    }
+
+    const snapshot = getBookletDOMSnapshot(root);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = snapshot;
+
+    const title = tempDiv.querySelector('[data-pdf-title]')?.getAttribute('data-pdf-title') || 'Carnet de voyage (titre introuvable)';
+    const startDate = tempDiv.querySelector('[data-pdf-start-date]')?.getAttribute('data-pdf-start-date') || '(start date missing)';
+    const endDate = tempDiv.querySelector('[data-pdf-end-date]')?.getAttribute('data-pdf-end-date') || '(end date missing)';
+    const stepsCount = tempDiv.querySelectorAll('[data-pdf-step]').length;
+
+    console.group('Booklet DOM Snapshot');
+    console.log('Title:', title);
+    console.log('Start date:', startDate);
+    console.log('End date:', endDate);
+    console.log('Steps found:', stepsCount);
+
+    const maxLen = 20_000;
+    if (snapshot.length > maxLen) {
+      console.log('Snapshot (truncated):', snapshot.slice(0, maxLen) + '\n... (truncated)');
+    } else {
+      console.log('Snapshot:', snapshot);
+    }
+    console.groupEnd();
+  } catch (err) {
+    console.error('debugLogBookletDOM error', err);
+  }
+}
+
+/**
+ * Ouvre une nouvelle fenêtre et y écrit le snapshot HTML nettoyé.
+ * Utile pour inspection visuelle hors-app (dev only).
+ */
+export function openBookletSnapshotWindow(root: HTMLElement | null) {
+  try {
+    if (!root) {
+      throw new Error('Element #booklet-content introuvable');
+    }
+
+    const snapshot = getBookletDOMSnapshot(root);
+    const w = window.open('', '_blank');
+    if (!w) {
+      console.warn('openBookletSnapshotWindow: popup blocked');
+      return;
+    }
+
+    w.document.open();
+    w.document.write(snapshot);
+    w.document.close();
+  } catch (err) {
+    console.error('openBookletSnapshotWindow error', err);
+  }
+}
+
+/**
  * Extrait toutes les étapes du voyage
  */
 function extractSteps(clone: HTMLElement): Step[] {

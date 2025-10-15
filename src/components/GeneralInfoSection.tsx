@@ -260,6 +260,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
                   onChange={(val) => updateEditableField(['capital'], val)}
                   className="inline"
                   as="span"
+                  data-pdf-info-capital
                 />
               </div>
             )}
@@ -271,6 +272,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
                   onChange={(val) => updateEditableField(['population'], val)}
                   className="inline"
                   as="span"
+                  data-pdf-info-population
                 />
               </div>
             )}
@@ -282,6 +284,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
                   onChange={(val) => updateEditableField(['surface_area'], val)}
                   className="inline"
                   as="span"
+                  data-pdf-info-surface
                 />
               </div>
             )}
@@ -305,6 +308,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
                 onChange={(val) => updateEditableField(['timezone_info', 'main_timezone'], val)}
                 className="inline"
                 as="span"
+                data-pdf-info-timezone
               />
             </div>
             <EditableText
@@ -312,6 +316,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
               onChange={(val) => updateEditableField(['timezone_info', 'offset_description'], val)}
               className="text-muted-foreground"
               as="div"
+              data-pdf-info-offset
             />
           </div>
         </div>
@@ -326,14 +331,14 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <DeleteButton cardId="entry" />
           </div>
           <EditableContent className="space-y-0.5 text-xs ml-5">
-            <div>
-              <span className="font-medium">Passeport:</span> {editableInfo.entry_requirements.passport}
+            <div><span className="font-medium">Passeport:</span>{' '} 
+              <span data-pdf-info-passport>{editableInfo.entry_requirements.passport}</span>
             </div>
-            <div>
-              <span className="font-medium">Visa:</span> {editableInfo.entry_requirements.visa}
+            <div><span className="font-medium">Visa:</span>{' '}
+              <span data-pdf-info-visa>{editableInfo.entry_requirements.visa}</span>
             </div>
-            <div>
-              <span className="font-medium">Durée autorisée:</span> {editableInfo.entry_requirements.validity}
+            <div><span className="font-medium">Durée autorisée:</span>{' '} 
+              <span data-pdf-info-validity>{editableInfo.entry_requirements.validity}</span>
             </div>
           </EditableContent>
         </div>
@@ -348,17 +353,18 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <DeleteButton cardId="health" />
           </div>
           <EditableContent className="space-y-1 text-xs ml-5">
-            {editableInfo.health_requirements.vaccines && editableInfo.health_requirements.vaccines.length > 0 && (
+            {editableInfo.health_requirements.vaccines?.length > 0 && (
               <div>
-                <span className="font-medium">Vaccins recommandés:</span> {editableInfo.health_requirements.vaccines.join(", ")}
+                <span className="font-medium">Vaccins recommandés:</span>{' '}
+                <span data-pdf-info-vaccines>{editableInfo.health_requirements.vaccines.join(", ")}</span>
               </div>
             )}
             {editableInfo.health_requirements.insurance_advice && (
-              <div>{editableInfo.health_requirements.insurance_advice}</div>
+              <div data-pdf-info-insurance>{editableInfo.health_requirements.insurance_advice}</div>
             )}
             {editableInfo.health_requirements.water_safety && (
-              <div>
-                <span className="font-medium">Eau potable:</span> {editableInfo.health_requirements.water_safety}
+              <div><span className="font-medium">Eau potable:</span>{' '}
+                <span data-pdf-info-water>{editableInfo.health_requirements.water_safety}</span>
               </div>
             )}
           </EditableContent>
@@ -376,20 +382,22 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <EditableContent className="space-y-1 text-xs ml-5">
             {editableInfo.clothing_advice.season && (
               <div>
-                <span className="font-medium">Saison:</span> {editableInfo.clothing_advice.season}
+                <span className="font-medium">Saison:</span>{" "}
+                <span data-pdf-info-clothing-season>{editableInfo.clothing_advice.season}</span>
               </div>
             )}
             {editableInfo.clothing_advice.temperatures && (
               <div>
-                <span className="font-medium">Températures:</span> {editableInfo.clothing_advice.temperatures}
+                <span className="font-medium">Températures:</span>{" "}
+                <span data-pdf-info-clothing-temperatures>{editableInfo.clothing_advice.temperatures}</span>
               </div>
             )}
-            {editableInfo.clothing_advice.recommended && editableInfo.clothing_advice.recommended.length > 0 && (
+            {editableInfo.clothing_advice.recommended?.length > 0 && (
               <div>
                 <span className="font-medium block mb-0.5">À prévoir:</span>
                 <ul className="list-disc list-inside space-y-0.5">
                   {editableInfo.clothing_advice.recommended.map((item, idx) => (
-                    <li key={idx}>{item}</li>
+                    <li key={idx} data-pdf-info-clothing-item>{item}</li>
                   ))}
                 </ul>
               </div>
@@ -399,7 +407,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
       )}
 
       {/* Food */}
-      {editableInfo?.food_specialties && editableInfo.food_specialties.length > 0 && !hiddenCards.has('food') && (
+      {editableInfo?.food_specialties?.length > 0 && !hiddenCards.has('food') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <UtensilsCrossed className="h-3.5 w-3.5 theme-text" />
@@ -408,9 +416,9 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           </div>
           <EditableContent className="space-y-1 text-xs ml-5">
             {editableInfo.food_specialties.map((item, idx) => (
-              <div key={idx} className="border-l border-primary/20 pl-2">
-                <div className="font-medium">{item.region}</div>
-                <div className="text-muted-foreground">{item.specialty}</div>
+              <div key={idx} className="border-l border-primary/20 pl-2" data-pdf-info-food-item>
+                <div className="font-medium" data-pdf-info-food-region>{item.region}</div>
+                <div className="text-muted-foreground" data-pdf-info-food-specialty>{item.specialty}</div>
               </div>
             ))}
           </EditableContent>
@@ -428,11 +436,12 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-0.5 text-xs ml-5">
             {info.currency && (
               <div>
-                <span className="font-medium">Devise:</span> {info.currency}
+                <span className="font-medium">Devise:</span>{" "}
+                <span data-pdf-info-currency>{info.currency}</span>
               </div>
             )}
             {info.exchange_rate && (
-              <div className="text-muted-foreground">{info.exchange_rate}</div>
+              <div className="text-muted-foreground" data-pdf-info-exchange-rate>{info.exchange_rate}</div>
             )}
           </div>
         </div>
@@ -449,17 +458,20 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-0.5 text-xs ml-5">
             {info.budget_info.coffee && (
               <div>
-                <span className="font-medium">Café:</span> {info.budget_info.coffee}
+                <span className="font-medium">Café:</span>{" "}
+                <span data-pdf-info-budget-coffee>{info.budget_info.coffee}</span>
               </div>
             )}
             {info.budget_info.simple_meal && (
               <div>
-                <span className="font-medium">Repas simple:</span> {info.budget_info.simple_meal}
+                <span className="font-medium">Repas simple:</span>{" "}
+                <span data-pdf-info-budget-simple-meal>{info.budget_info.simple_meal}</span>
               </div>
             )}
             {info.budget_info.restaurant && (
               <div>
-                <span className="font-medium">Restaurant:</span> {info.budget_info.restaurant}
+                <span className="font-medium">Restaurant:</span>{" "}
+                <span data-pdf-info-budget-restaurant>{info.budget_info.restaurant}</span>
               </div>
             )}
           </div>
@@ -476,26 +488,31 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           </div>
           <div className="space-y-0.5 text-xs ml-5">
             <div>
-              <span className="font-medium">Usage:</span> {info.tipping_culture.required ? "Attendu" : "Optionnel"}
+              <span className="font-medium">Usage:</span>{" "}
+              <span data-pdf-info-tipping-required>{info.tipping_culture.required ? "Attendu" : "Optionnel"}</span>
             </div>
             {info.tipping_culture.restaurants && (
               <div>
-                <span className="font-medium">Restaurants:</span> {info.tipping_culture.restaurants}
+                <span className="font-medium">Restaurants:</span>{" "}
+                <span data-pdf-info-tipping-restaurants>{info.tipping_culture.restaurants}</span>
               </div>
             )}
             {info.tipping_culture.taxis && (
               <div>
-                <span className="font-medium">Taxis:</span> {info.tipping_culture.taxis}
+                <span className="font-medium">Taxis:</span>{" "}
+                <span data-pdf-info-tipping-taxis>{info.tipping_culture.taxis}</span>
               </div>
             )}
             {info.tipping_culture.guides && (
               <div>
-                <span className="font-medium">Guides:</span> {info.tipping_culture.guides}
+                <span className="font-medium">Guides:</span>{" "}
+                <span data-pdf-info-tipping-guides>{info.tipping_culture.guides}</span>
               </div>
             )}
             {info.tipping_culture.porters && (
               <div>
-                <span className="font-medium">Porteurs:</span> {info.tipping_culture.porters}
+                <span className="font-medium">Porteurs:</span>{" "}
+                <span data-pdf-info-tipping-porters>{info.tipping_culture.porters}</span>
               </div>
             )}
           </div>
@@ -513,19 +530,22 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-0.5 text-xs ml-5">
             {info.electricity_info.voltage && (
               <div>
-                <span className="font-medium">Voltage:</span> {info.electricity_info.voltage}
+                <span className="font-medium">Voltage:</span>{" "}
+                <span data-pdf-info-electricity-voltage>{info.electricity_info.voltage}</span>
               </div>
             )}
-            {info.electricity_info.plug_types && info.electricity_info.plug_types.length > 0 && (
+            {info.electricity_info.plug_types?.length > 0 && (
               <div>
                 <span className="font-medium">Types de prises:</span>{" "}
-                {info.electricity_info.plug_types.join(", ")}
+                <span data-pdf-info-electricity-plugs>{info.electricity_info.plug_types.join(", ")}</span>
               </div>
             )}
             {info.electricity_info.adapter_needed !== undefined && (
               <div>
                 <span className="font-medium">Adaptateur:</span>{" "}
-                {info.electricity_info.adapter_needed ? "Nécessaire" : "Non nécessaire"}
+                <span data-pdf-info-electricity-adapter>
+                  {info.electricity_info.adapter_needed ? "Nécessaire" : "Non nécessaire"}
+                </span>
               </div>
             )}
           </div>
@@ -540,7 +560,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <h3 className="text-sm font-semibold theme-text">Religion</h3>
             <DeleteButton cardId="religion" />
           </div>
-          <p className="text-xs ml-5">{info.religion_info}</p>
+          <p className="text-xs ml-5" data-pdf-info-religion>{info.religion_info}</p>
         </div>
       )}
 
@@ -552,7 +572,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <h3 className="text-sm font-semibold theme-text">Achats / Shopping</h3>
             <DeleteButton cardId="shopping" />
           </div>
-          <p className="text-xs ml-5">{info.shopping_info}</p>
+          <p className="text-xs ml-5" data-pdf-info-shopping>{info.shopping_info}</p>
         </div>
       )}
 
@@ -567,16 +587,18 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-0.5 text-xs ml-5">
             {info.phone_info.calling_to && (
               <div>
-                <span className="font-medium">Appeler depuis la Suisse:</span> {info.phone_info.calling_to}
+                <span className="font-medium">Appeler depuis la Suisse:</span>{" "}
+                <span data-pdf-info-phone-to>{info.phone_info.calling_to}</span>
               </div>
             )}
             {info.phone_info.calling_from && (
               <div>
-                <span className="font-medium">Appeler la Suisse:</span> {info.phone_info.calling_from}
+                <span className="font-medium">Appeler la Suisse:</span>{" "}
+                <span data-pdf-info-phone-from>{info.phone_info.calling_from}</span>
               </div>
             )}
             {info.phone_info.tips && (
-              <div className="text-muted-foreground">{info.phone_info.tips}</div>
+              <div className="text-muted-foreground" data-pdf-info-phone-tips>{info.phone_info.tips}</div>
             )}
           </div>
         </div>
@@ -591,27 +613,27 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <DeleteButton cardId="languages" />
           </div>
           <div className="space-y-0.5 text-xs ml-5">
-            {info.languages.official && info.languages.official.length > 0 && (
+            {info.languages.official?.length > 0 && (
               <div>
                 <span className="font-medium">Langues officielles:</span>{" "}
-                {info.languages.official.join(", ")}
+                <span data-pdf-info-languages-official>{info.languages.official.join(", ")}</span>
               </div>
             )}
             {info.languages.french_spoken !== undefined && (
               <div>
                 <span className="font-medium">Français parlé:</span>{" "}
-                {info.languages.french_spoken ? "Oui" : "Non"}
+                <span data-pdf-info-languages-french>{info.languages.french_spoken ? "Oui" : "Non"}</span>
               </div>
             )}
             {info.languages.notes && (
-              <div className="text-muted-foreground">{info.languages.notes}</div>
+              <div className="text-muted-foreground" data-pdf-info-languages-notes>{info.languages.notes}</div>
             )}
           </div>
         </div>
       )}
 
       {/* Cultural Sites */}
-      {info.cultural_sites && info.cultural_sites.length > 0 && !hiddenCards.has('cultural') && (
+      {info.cultural_sites?.length > 0 && !hiddenCards.has('cultural') && (
         <div className="relative group keep-together">
           <div className="flex items-center gap-2 mb-1">
             <Building2 className="h-3.5 w-3.5 theme-text" />
@@ -620,9 +642,9 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           </div>
           <div className="space-y-1 text-xs ml-5">
             {info.cultural_sites.map((site, idx) => (
-              <div key={idx}>
-                <div className="font-medium">{site.name}</div>
-                <div className="text-muted-foreground">{site.description}</div>
+              <div key={idx} data-pdf-info-cultural-item>
+                <div className="font-medium" data-pdf-info-cultural-name>{site.name}</div>
+                <div className="text-muted-foreground" data-pdf-info-cultural-description>{site.description}</div>
               </div>
             ))}
           </div>
@@ -637,7 +659,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <h3 className="text-sm font-semibold theme-text">Attractions naturelles</h3>
             <DeleteButton cardId="natural" />
           </div>
-          <p className="text-xs ml-5">{info.natural_attractions}</p>
+          <p className="text-xs ml-5" data-pdf-info-natural>{info.natural_attractions}</p>
         </div>
       )}
 
@@ -649,7 +671,7 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
             <h3 className="text-sm font-semibold theme-text">Sécurité</h3>
             <DeleteButton cardId="safety" />
           </div>
-          <p className="text-xs ml-5">{info.safety_info}</p>
+          <p className="text-xs ml-5" data-pdf-info-safety>{info.safety_info}</p>
         </div>
       )}
 
@@ -664,27 +686,32 @@ export function GeneralInfoSection({ tripId, options }: GeneralInfoSectionProps)
           <div className="space-y-0.5 text-xs ml-5">
             {info.climate_info.current_season && (
               <div>
-                <span className="font-medium">Saison actuelle:</span> {info.climate_info.current_season}
+                <span className="font-medium">Saison actuelle:</span>{" "}
+                <span data-pdf-info-climate-current>{info.climate_info.current_season}</span>
               </div>
             )}
             {info.climate_info.summer && (
               <div>
-                <span className="font-medium">Été:</span> {info.climate_info.summer}
+                <span className="font-medium">Été:</span>{" "}
+                <span data-pdf-info-climate-summer>{info.climate_info.summer}</span>
               </div>
             )}
             {info.climate_info.winter && (
               <div>
-                <span className="font-medium">Hiver:</span> {info.climate_info.winter}
+                <span className="font-medium">Hiver:</span>{" "}
+                <span data-pdf-info-climate-winter>{info.climate_info.winter}</span>
               </div>
             )}
             {info.climate_info.autumn && (
               <div>
-                <span className="font-medium">Automne:</span> {info.climate_info.autumn}
+                <span className="font-medium">Automne:</span>{" "}
+                <span data-pdf-info-climate-autumn>{info.climate_info.autumn}</span>
               </div>
             )}
             {info.climate_info.spring && (
               <div>
-                <span className="font-medium">Printemps:</span> {info.climate_info.spring}
+                <span className="font-medium">Printemps:</span>{" "}
+                <span data-pdf-info-climate-spring>{info.climate_info.spring}</span>
               </div>
             )}
           </div>
