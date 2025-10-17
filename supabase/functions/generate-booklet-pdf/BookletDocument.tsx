@@ -170,11 +170,11 @@ function daysBetween(start?: string, end?: string): number | string {
 function stringify(v: any, context: string = "unknown"): string {
   if (v === undefined || v === null) {
     console.log(`⚠️ [${context}] received undefined/null`);
-    return "";
+    return " ";
   }
 
   if (typeof v === "string") {
-    if (v.trim() === "") {
+    if (v.trim() === " ") {
       console.log(`⚠️ [${context}] empty string detected`);
     }
     return v;
@@ -184,14 +184,14 @@ function stringify(v: any, context: string = "unknown"): string {
 
   if (Array.isArray(v)) {
     const result = v.map((x, i) => stringify(x, `${context}[${i}]`)).join(", ");
-    if (result.trim() === "") console.log(`⚠️ [${context}] array produced empty string`);
+    if (result.trim() === " ") console.log(`⚠️ [${context}] array produced empty string`);
     return result;
   }
 
   if (typeof v === "object") {
     if (React.isValidElement(v)) {
       console.log(`⚠️ [${context}] JSX element passed to stringify()`);
-      return "";
+      return " ";
     }
     if (v.name) return String(v.name);
     if (v.title) return String(v.title);

@@ -4,7 +4,7 @@ import * as React from "npm:react@18.2.0";
 import ReactPDF from "npm:@react-pdf/renderer@3.4.3";
 
 import { extractFromHtml } from "./extract.ts";
-import BookletDocument from "./BookletDocument.tsx";
+import BookletDocument from "./BookletTemplate.tsx";
 
 // ===============================================
 // ⚙️ Configuration Supabase
@@ -133,6 +133,8 @@ serve(async (req) => {
     }
 
     // === Extraction du HTML ===
+    console.log("🧩 generate-booklet-pdf version: 2025-10-17-b");
+
     console.log("🔍 Extracting data from HTML...");
     let data;
     try {
