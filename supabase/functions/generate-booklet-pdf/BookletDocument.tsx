@@ -167,23 +167,49 @@ function daysBetween(start?: string, end?: string): number | string {
   return diffDays > 0 ? diffDays : 1
 }
 
-function stringify(v: any): string {
-  if (v === undefined || v === null) return ''
-  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
-    return String(v)
-  if (Array.isArray(v)) return v.join(', ')
-  if (typeof v === 'object') {
-    if (v.name) return String(v.name)
-    if (v.title) return String(v.title)
-    if (v.rate) return String(v.rate)
+function stringify(v: any, context: string = "unknown"): string {
+  if (v === undefined || v === null) {
+    console.log(`⚠️ [${context}] received undefined/null`);
+    return "";
+  }
+
+  if (typeof v === "string") {
+    if (v.trim() === "") {
+      console.log(`⚠️ [${context}] empty string detected`);
+    }
+    return v;
+  }
+
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+
+  if (Array.isArray(v)) {
+    const result = v.map((x, i) => stringify(x, `${context}[${i}]`)).join(", ");
+    if (result.trim() === "") console.log(`⚠️ [${context}] array produced empty string`);
+    return result;
+  }
+
+  if (typeof v === "object") {
+    if (React.isValidElement(v)) {
+      console.log(`⚠️ [${context}] JSX element passed to stringify()`);
+      return "";
+    }
+    if (v.name) return String(v.name);
+    if (v.title) return String(v.title);
+    if (v.rate) return String(v.rate);
     try {
-      return JSON.stringify(v)
+      const json = JSON.stringify(v);
+      if (json === "{}") console.log(`⚠️ [${context}] empty object`);
+      return json;
     } catch {
-      return String(v)
+      console.log(`⚠️ [${context}] failed JSON.stringify`);
+      return String(v);
     }
   }
-  return String(v)
+
+  return String(v);
 }
+
+
 
 function pick(...vals: (string | undefined | null)[]): string {
   // renvoie le 1er truthy string
@@ -491,7 +517,7 @@ export const Cover: React.FC<CoverProps> = (props: any) => {
       >
         {images.map((src, i) => (
           <Image
-            key={i}
+            key={`cover-img-${i}`}
             src={src}
             style={{
               width: '100%',
@@ -631,11 +657,11 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                         marginBottom: 2,
                       }}
                     >
-                      {`${roleLabel} — ${stringify(s.title)}`}
+                      {`${roleLabel} — ${stringify(s.title, `segment[${si}].title`)}`}
                     </Text>
                     {infos.map((line, li) => (
                       <Text
-                        key={li}
+                        key={`seg-${s.id || si}-info-${li}`}
                         style={{
                           fontSize: 10,
                           color: theme.text,
@@ -663,7 +689,7 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                   </Text>
                   {step.tips.map((t: string, ti: number) => (
                     <Text
-                      key={ti}
+                      key={`step-${step.id || i}-tip-${ti}`}
                       style={{
                         fontSize: 10,
                         color: theme.text,
@@ -810,7 +836,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
         lineHeight: 1.4,
       }}
     >
-      {stringify(text)}
+      {stringify(text, keyVal ? `paragraph[${keyVal}]` : 'paragraph')}
     </Text>
   )
 
@@ -824,7 +850,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
         marginBottom: 2,
       }}
     >
-      • {stringify(text)}
+      • {stringify(text, keyVal ? `bullet[${keyVal}]` : 'bullet')}
     </Text>
   )
 
@@ -917,8 +943,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
           <Paragraph text={`Températures moyennes : ${info.clothing.temperature}`} />
         )}
         {Array.isArray(info.clothing.items) &&
-          info.clothing.items.map((i: any, idx: number) => (
-            <Bullet keyVal={`cloth-${idx}`} text={i} />
+          info.clothing.items.map((item: any, idx: number) => (
+            <Bullet key={`cloth-${idx}`} keyVal={`cloth-${idx}`} text={item} />
           ))}
       </View>
     )
@@ -929,8 +955,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
     blocks.push(
       <View key="food" wrap={false}>
         <Title text="SPÉCIALITÉS CULINAIRES" />
-        {info.food.specialties.map((s: any, i: number) => (
-          <Paragraph keyVal={`food-${i}`} text={`${s.region} : ${s.specialty}`} />
+        {info.food.specialties.map((s: any, fi: number) => (
+          <Paragraph key={`food-${fi}`} keyVal={`food-${fi}`} text={`${s.region} : ${s.specialty}`} />
         ))}
       </View>
     )
@@ -945,8 +971,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
           <Paragraph text={`Monnaie : ${info.currency.name}`} />
         )}
         {Array.isArray(info.currency?.exchange) &&
-          info.currency.exchange.map((e: any, i: number) => (
-            <Bullet keyVal={`ex-${i}`} text={e} />
+          info.currency.exchange.map((ex: any, ei: number) => (
+            <Bullet key={`ex-${ei}`} keyVal={`ex-${ei}`} text={ex} />
           ))}
         {info.budget?.coffee && <Paragraph text={`Café : ${info.budget.coffee}`} />}
         {info.budget?.meal && <Paragraph text={`Repas : ${info.budget.meal}`} />}
@@ -1038,8 +1064,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
     blocks.push(
       <View key="culture" wrap={false}>
         <Title text="SITES CULTURELS" />
-        {info.cultural_sites.map((c: any, i: number) => (
-          <Paragraph keyVal={`culture-${i}`} text={`• ${c.name} — ${c.description}`} />
+        {info.cultural_sites.map((c: any, ci: number) => (
+          <Paragraph key={`culture-${ci}`} keyVal={`culture-${ci}`} text={`• ${c.name} — ${c.description}`} />
         ))}
       </View>
     )
@@ -1129,7 +1155,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
         lineHeight: 1.4,
       }}
     >
-      {stringify(text)}
+      {stringify(text, keyVal ? `paragraph[${keyVal}]` : 'paragraph')}
     </Text>
   )
 
@@ -1144,7 +1170,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
         textAlign: 'justify',
       }}
     >
-      ※ {stringify(text)}
+      ※ {stringify(text, keyVal ? `bullet[${keyVal}]` : 'bullet')}
     </Text>
   )
 
@@ -1156,7 +1182,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
         fontWeight: 'bold',
       }}
     >
-      {stringify(text)}
+      {stringify(text, 'emergency-highlight')}
     </Text>
   )
 
@@ -1207,15 +1233,15 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
           {contact.after_departure?.local && (
             <View>
               <SubTitle text="b. Nos correspondants locaux :" />
-              {contact.after_departure.local.name && (
-                <Paragraph text={contact.after_departure.local.name} />
+                {contact.after_departure.local.name && (
+                <Paragraph key="local-name" text={contact.after_departure.local.name} />
               )}
               {contact.after_departure.local.phone && (
-                <Paragraph text={contact.after_departure.local.phone} />
+                <Paragraph key="local-phone" text={contact.after_departure.local.phone} />
               )}
-              {Array.isArray(contact.after_departure.local.items) &&
-                contact.after_departure.local.items.map((it: any, i: number) => (
-                  <Bullet keyVal={`local-${i}`} text={it} />
+                {Array.isArray(contact.after_departure.local.items) &&
+                contact.after_departure.local.items.map((it: any, li: number) => (
+                  <Bullet key={`local-${li}`} keyVal={`local-${li}`} text={it} />
                 ))}
               {contact.after_departure.local.note && (
                 <Paragraph text={contact.after_departure.local.note} />
@@ -1234,23 +1260,41 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
         {/* 4. Cas d’urgence */}
         <View wrap={false}>
           <SectionTitle text="4. Pour les cas d’extrême urgence" />
-          {contact.emergency?.text1 && <Paragraph text={contact.emergency.text1} />}
+
+          {contact.emergency?.text1 && (
+            <Paragraph text={contact.emergency.text1} />
+          )}
+
           {contact.emergency?.text2 && (
             <View>
               <Paragraph text={contact.emergency.text2} />
+
               {contact.emergency.phone && (
-                <Paragraph
-                  text={
-                    <>
-                      Numéro d’urgence :{' '}
-                      <EmergencyHighlight text={contact.emergency.phone} />
-                    </>
-                  }
-                />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color: theme.text,
+                    marginBottom: 4,
+                    textAlign: 'justify',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Numéro d'urgence :
+                  <Text
+                    style={{
+                      backgroundColor: theme.sand,
+                      color: theme.primaryDark,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {' '}{stringify(contact.emergency.phone, 'emergency-phone')}
+                  </Text>
+                </Text>
               )}
             </View>
           )}
         </View>
+
       </View>
     </View>
   )
@@ -1264,8 +1308,8 @@ export const Notes: React.FC = () => (
       <Text style={styles.paragraph}>
         Écrivez ici vos impressions, vos adresses favorites, vos rencontres…
       </Text>
-      {Array.from({ length: 55 }).map((_, i) => (
-        <View key={i} style={styles.noteLine} />
+      {Array.from({ length: 55 }).map((_, ni) => (
+        <View key={`note-${ni}`} style={styles.noteLine} />
       ))}
     </View>
   </View>
