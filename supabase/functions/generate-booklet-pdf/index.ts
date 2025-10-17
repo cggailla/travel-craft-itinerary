@@ -33,21 +33,25 @@ const corsHeaders = {
 async function fetchAsBase64(url: string): Promise<string | null> {
   try {
     const res = await fetch(url);
-    if (!res.ok) {
-      console.warn("⚠️ Failed to fetch image:", url, res.status);
-      return null;
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const buffer = await res.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
-    const mime = url.toLowerCase().endsWith(".png")
-      ? "image/png"
-      : "image/jpeg";
-    return `data:${mime};base64,${base64}`;
+    // Deno-compatible base64 conversion
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(
+        null,
+        bytes.subarray(i, i + chunkSize) as any
+      );
+    }
+    return `data:image/jpeg;base64,${btoa(binary)}`;
   } catch (err) {
-    console.error("💥 Image fetch error:", url, err);
+    console.error(`💥 Image fetch error: ${url}`, err);
     return null;
   }
 }
+
 
 async function resolveImages(obj: any) {
   if (!obj) return;
