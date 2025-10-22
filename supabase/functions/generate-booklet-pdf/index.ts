@@ -1,13 +1,17 @@
+// supabase/functions/generate-booklet-pdf/index.ts
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import * as React from "npm:react@18.2.0";
 import ReactPDF from "npm:@react-pdf/renderer@3.4.3";
 
+// Ensure these paths are correct relative to your index.ts file
+// (e.g., if in '_common', use '../_common/extract.ts')
 import { extractFromHtml } from "./extract.ts";
 import BookletDocument from "./BookletTemplate.tsx";
 
 // ===============================================
-// ⚙️ Configuration Supabase
+// ⚙️ Supabase Configuration
 // ===============================================
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -23,55 +27,33 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // ===================================================
-// 🧠 Préchargement des images (base64)
+// 📊 Metrics Helper
 // ===================================================
-async function fetchAsBase64(url: string): Promise<string | null> {
+/**
+ * Logs memory and execution time at a specific stage.
+ * @param stage - The name of the stage (e.g., "After HTML Extract").
+ * @param startTime - The timestamp from performance.now() at the start.
+ */
+function logMetrics(stage: string, startTime: number) {
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buffer = await res.arrayBuffer();
-    // Deno-compatible base64 conversion
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode.apply(
-        null,
-        bytes.subarray(i, i + chunkSize) as any
-      );
-    }
-    return `data:image/jpeg;base64,${btoa(binary)}`;
-  } catch (err) {
-    console.error(`💥 Image fetch error: ${url}`, err);
-    return null;
-  }
-}
-
-
-async function resolveImages(obj: any) {
-  if (!obj) return;
-  if (Array.isArray(obj)) {
-    for (let i = 0; i < obj.length; i++) await resolveImages(obj[i]);
-  } else if (typeof obj === "object") {
-    for (const key of Object.keys(obj)) {
-      if (key === "images" && Array.isArray(obj[key])) {
-        const resolved = await Promise.all(
-          obj[key].map(async (src: string) => {
-            if (src.startsWith("https://jjlhsikgczigvtdzfroa.supabase.co/"))
-              return (await fetchAsBase64(src)) || src;
-            return src;
-          })
-        );
-        obj[key] = resolved;
-      } else {
-        await resolveImages(obj[key]);
-      }
-    }
+    // Deno.memoryUsage() provides detailed memory stats
+    const mem = Deno.memoryUsage();
+    const timeSeconds = (performance.now() - startTime) / 1000;
+    
+    // RSS (Resident Set Size) is the key metric: total memory allocated by the OS
+    console.log(
+      `[Metrics] Stage: ${stage} | Time: ${timeSeconds.toFixed(2)}s | Mem (RSS): ${(
+        mem.rss /
+        1024 /
+        1024
+      ).toFixed(2)} MB | Mem (Heap): ${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+    );
+  } catch (e) {
+    console.warn(`[Metrics] Failed to get metrics at stage ${stage}: ${e.message}`);
   }
 }
 
@@ -79,6 +61,10 @@ async function resolveImages(obj: any) {
 // 🚀 Serve Function
 // ===================================================
 serve(async (req) => {
+  // 1. Start monitoring
+  const startTime = performance.now();
+  logMetrics("Init", startTime);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
   }
@@ -98,71 +84,26 @@ serve(async (req) => {
 
     console.log(`🧾 Starting PDF generation for trip: ${tripId}`);
 
-    // === Analyse du HTML pour <img> et <date> ===
+    // === HTML Inspection (Debug) ===
     try {
       const htmlStr = String(html);
-      const lower = htmlStr.toLowerCase();
-
-      // Images
-      const imgOccurrences: string[] = [];
-      let idx = 0;
-      while ((idx = lower.indexOf("<img", idx)) !== -1) {
-        imgOccurrences.push(htmlStr.slice(idx, idx + 200));
-        idx += 4;
-      }
-
-      // Dates
-      const hasStartDateAttr = lower.includes("data-pdf-cover-start-date");
-      const hasEndDateAttr = lower.includes("data-pdf-cover-end-date");
-
-      console.log(`🔎 Found ${imgOccurrences.length} <img> tags in HTML`);
       console.log(
-        `📅 HTML contains start-date attribute: ${hasStartDateAttr}, end-date: ${hasEndDateAttr}`
+        `🔎 Found ${
+          (htmlStr.match(/<img/g) || []).length
+        } <img> tags in HTML`
       );
-
-      if (hasStartDateAttr) {
-        const match = htmlStr.match(/data-pdf-cover-start-date[^>]+/i);
-        if (match) console.log("🧩 start-date snippet:", match[0].slice(0, 200));
-      }
-      if (hasEndDateAttr) {
-        const match = htmlStr.match(/data-pdf-cover-end-date[^>]+/i);
-        if (match) console.log("🧩 end-date snippet:", match[0].slice(0, 200));
-      }
     } catch (domErr) {
       console.warn("⚠️ Could not inspect HTML:", domErr);
     }
 
-    // === Extraction du HTML ===
-    console.log("🧩 generate-booklet-pdf version: 2025-10-17-b");
-
+    // === HTML Extraction ===
     console.log("🔍 Extracting data from HTML...");
     let data;
-    try {
-      data = extractFromHtml(html);
-      console.log(
-        "✅ extractFromHtml returned:",
-        JSON.stringify(data?.cover || {}, null, 2)
-      );
-    } catch (e) {
-      console.error("❌ HTML extraction failed:", e);
-      return new Response(
-        JSON.stringify({ success: false, error: "HTML extraction failed" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    data = extractFromHtml(html);
+    // 2. Metric after parsing
+    logMetrics("After HTML Extract", startTime);
 
-    // === Diagnostic cover dates ===
-    console.log("📅 Cover date diagnostics:");
-    console.log("   startDate:", data?.cover?.startDate);
-    console.log("   endDate:", data?.cover?.endDate);
-    console.log("   start:", data?.cover?.start);
-    console.log("   end:", data?.cover?.end);
-    console.log("   keys in cover:", Object.keys(data?.cover || {}));
-
-    // === Image logging ===
+    // === Diagnostics (Debug) ===
     try {
       const totalCoverImages = data?.cover?.images?.length || 0;
       const stepImageCount = (data?.itinerary || []).reduce(
@@ -175,24 +116,27 @@ serve(async (req) => {
     } catch (err) {
       console.warn("⚠️ Could not log image stats:", err);
     }
+    
+    // === [REMOVED] Base64 Conversion ===
+    // The `resolveImages` call has been entirely removed.
 
-    // === Base64 conversion ===
-    console.log("🧩 Converting Supabase images to base64...");
-    await resolveImages(data);
-    console.log("✅ Image conversion complete");
-
-    // === PDF rendering ===
-    console.log("🖨️ Rendering PDF with ReactPDF...");
-    console.log("📦 Cover object before rendering:", JSON.stringify(data.cover, null, 2));
+    // === PDF Rendering ===
+    console.log("🖨️ Rendering PDF with ReactPDF (using direct URLs)...");
 
     const doc = React.createElement(BookletDocument, { data });
     const tmpFile = `/tmp/booklet-${crypto.randomUUID()}.pdf`;
 
+    // This is the heaviest step: rendering and fetching images via network
     await ReactPDF.renderToFile(doc, tmpFile);
     const pdfBytes = await Deno.readFile(tmpFile);
-    console.log("✅ PDF rendered successfully");
+    await Deno.remove(tmpFile); // Cleanup temp file
 
-    // === Upload dans Supabase ===
+    // 3. Metric after render (most critical)
+    const fileSizeMB = (pdfBytes.length / 1024 / 1024).toFixed(2);
+    console.log(`[Metrics] Final PDF Size: ${fileSizeMB} MB`);
+    logMetrics("After PDF Render", startTime);
+
+    // === Supabase Upload ===
     console.log("📦 Uploading to Supabase Storage...");
     const fileName = `booklets/${tripId}.pdf`;
     const fileBlob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -209,6 +153,9 @@ serve(async (req) => {
       throw new Error(uploadError.message);
     }
 
+    // 4. Metric after upload
+    logMetrics("After Upload", startTime);
+
     const { data: publicUrlData } = supabase.storage
       .from("travel-booklets")
       .getPublicUrl(fileName);
@@ -217,6 +164,8 @@ serve(async (req) => {
     if (!publicUrl) throw new Error("Failed to get public URL from storage");
 
     console.log("✅ PDF available at:", publicUrl);
+    // 5. Final metric
+    logMetrics("Complete", startTime);
 
     return new Response(
       JSON.stringify({ success: true, pdf_url: publicUrl }),
@@ -227,6 +176,7 @@ serve(async (req) => {
     );
   } catch (err) {
     console.error("💥 Error in generate-booklet-pdf:", err);
+    logMetrics("Error", startTime); // Log metrics on failure
     return new Response(
       JSON.stringify({ success: false, error: err.message || String(err) }),
       {
@@ -236,3 +186,4 @@ serve(async (req) => {
     );
   }
 });
+

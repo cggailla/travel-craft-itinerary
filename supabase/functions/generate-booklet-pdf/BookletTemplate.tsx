@@ -183,21 +183,13 @@ const SafeView: React.FC<{ style?: any; wrap?: boolean }> = ({ style, wrap, chil
 const styles = StyleSheet.create({
   page: {
     fontFamily: BODY_FONT || DEFAULT_TEXT,
-    fontSize: 11,
-    color: theme.text,
-    lineHeight: 1.5,
-    paddingTop: 48,
-    paddingBottom: 40,
-    paddingHorizontal: 40,
-    backgroundColor: 'white',
-  },
-  headerBar: {},
-  pageNumber: {
-    position: 'absolute',
-    bottom: 18,
-    right: 40,
     fontSize: 9,
-    color: theme.gray700,
+    color: theme.text,
+    lineHeight: 1.2,
+    paddingTop: 25,
+    paddingBottom: 25,
+    paddingHorizontal: 25,
+    backgroundColor: 'white',
   },
 
   // Cover
@@ -217,7 +209,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  coverSubtitle: { fontSize: 11, marginTop: 4, opacity: 0.95 },
+  coverSubtitle: { fontSize: 14, marginTop: 4, opacity: 0.95 },
   coverImagesWrap: { marginTop: 14, gap: 10 },
   coverImage: { width: '100%', height: 240, objectFit: 'cover', borderRadius: 6 },
 
