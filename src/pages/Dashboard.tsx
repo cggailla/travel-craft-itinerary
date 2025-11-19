@@ -1,0 +1,334 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
+import { UserMenu } from '@/components/auth/UserMenu';
+import { getUserTrips } from '@/services/tripService';
+import { createTrip } from '@/services/documentService';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Plus, 
+  Plane, 
+  Calendar,
+  MapPin,
+  Loader2,
+  FileText,
+  ArrowRight,
+  Zap
+} from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Trip = Tables<'trips'>;
+
+type TripPhase = 'upload' | 'timeline' | 'validated';
+
+interface TripWithPhase extends Trip {
+  currentPhase: TripPhase;
+  segmentCount?: number;
+  documentCount?: number;
+}
+
+export default function Dashboard() {
+  const [trips, setTrips] = useState<TripWithPhase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+  const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadTrips();
+  }, []);
+
+  const loadTrips = async () => {
+    setIsLoading(true);
+    try {
+      const userTrips = await getUserTrips();
+      
+      // Enrichir chaque voyage avec sa phase et des stats
+      const enrichedTrips = await Promise.all(
+        userTrips.map(async (trip) => {
+          // Compter les segments
+          const { count: segmentCount } = await supabase
+            .from('travel_segments')
+            .select('*', { count: 'exact', head: true })
+            .eq('trip_id', trip.id);
+
+          // Compter les documents
+          const { count: documentCount } = await supabase
+            .from('documents')
+            .select('*', { count: 'exact', head: true })
+            .eq('trip_id', trip.id);
+
+          // Déterminer la phase actuelle
+          let currentPhase: TripPhase = 'upload';
+          
+          if (trip.status === 'validated') {
+            currentPhase = 'validated';
+          } else if (segmentCount && segmentCount > 0) {
+            currentPhase = 'timeline';
+          } else if (documentCount && documentCount > 0) {
+            currentPhase = 'upload';
+          }
+
+          return {
+            ...trip,
+            currentPhase,
+            segmentCount: segmentCount || 0,
+            documentCount: documentCount || 0,
+          };
+        })
+      );
+
+      setTrips(enrichedTrips);
+    } catch (error) {
+      console.error('Failed to load trips:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger vos voyages",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateNewTrip = async () => {
+    setIsCreatingTrip(true);
+    try {
+      const result = await createTrip();
+      if (result.success && result.trip_id) {
+        toast({
+          title: "Voyage créé",
+          description: "Redirection vers l'upload de documents...",
+        });
+        navigate(`/trip/create?tripId=${result.trip_id}`);
+      } else {
+        throw new Error(result.error || 'Failed to create trip');
+      }
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingTrip(false);
+    }
+  };
+
+  const handleDevMode = async () => {
+    setIsLoadingDevMode(true);
+    try {
+      const { data, error } = await supabase
+        .from('travel_segments')
+        .select('trip_id')
+        .not('trip_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0 && data[0].trip_id) {
+        toast({
+          title: "Mode Dev activé",
+          description: "Chargement du dernier voyage...",
+        });
+        navigate(`/trip/${data[0].trip_id}`);
+      } else {
+        toast({
+          title: "Aucun voyage trouvé",
+          description: "Créez d'abord un voyage avec des segments",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load latest trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le dernier voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDevMode(false);
+    }
+  };
+
+  const handleTripClick = (trip: TripWithPhase) => {
+    if (trip.status === 'validated') {
+      navigate(`/booklet?tripId=${trip.id}`);
+    } else {
+      navigate(`/trip/${trip.id}`);
+    }
+  };
+
+  const getPhaseLabel = (phase: TripPhase): string => {
+    const labels = {
+      upload: 'Upload de documents',
+      timeline: 'Édition de la chronologie',
+      validated: 'Carnet finalisé',
+    };
+    return labels[phase];
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground mb-2">
+              Mes carnets de voyage
+            </h1>
+            <p className="text-muted-foreground">
+              Gérez et créez vos carnets de voyage personnalisés
+            </p>
+          </div>
+          <UserMenu />
+        </header>
+
+        {/* Actions principales */}
+        <div className="flex gap-4 mb-8">
+          <Button
+            onClick={handleCreateNewTrip}
+            disabled={isCreatingTrip}
+            size="lg"
+            className="flex-1 max-w-sm"
+          >
+            {isCreatingTrip ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Création en cours...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-5 w-5" />
+                Créer un nouveau voyage
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={handleDevMode}
+            disabled={isLoadingDevMode}
+            variant="outline"
+            size="lg"
+          >
+            {isLoadingDevMode ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Chargement...
+              </>
+            ) : (
+              <>
+                <Zap className="mr-2 h-5 w-5" />
+                Mode Dev
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Liste des voyages */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : trips.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Plane className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h2 className="text-2xl font-semibold mb-2">Aucun voyage pour le moment</h2>
+              <p className="text-muted-foreground mb-6">
+                Commencez par créer votre premier carnet de voyage !
+              </p>
+              <Button onClick={handleCreateNewTrip} disabled={isCreatingTrip}>
+                <Plus className="mr-2 h-4 w-4" />
+                Créer mon premier voyage
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trips.map((trip) => (
+              <Card
+                key={trip.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer group"
+                onClick={() => handleTripClick(trip)}
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start mb-2">
+                    <Badge variant={trip.status === 'validated' ? 'default' : 'secondary'}>
+                      {trip.status === 'validated' ? 'Validé' : 'Brouillon'}
+                    </Badge>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="line-clamp-1">
+                    {trip.title || 'Sans titre'}
+                  </CardTitle>
+                  {trip.destination_zone && (
+                    <CardDescription className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {trip.destination_zone}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+
+                <CardContent>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span>
+                        {trip.documentCount} document{trip.documentCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {trip.segmentCount > 0 && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>
+                          {trip.segmentCount} segment{trip.segmentCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                    {trip.status === 'draft' && (
+                      <div className="text-xs mt-2">
+                        Phase: {getPhaseLabel(trip.currentPhase)}
+                      </div>
+                    )}
+                    <div className="text-xs">
+                      Créé le {formatDate(trip.created_at)}
+                    </div>
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex gap-2">
+                  {trip.status === 'validated' ? (
+                    <Button className="flex-1 group-hover:bg-primary/90" size="sm">
+                      Voir le carnet
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="flex-1" size="sm">
+                      Continuer
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
