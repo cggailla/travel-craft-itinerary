@@ -11,28 +11,10 @@ import { getUserTrips, deleteTrip } from '@/services/tripService';
 import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Plane, 
-  Calendar,
-  MapPin,
-  Loader2,
-  FileText,
-  ArrowRight,
-  Zap,
-  Search,
-  CheckCircle2,
-  FileEdit,
-  TrendingUp,
-  Trash2,
-  MoreVertical
-} from 'lucide-react';
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
-
 type Trip = Tables<'trips'>;
-
 type TripPhase = 'upload' | 'timeline' | 'validated';
-
 interface TripWithPhase extends Trip {
   currentPhase: TripPhase;
   segmentCount?: number;
@@ -40,7 +22,6 @@ interface TripWithPhase extends Trip {
   hasPdf?: boolean;
   pdfUrl?: string | null;
 }
-
 export default function Dashboard() {
   const [trips, setTrips] = useState<TripWithPhase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,75 +34,76 @@ export default function Dashboard() {
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     loadTrips();
   }, []);
-
   const loadTrips = async () => {
     setIsLoading(true);
     try {
       const userTrips = await getUserTrips();
-      
+
       // Enrichir chaque voyage avec sa phase et des stats
-      const enrichedTrips = await Promise.all(
-        userTrips.map(async (trip) => {
-          // Compter les segments
-          const { count: segmentCount } = await supabase
-            .from('travel_segments')
-            .select('*', { count: 'exact', head: true })
-            .eq('trip_id', trip.id);
+      const enrichedTrips = await Promise.all(userTrips.map(async trip => {
+        // Compter les segments
+        const {
+          count: segmentCount
+        } = await supabase.from('travel_segments').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('trip_id', trip.id);
 
-          // Compter les documents
-          const { count: documentCount } = await supabase
-            .from('documents')
-            .select('*', { count: 'exact', head: true })
-            .eq('trip_id', trip.id);
+        // Compter les documents
+        const {
+          count: documentCount
+        } = await supabase.from('documents').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('trip_id', trip.id);
 
-          // Déterminer la phase actuelle
-          let currentPhase: TripPhase = 'upload';
-          
-          if (trip.status === 'validated') {
-            currentPhase = 'validated';
-          } else if (segmentCount && segmentCount > 0) {
-            currentPhase = 'timeline';
-          } else if (documentCount && documentCount > 0) {
-            currentPhase = 'upload';
-          }
-
-          return {
-            ...trip,
-            currentPhase,
-            segmentCount: segmentCount || 0,
-            documentCount: documentCount || 0,
-            hasPdf: !!trip.last_pdf_url,
-            pdfUrl: trip.last_pdf_url,
-          };
-        })
-      );
-
+        // Déterminer la phase actuelle
+        let currentPhase: TripPhase = 'upload';
+        if (trip.status === 'validated') {
+          currentPhase = 'validated';
+        } else if (segmentCount && segmentCount > 0) {
+          currentPhase = 'timeline';
+        } else if (documentCount && documentCount > 0) {
+          currentPhase = 'upload';
+        }
+        return {
+          ...trip,
+          currentPhase,
+          segmentCount: segmentCount || 0,
+          documentCount: documentCount || 0,
+          hasPdf: !!trip.last_pdf_url,
+          pdfUrl: trip.last_pdf_url
+        };
+      }));
       setTrips(enrichedTrips);
     } catch (error) {
       console.error('Failed to load trips:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger vos voyages",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleCreateNewTrip = async (data: { title: string; destination_zone: string }) => {
+  const handleCreateNewTrip = async (data: {
+    title: string;
+    destination_zone: string;
+  }) => {
     setIsCreatingTrip(true);
     try {
       const result = await createTrip(data);
       if (result.success && result.trip_id) {
         toast({
           title: "Voyage créé",
-          description: `"${data.title}" - Redirection vers l'upload de documents...`,
+          description: `"${data.title}" - Redirection vers l'upload de documents...`
         });
         setShowCreateDialog(false);
         navigate(`/trip/create?tripId=${result.trip_id}`);
@@ -133,36 +115,33 @@ export default function Dashboard() {
       toast({
         title: "Erreur",
         description: "Impossible de créer le voyage",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsCreatingTrip(false);
     }
   };
-
   const handleDevMode = async () => {
     setIsLoadingDevMode(true);
     try {
-      const { data, error } = await supabase
-        .from('travel_segments')
-        .select('trip_id')
-        .not('trip_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
+      const {
+        data,
+        error
+      } = await supabase.from('travel_segments').select('trip_id').not('trip_id', 'is', null).order('created_at', {
+        ascending: false
+      }).limit(1);
       if (error) throw error;
-
       if (data && data.length > 0 && data[0].trip_id) {
         toast({
           title: "Mode Dev activé",
-          description: "Chargement du dernier voyage...",
+          description: "Chargement du dernier voyage..."
         });
         navigate(`/trip/${data[0].trip_id}`);
       } else {
         toast({
           title: "Aucun voyage trouvé",
           description: "Créez d'abord un voyage avec des segments",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } catch (error) {
@@ -170,13 +149,12 @@ export default function Dashboard() {
       toast({
         title: "Erreur",
         description: "Impossible de charger le dernier voyage",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoadingDevMode(false);
     }
   };
-
   const handleTripClick = (trip: TripWithPhase) => {
     if (trip.status === 'validated') {
       navigate(`/booklet?tripId=${trip.id}`);
@@ -184,29 +162,25 @@ export default function Dashboard() {
       navigate(`/trip/${trip.id}`);
     }
   };
-
   const handleDeleteClick = (trip: TripWithPhase, e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher la navigation
     setTripToDelete(trip);
     setShowDeleteDialog(true);
   };
-
   const handleConfirmDelete = async () => {
     if (!tripToDelete) return;
-
     setIsDeleting(true);
     try {
       const result = await deleteTrip(tripToDelete.id);
-      
       if (result.success) {
         toast({
           title: "Voyage supprimé",
-          description: `"${tripToDelete.title || 'Sans titre'}" a été supprimé définitivement`,
+          description: `"${tripToDelete.title || 'Sans titre'}" a été supprimé définitivement`
         });
-        
+
         // Recharger la liste des voyages
         await loadTrips();
-        
+
         // Fermer le dialog
         setShowDeleteDialog(false);
         setTripToDelete(null);
@@ -218,27 +192,25 @@ export default function Dashboard() {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le voyage",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsDeleting(false);
     }
   };
-
   const getPhaseLabel = (phase: TripPhase): string => {
     const labels = {
       upload: 'Upload de documents',
       timeline: 'Édition de la chronologie',
-      validated: 'Carnet finalisé',
+      validated: 'Carnet finalisé'
     };
     return labels[phase];
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
   };
 
@@ -257,7 +229,6 @@ export default function Dashboard() {
       const destinationMatch = trip.destination_zone?.toLowerCase().includes(query);
       return titleMatch || destinationMatch;
     }
-
     return true;
   });
 
@@ -265,11 +236,9 @@ export default function Dashboard() {
   const stats = {
     total: trips.length,
     validated: trips.filter(t => t.status === 'validated').length,
-    draft: trips.filter(t => t.status === 'draft').length,
+    draft: trips.filter(t => t.status === 'draft').length
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+  return <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <header className="flex justify-between items-center mb-8">
@@ -327,35 +296,17 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Rechercher un voyage par titre ou destination..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+            <Input type="text" placeholder="Rechercher un voyage par titre ou destination..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
           
           <div className="flex gap-2">
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('all')}
-              size="sm"
-            >
+            <Button variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')} size="sm">
               Tous ({stats.total})
             </Button>
-            <Button
-              variant={statusFilter === 'draft' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('draft')}
-              size="sm"
-            >
+            <Button variant={statusFilter === 'draft' ? 'default' : 'outline'} onClick={() => setStatusFilter('draft')} size="sm">
               Brouillon ({stats.draft})
             </Button>
-            <Button
-              variant={statusFilter === 'validated' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('validated')}
-              size="sm"
-            >
+            <Button variant={statusFilter === 'validated' ? 'default' : 'outline'} onClick={() => setStatusFilter('validated')} size="sm">
               Validés ({stats.validated})
             </Button>
           </div>
@@ -363,58 +314,35 @@ export default function Dashboard() {
 
         {/* Actions principales */}
         <div className="flex gap-4 mb-8">
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            disabled={isCreatingTrip}
-            size="lg"
-            className="flex-1 max-w-sm"
-          >
-            {isCreatingTrip ? (
-              <>
+          <Button onClick={() => setShowCreateDialog(true)} disabled={isCreatingTrip} size="lg" className="flex-1 max-w-sm">
+            {isCreatingTrip ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Création en cours...
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Plus className="mr-2 h-5 w-5" />
                 Créer un nouveau voyage
-              </>
-            )}
+              </>}
           </Button>
 
-          <Button
-            onClick={handleDevMode}
-            disabled={isLoadingDevMode}
-            variant="outline"
-            size="lg"
-          >
-            {isLoadingDevMode ? (
-              <>
+          <Button onClick={handleDevMode} disabled={isLoadingDevMode} variant="outline" size="lg">
+            {isLoadingDevMode ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Chargement...
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Zap className="mr-2 h-5 w-5" />
                 Mode Dev
-              </>
-            )}
+              </>}
           </Button>
         </div>
 
         {/* Liste des voyages */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
+        {isLoading ? <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : filteredTrips.length === 0 && searchQuery ? (
-          <Card className="text-center py-12">
+          </div> : filteredTrips.length === 0 && searchQuery ? <Card className="text-center py-12">
             <CardContent>
               <p className="text-muted-foreground">Aucun voyage ne correspond à votre recherche.</p>
             </CardContent>
-          </Card>
-        ) : filteredTrips.length === 0 ? (
-          <Card className="text-center py-12">
+          </Card> : filteredTrips.length === 0 ? <Card className="text-center py-12">
             <CardContent>
               <p className="text-muted-foreground mb-4">Aucun voyage créé pour le moment.</p>
               <Button onClick={() => setShowCreateDialog(true)}>
@@ -422,64 +350,52 @@ export default function Dashboard() {
                 Créer mon premier voyage
               </Button>
             </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          </Card> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredTrips.map((trip, index) => {
-              const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
-              const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
-              
-              const statusConfig = {
-                validated: {
-                  gradient: 'from-green-500/10 via-emerald-500/5 to-transparent',
-                  borderColor: 'border-green-500/20',
-                  iconBg: 'bg-green-500/10',
-                  iconColor: 'text-green-600 dark:text-green-400',
-                  badgeVariant: 'default' as const,
-                  badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
-                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]',
-                },
-                timeline: {
-                  gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
-                  borderColor: 'border-blue-500/20',
-                  iconBg: 'bg-blue-500/10',
-                  iconColor: 'text-blue-600 dark:text-blue-400',
-                  badgeVariant: 'secondary' as const,
-                  badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
-                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]',
-                },
-                upload: {
-                  gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
-                  borderColor: 'border-orange-500/20',
-                  iconBg: 'bg-orange-500/10',
-                  iconColor: 'text-orange-600 dark:text-orange-400',
-                  badgeVariant: 'outline' as const,
-                  badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
-                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]',
-                },
-              };
-
-              const config = statusConfig[trip.currentPhase];
-              const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
-
-              return (
-                <div
-                  key={trip.id}
-                  className={`group relative animate-slide-up`}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
+          const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
+          const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+          const statusConfig = {
+            validated: {
+              gradient: 'from-green-500/10 via-emerald-500/5 to-transparent',
+              borderColor: 'border-green-500/20',
+              iconBg: 'bg-green-500/10',
+              iconColor: 'text-green-600 dark:text-green-400',
+              badgeVariant: 'default' as const,
+              badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
+            },
+            timeline: {
+              gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
+              borderColor: 'border-blue-500/20',
+              iconBg: 'bg-blue-500/10',
+              iconColor: 'text-blue-600 dark:text-blue-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
+            },
+            upload: {
+              gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
+              borderColor: 'border-orange-500/20',
+              iconBg: 'bg-orange-500/10',
+              iconColor: 'text-orange-600 dark:text-orange-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            }
+          };
+          const config = statusConfig[trip.currentPhase];
+          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          return <div key={trip.id} className={`group relative animate-slide-up`} style={{
+            animationDelay: `${index * 50}ms`
+          }}>
                   {/* Nouveau ribbon */}
-                  {isNew && (
-                    <div className="absolute -top-2 -right-2 z-20">
+                  {isNew && <div className="absolute -top-2 -right-2 z-20">
                       <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse-glow">
                         Nouveau
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
-                  <Card
-                    onClick={() => handleTripClick(trip)}
-                    className={`
+                  <Card onClick={() => handleTripClick(trip)} className={`
                       relative overflow-hidden cursor-pointer h-full
                       transition-all duration-300 ease-out
                       border-2 ${config.borderColor}
@@ -488,52 +404,36 @@ export default function Dashboard() {
                       backdrop-blur-sm bg-card/95
                       before:absolute before:inset-0 before:bg-gradient-to-br before:${config.gradient}
                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300
-                    `}
-                  >
+                    `}>
                     {/* Bannière de statut en haut */}
                     <div className={`h-2 w-full bg-gradient-to-r ${config.badgeClass} transition-all duration-300 group-hover:h-3`} />
 
                     {/* Badge de statut avec glassmorphism */}
                     <div className="absolute top-4 right-4 z-10">
-                      <Badge 
-                        variant={config.badgeVariant}
-                        className={`
+                      <Badge variant={config.badgeVariant} className={`
                           ${config.badgeClass} 
                           backdrop-blur-md shadow-lg
                           border border-white/20
                           flex items-center gap-1.5
                           transition-transform duration-300 group-hover:scale-110
-                        `}
-                      >
-                        {isRecent && (
-                          <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse-glow" />
-                        )}
+                        `}>
+                        {isRecent && <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse-glow" />}
                         {getPhaseLabel(trip.currentPhase)}
                       </Badge>
                     </div>
 
                     <CardHeader className="pb-3 pt-6 relative">
                       {/* Icône de destination grande et stylisée */}
-                      <div className={`
-                        absolute -top-8 left-6 w-16 h-16 rounded-2xl
-                        ${config.iconBg} backdrop-blur-md
-                        flex items-center justify-center
-                        shadow-lg border-2 border-white/10
-                        transition-all duration-300 group-hover:scale-110 group-hover:rotate-3
-                      `}>
-                        <MapPin className={`h-8 w-8 ${config.iconColor} transition-all duration-300 group-hover:animate-float`} />
-                      </div>
+                      
 
                       <div className="mt-6">
                         <CardTitle className="text-xl font-bold tracking-tight mb-2 line-clamp-2 transition-all duration-300 group-hover:text-primary group-hover:translate-x-1">
                           {trip.title || 'Voyage sans titre'}
                         </CardTitle>
-                        {trip.destination_zone && (
-                          <CardDescription className="text-base font-medium flex items-center gap-2 text-foreground/80">
+                        {trip.destination_zone && <CardDescription className="text-base font-medium flex items-center gap-2 text-foreground/80">
                             <Plane className="h-4 w-4" />
                             {trip.destination_zone}
-                          </CardDescription>
-                        )}
+                          </CardDescription>}
                       </div>
                     </CardHeader>
 
@@ -560,20 +460,17 @@ export default function Dashboard() {
                       </div>
 
                       {/* Barre de progression pour les brouillons */}
-                      {trip.currentPhase !== 'validated' && (
-                        <div className="space-y-1">
+                      {trip.currentPhase !== 'validated' && <div className="space-y-1">
                           <div className="flex justify-between items-center text-xs text-muted-foreground">
                             <span>Avancement</span>
                             <span className="font-semibold">{progress}%</span>
                           </div>
                           <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full bg-gradient-to-r ${config.badgeClass} transition-all duration-500 ease-out`}
-                              style={{ width: `${progress}%` }}
-                            />
+                            <div className={`h-full bg-gradient-to-r ${config.badgeClass} transition-all duration-500 ease-out`} style={{
+                      width: `${progress}%`
+                    }} />
                           </div>
-                        </div>
-                      )}
+                        </div>}
 
                       {/* Date avec icône */}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
@@ -583,94 +480,48 @@ export default function Dashboard() {
                     </CardContent>
 
                     <CardFooter className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                      {trip.status === 'validated' ? (
-                        <>
-                          <Button
-                            variant="default"
-                            className="w-full group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTripClick(trip);
-                            }}
-                          >
+                      {trip.status === 'validated' ? <>
+                          <Button variant="default" className="w-full group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300" size="sm" onClick={e => {
+                    e.stopPropagation();
+                    handleTripClick(trip);
+                  }}>
                             <CheckCircle2 className="mr-2 h-4 w-4" />
                             Voir le booklet
                             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                           </Button>
-                          {trip.hasPdf && trip.pdfUrl && (
-                            <Button
-                              variant="outline"
-                              className="w-full relative overflow-hidden group/pdf"
-                              size="sm"
-                              asChild
-                            >
-                              <a
-                                href={trip.pdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                          {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" asChild>
+                              <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
                                 <FileText className="mr-2 h-4 w-4" />
                                 Télécharger le PDF
-                                {trip.hasPdf && (
-                                  <span className="ml-2 inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
-                                )}
+                                {trip.hasPdf && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />}
                               </a>
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        <Button
-                          variant="default"
-                          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTripClick(trip);
-                          }}
-                        >
+                            </Button>}
+                        </> : <Button variant="default" className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300" size="sm" onClick={e => {
+                  e.stopPropagation();
+                  handleTripClick(trip);
+                }}>
                           <FileEdit className="mr-2 h-4 w-4" />
                           Continuer l'édition
                           <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                        </Button>
-                      )}
+                        </Button>}
 
                       {/* Bouton supprimer avec hover state amélioré */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
-                        onClick={(e) => handleDeleteClick(trip, e)}
-                      >
+                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300" onClick={e => handleDeleteClick(trip, e)}>
                         <Trash2 className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
                         Supprimer
                       </Button>
                     </CardFooter>
                   </Card>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                </div>;
+        })}
+          </div>}
 
         {/* Dialog de création de voyage */}
-        <CreateTripDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-          onConfirm={handleCreateNewTrip}
-        />
+        <CreateTripDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onConfirm={handleCreateNewTrip} />
 
         {/* Dialog de suppression de voyage */}
-        <DeleteTripDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          onConfirm={handleConfirmDelete}
-          tripTitle={tripToDelete?.title}
-          isDeleting={isDeleting}
-        />
+        <DeleteTripDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} onConfirm={handleConfirmDelete} tripTitle={tripToDelete?.title} isDeleting={isDeleting} />
       </div>
-    </div>
-  );
+    </div>;
 }
