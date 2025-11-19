@@ -36,7 +36,10 @@ export interface TravelSegmentResponse {
 /**
  * 🔐 NIVEAU 2 : Create a new trip (avec vérification auth)
  */
-export async function createTrip(): Promise<{ success: boolean; trip_id?: string; error?: string }> {
+export async function createTrip(tripData?: { 
+  title?: string; 
+  destination_zone?: string; 
+}): Promise<{ success: boolean; trip_id?: string; error?: string }> {
   try {
     console.log('🔐 [NIVEAU 2] Vérification authentification pour création trip...');
     
@@ -48,7 +51,8 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
     const { data, error } = await supabase
       .from('trips')
       .insert({
-        title: 'Nouveau carnet de voyage',
+        title: tripData?.title || 'Nouveau carnet de voyage',
+        destination_zone: tripData?.destination_zone || null,
         status: 'draft',
         user_id: userId // ✅ NIVEAU 2 : Lié à l'utilisateur
       })

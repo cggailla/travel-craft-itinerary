@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { CreateTripDialog } from '@/components/CreateTripDialog';
 import { getUserTrips } from '@/services/tripService';
 import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'validated'>('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -102,15 +104,16 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateNewTrip = async () => {
+  const handleCreateNewTrip = async (data: { title: string; destination_zone: string }) => {
     setIsCreatingTrip(true);
     try {
-      const result = await createTrip();
+      const result = await createTrip(data);
       if (result.success && result.trip_id) {
         toast({
           title: "Voyage créé",
-          description: "Redirection vers l'upload de documents...",
+          description: `"${data.title}" - Redirection vers l'upload de documents...`,
         });
+        setShowCreateDialog(false);
         navigate(`/trip/create?tripId=${result.trip_id}`);
       } else {
         throw new Error(result.error || 'Failed to create trip');
@@ -311,7 +314,7 @@ export default function Dashboard() {
         {/* Actions principales */}
         <div className="flex gap-4 mb-8">
           <Button
-            onClick={handleCreateNewTrip}
+            onClick={() => setShowCreateDialog(true)}
             disabled={isCreatingTrip}
             size="lg"
             className="flex-1 max-w-sm"
@@ -375,7 +378,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground mb-6">
                 Commencez par créer votre premier carnet de voyage !
               </p>
-              <Button onClick={handleCreateNewTrip} disabled={isCreatingTrip}>
+              <Button onClick={() => setShowCreateDialog(true)} disabled={isCreatingTrip}>
                 <Plus className="mr-2 h-4 w-4" />
                 Créer mon premier voyage
               </Button>
@@ -451,6 +454,13 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+
+        {/* Dialog de création de voyage */}
+        <CreateTripDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onConfirm={handleCreateNewTrip}
+        />
       </div>
     </div>
   );
