@@ -149,7 +149,6 @@ export default function IndexNew() {
     }
   };
 
-
   const handleFilesProcessed = (documentIds: string[]) => {
     setProcessedDocuments(prev => [...prev, ...documentIds]);
     setCurrentPhase('timeline');
@@ -158,6 +157,10 @@ export default function IndexNew() {
       title: "Documents traités",
       description: `${documentIds.length} documents analysés avec succès`,
     });
+  };
+
+  const handleProcessingUpdate = (processing: boolean) => {
+    setIsProcessing(processing);
   };
 
   const handleValidated = () => {
@@ -193,130 +196,89 @@ export default function IndexNew() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="text-center mb-12">
-          <div className="flex items-center justify-center space-x-3 mb-4 relative">
-            {/* User Menu - Position absolue en haut à droite */}
-            <div className="absolute right-0 top-0">
-              <UserMenu />
-            </div>
-            
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white">
-              <FileText className="h-8 w-8" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Travel Booklet Builder
-            </h1>
-          </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-            Transformez vos documents de voyage en carnet organisé grâce à l'intelligence artificielle
-          </p>
-          
-          {/* Mode Dev Button */}
-          <div className="flex justify-center">
-            <Button 
-              onClick={loadLatestTrip}
-              disabled={isLoadingLatestTrip}
-              variant="outline"
+        {/* Header avec retour dashboard */}
+        <header className="flex flex-row gap-4 items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
               size="sm"
-              className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+              onClick={handleBackToDashboard}
             >
-              {isLoadingLatestTrip ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Chargement...
-                </>
-              ) : (
-                <>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Mode Dev - Charger dernier voyage
-                </>
-              )}
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au Dashboard
             </Button>
+            <div className="text-left">
+              <h1 className="text-3xl font-bold text-foreground">
+                {tripId ? 'Édition du voyage' : 'Nouveau voyage'}
+              </h1>
+              <p className="text-muted-foreground">
+                Créez et gérez votre carnet de voyage personnalisé
+              </p>
+            </div>
           </div>
+          <UserMenu />
         </header>
 
+        {/* Phase indicators */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center space-x-2 bg-card rounded-full p-2 shadow-md">
+            {(Object.keys(phases) as AppPhase[]).map((phase, index) => (
+              <React.Fragment key={phase}>
+                {index > 0 && (
+                  <div className={`h-px w-12 ${
+                    isPhaseCompleted(phase) 
+                      ? 'bg-primary' 
+                      : 'bg-muted'
+                  }`} />
+                )}
+                <div
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all ${
+                    isPhaseActive(phase)
+                      ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                      : isPhaseCompleted(phase)
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {phases[phase].icon}
+                  <span className="font-medium hidden sm:inline">{phases[phase].title}</span>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
-        {/* Phase Content */}
-        <div className="space-y-8">
-          {currentPhase === 'create-trip' && (
-            <div className="space-y-6">
-              <Card className="border-2 border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="h-5 w-5" />
-                    <span>Créer un nouveau voyage</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-center py-8">
-                  <div className="space-y-4">
-                    <p className="text-lg text-muted-foreground">
-                      Commencez par créer votre carnet de voyage
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Tous vos documents seront organisés dans ce carnet
-                    </p>
-                    <Button 
-                      onClick={createNewTrip} 
-                      disabled={isCreatingTrip}
-                      size="lg"
-                      className="mt-6"
-                    >
-                      {isCreatingTrip ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Création en cours...
-                        </>
-                      ) : (
-                        <>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Créer un nouveau voyage
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+        {/* Phase content */}
+        <div className="mt-8">
+          {currentPhase === 'upload' && tripId && (
+            <Card className="max-w-3xl mx-auto">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Upload className="h-5 w-5" />
+                  <span>Upload de documents</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FileUploadNew
+                  onFilesProcessed={handleFilesProcessed}
+                  onProcessingUpdate={handleProcessingUpdate}
+                  tripId={tripId}
+                />
+              </CardContent>
+            </Card>
           )}
 
-          {currentPhase === 'upload' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Upload className="h-5 w-5" />
-                    <span>Upload de documents</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FileUploadNew
-                    onFilesProcessed={handleFilesProcessed}
-                    onProcessingUpdate={setIsProcessing}
-                    tripId={tripId}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-
-          {(currentPhase === 'timeline' || currentPhase === 'validated') && (
-            <div className="space-y-6">
-              <TravelTimelineNew
-                documentIds={processedDocuments}
-                onValidated={handleValidated}
-                tripId={tripId}
-              />
-            </div>
+          {(currentPhase === 'timeline' || currentPhase === 'validated') && tripId && (
+            <TravelTimelineNew 
+              tripId={tripId}
+              onValidated={handleValidated}
+            />
           )}
         </div>
 
         {/* Footer */}
         <footer className="mt-16 text-center text-sm text-muted-foreground">
-          <p>
-            Propulsé par l'intelligence artificielle • Vos documents restent privés et sécurisés
-          </p>
+          <p>Transformez vos documents de voyage en carnet organisé grâce à l'IA</p>
         </footer>
       </div>
     </div>
