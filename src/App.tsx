@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoginForm } from "@/components/auth/LoginForm";
 import IndexNew from "./pages/IndexNew";
 import TravelBooklet from "./pages/TravelBooklet";
+import TripWorkflow from "./pages/TripWorkflow";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             {/* Routes protégées */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<IndexNew />} />
+              <Route path="/trip/:tripId" element={<TripWorkflow />} />
               <Route path="/booklet" element={<TravelBooklet />} />
             </Route>
             

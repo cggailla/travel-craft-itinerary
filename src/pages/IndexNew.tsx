@@ -110,7 +110,8 @@ export default function IndexNew() {
         setNewTripTitle('');
         setNewTripDestination('');
         
-        // Navigate to the new trip
+        // Navigate to the workflow page
+        navigate(`/trip/${result.trip.id}`);
         navigate(`/booklet?tripId=${result.trip.id}`);
       } else {
         throw new Error(result.error || 'Erreur lors de la création du voyage');
@@ -164,7 +165,7 @@ export default function IndexNew() {
       if (error) throw error;
 
       if (latestTrip) {
-        navigate(`/booklet?tripId=${latestTrip.id}`);
+        navigate(`/trip/${latestTrip.id}`);
       } else {
         toast({
           title: "Aucun voyage",
