@@ -238,116 +238,181 @@ export default function Dashboard() {
     validated: trips.filter(t => t.status === 'validated').length,
     draft: trips.filter(t => t.status === 'draft').length
   };
-  return <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground mb-2">
+        {/* Header avec effet moderne */}
+        <header className="flex justify-between items-center mb-12 relative">
+          <div className="space-y-2">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent mb-3 tracking-tight">
               Mes carnets de voyage
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-lg text-muted-foreground/80 font-medium flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
               Gérez et créez vos carnets de voyage personnalisés
             </p>
           </div>
-          <UserMenu />
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
+            <UserMenu />
+          </div>
         </header>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
+        {/* Statistiques modernes avec animations */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <Card className="group relative overflow-hidden border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-card via-card to-primary/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl transition-all duration-500 group-hover:scale-150" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2 uppercase tracking-wide">
+                <TrendingUp className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                 Total de voyages
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.total}</div>
+            <CardContent className="relative z-10">
+              <div className="text-4xl font-bold font-mono bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                {stats.total}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Tous vos voyages</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
+          <Card className="group relative overflow-hidden border-2 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20 hover:-translate-y-1 bg-gradient-to-br from-card via-card to-green-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl transition-all duration-500 group-hover:scale-150" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2 uppercase tracking-wide">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                 Voyages validés
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{stats.validated}</div>
+            <CardContent className="relative z-10">
+              <div className="text-4xl font-bold font-mono text-green-600 dark:text-green-400">
+                {stats.validated}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Prêts à explorer</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <FileEdit className="h-4 w-4" />
+          <Card className="group relative overflow-hidden border-2 hover:border-orange-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/20 hover:-translate-y-1 bg-gradient-to-br from-card via-card to-orange-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl transition-all duration-500 group-hover:scale-150" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2 uppercase tracking-wide">
+                <FileEdit className="h-5 w-5 text-orange-600 dark:text-orange-400 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                 Voyages en cours
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">{stats.draft}</div>
+            <CardContent className="relative z-10">
+              <div className="text-4xl font-bold font-mono text-orange-600 dark:text-orange-400">
+                {stats.draft}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">En préparation</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recherche et filtres */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input type="text" placeholder="Rechercher un voyage par titre ou destination..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+        {/* Recherche et filtres modernes */}
+        <div className="flex flex-col md:flex-row gap-4 mb-10">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors duration-300 group-focus-within:text-primary" />
+            <Input 
+              type="text" 
+              placeholder="Rechercher un voyage par titre ou destination..." 
+              value={searchQuery} 
+              onChange={e => setSearchQuery(e.target.value)} 
+              className="pl-12 h-12 text-base border-2 focus:border-primary/50 bg-card/50 backdrop-blur-sm transition-all duration-300 shadow-sm hover:shadow-md" 
+            />
           </div>
           
-          <div className="flex gap-2">
-            <Button variant={statusFilter === 'all' ? 'default' : 'outline'} onClick={() => setStatusFilter('all')} size="sm">
-              Tous ({stats.total})
+          <div className="flex gap-3 flex-wrap">
+            <Button 
+              variant={statusFilter === 'all' ? 'default' : 'outline'} 
+              onClick={() => setStatusFilter('all')} 
+              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'all' ? 'shadow-lg shadow-primary/30' : 'hover:border-primary/50'}`}
+            >
+              Tous
+              <Badge variant="secondary" className="ml-2 font-mono">{stats.total}</Badge>
             </Button>
-            <Button variant={statusFilter === 'draft' ? 'default' : 'outline'} onClick={() => setStatusFilter('draft')} size="sm">
-              Brouillon ({stats.draft})
+            <Button 
+              variant={statusFilter === 'draft' ? 'default' : 'outline'} 
+              onClick={() => setStatusFilter('draft')} 
+              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'draft' ? 'shadow-lg shadow-primary/30' : 'hover:border-orange-500/50'}`}
+            >
+              Brouillon
+              <Badge variant="secondary" className="ml-2 font-mono">{stats.draft}</Badge>
             </Button>
-            <Button variant={statusFilter === 'validated' ? 'default' : 'outline'} onClick={() => setStatusFilter('validated')} size="sm">
-              Validés ({stats.validated})
+            <Button 
+              variant={statusFilter === 'validated' ? 'default' : 'outline'} 
+              onClick={() => setStatusFilter('validated')} 
+              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'validated' ? 'shadow-lg shadow-primary/30' : 'hover:border-green-500/50'}`}
+            >
+              Validés
+              <Badge variant="secondary" className="ml-2 font-mono">{stats.validated}</Badge>
             </Button>
           </div>
         </div>
 
-        {/* Actions principales */}
-        <div className="flex gap-4 mb-8">
-          <Button onClick={() => setShowCreateDialog(true)} disabled={isCreatingTrip} size="lg" className="flex-1 max-w-sm">
+        {/* Actions principales avec design moderne */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-12">
+          <Button 
+            onClick={() => setShowCreateDialog(true)} 
+            disabled={isCreatingTrip} 
+            size="lg" 
+            className="group flex-1 sm:max-w-md h-14 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary shadow-xl hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02]"
+          >
             {isCreatingTrip ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Création en cours...
               </> : <>
-                <Plus className="mr-2 h-5 w-5" />
+                <Plus className="mr-2 h-5 w-5 transition-transform duration-300 group-hover:rotate-90" />
                 Créer un nouveau voyage
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
               </>}
           </Button>
 
-          <Button onClick={handleDevMode} disabled={isLoadingDevMode} variant="outline" size="lg">
+          <Button 
+            onClick={handleDevMode} 
+            disabled={isLoadingDevMode} 
+            variant="outline" 
+            size="lg"
+            className="h-14 px-8 text-base font-semibold border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm"
+          >
             {isLoadingDevMode ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Chargement...
               </> : <>
-                <Zap className="mr-2 h-5 w-5" />
+                <Zap className="mr-2 h-5 w-5 text-primary" />
                 Mode Dev
               </>}
           </Button>
         </div>
 
-        {/* Liste des voyages */}
-        {isLoading ? <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div> : filteredTrips.length === 0 && searchQuery ? <Card className="text-center py-12">
-            <CardContent>
-              <p className="text-muted-foreground">Aucun voyage ne correspond à votre recherche.</p>
+        {/* Liste des voyages avec états vides améliorés */}
+        {isLoading ? <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground font-medium">Chargement de vos voyages...</p>
+            </div>
+          </div> : filteredTrips.length === 0 && searchQuery ? <Card className="border-2 border-dashed hover:border-primary/50 transition-all duration-300">
+            <CardContent className="text-center py-20">
+              <Search className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Aucun résultat</h3>
+              <p className="text-muted-foreground mb-6">Aucun voyage ne correspond à votre recherche "<span className="font-semibold text-foreground">{searchQuery}</span>"</p>
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Effacer la recherche
+              </Button>
             </CardContent>
-          </Card> : filteredTrips.length === 0 ? <Card className="text-center py-12">
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Aucun voyage créé pour le moment.</p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+          </Card> : filteredTrips.length === 0 ? <Card className="border-2 border-dashed hover:border-primary/50 transition-all duration-300 bg-gradient-to-br from-card to-primary/5">
+            <CardContent className="text-center py-20">
+              <div className="relative inline-block mb-6">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl" />
+                <Plane className="relative h-20 w-20 text-primary mx-auto" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Commencez votre aventure</h3>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
+                Aucun voyage créé pour le moment. Créez votre premier carnet de voyage et partagez vos expériences.
+              </p>
+              <Button size="lg" onClick={() => setShowCreateDialog(true)} className="h-12 px-8 text-base font-semibold shadow-xl hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-105">
+                <Plus className="mr-2 h-5 w-5" />
                 Créer mon premier voyage
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardContent>
           </Card> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
