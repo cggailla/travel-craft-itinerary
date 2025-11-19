@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
 
 import { 
@@ -10,18 +9,15 @@ import {
   Cpu, 
   Calendar, 
   CheckCircle, 
-  RefreshCw,
-  FileText,
-  Settings
+  ArrowLeft
 } from 'lucide-react';
 import FileUploadNew from '@/components/FileUploadNew';
 import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
-import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 
-type AppPhase = 'create-trip' | 'upload' | 'processing' | 'timeline' | 'validated';
+type AppPhase = 'upload' | 'processing' | 'timeline' | 'validated';
 
 interface PhaseConfig {
   title: string;
@@ -31,12 +27,6 @@ interface PhaseConfig {
 }
 
 const phases: Record<AppPhase, PhaseConfig> = {
-  'create-trip': {
-    title: 'Nouveau voyage',
-    description: 'Créer votre carnet de voyage',
-    icon: <Settings className="h-5 w-5" />,
-    color: 'bg-muted'
-  },
   upload: {
     title: 'Upload de documents',
     description: 'Glissez-déposez vos documents de voyage',
@@ -64,25 +54,24 @@ const phases: Record<AppPhase, PhaseConfig> = {
 };
 
 export default function IndexNew() {
-  const [currentPhase, setCurrentPhase] = useState<AppPhase>('create-trip');
+  const [currentPhase, setCurrentPhase] = useState<AppPhase>('upload');
   const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [tripId, setTripId] = useState<string | null>(null);
-  const [isCreatingTrip, setIsCreatingTrip] = useState(false);
-  const [isLoadingLatestTrip, setIsLoadingLatestTrip] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const params = useParams<{ tripId: string }>();
 
-  // Check if tripId is provided in URL params
+  // Charger le tripId depuis les paramètres d'URL
   useEffect(() => {
-    const urlTripId = searchParams.get('tripId');
+    const urlTripId = params.tripId || searchParams.get('tripId');
+    
     if (urlTripId) {
       setTripId(urlTripId);
-      setCurrentPhase('timeline');
       loadExistingTripData(urlTripId);
     }
-  }, [searchParams, toast]);
+  }, [params.tripId, searchParams]);
 
   const loadExistingTripData = async (tripId: string) => {
     try {
@@ -94,7 +83,16 @@ export default function IndexNew() {
 
       if (docError) throw docError;
 
-      // Vérifier si tous les segments sont validés
+      // Vérifier si le trip est validé
+      const { data: trip, error: tripError } = await supabase
+        .from('trips')
+        .select('status')
+        .eq('id', tripId)
+        .single();
+
+      if (tripError) throw tripError;
+
+      // Vérifier les segments
       const { data: segments, error: segError } = await supabase
         .from('travel_segments')
         .select('validated')
@@ -102,29 +100,44 @@ export default function IndexNew() {
 
       if (segError) throw segError;
 
-      if (documents && documents.length > 0) {
-        const docIds = documents.map(doc => doc.id);
-        setProcessedDocuments(docIds);
-        
-        // Si tous les segments sont validés, passer en phase validated
-        const allValidated = segments && segments.length > 0 && segments.every(s => s.validated);
+      // Déterminer la phase actuelle
+      if (trip?.status === 'validated') {
+        setCurrentPhase('validated');
+        toast({
+          title: "Voyage validé",
+          description: "Carnet prêt à générer",
+        });
+      } else if (segments && segments.length > 0) {
+        setCurrentPhase('timeline');
+        const allValidated = segments.every(s => s.validated);
         if (allValidated) {
-          setCurrentPhase('validated');
           toast({
-            title: "Trip validé chargé",
-            description: "Tous les segments sont validés - carnet prêt à générer",
+            title: "Voyage en édition",
+            description: "Tous les segments sont validés",
           });
         } else {
           toast({
-            title: "Trip chargé",
-            description: `${documents.length} documents trouvés pour ce voyage`,
+            title: "Voyage en édition",
+            description: `${segments.length} segments à vérifier`,
           });
         }
-      } else {
+      } else if (documents && documents.length > 0) {
+        setCurrentPhase('upload');
         toast({
-          title: "Trip chargé", 
-          description: "Aucun document trouvé pour ce voyage",
+          title: "Documents trouvés",
+          description: `${documents.length} documents en attente de traitement`,
         });
+      } else {
+        setCurrentPhase('upload');
+        toast({
+          title: "Nouveau voyage",
+          description: "Commencez par uploader vos documents",
+        });
+      }
+
+      if (documents && documents.length > 0) {
+        const docIds = documents.map(doc => doc.id);
+        setProcessedDocuments(docIds);
       }
     } catch (error) {
       console.error('Failed to load trip data:', error);
@@ -136,71 +149,6 @@ export default function IndexNew() {
     }
   };
 
-  const loadLatestTrip = async () => {
-    setIsLoadingLatestTrip(true);
-    try {
-      const { data: segs, error } = await supabase
-        .from('travel_segments')
-        .select('trip_id, created_at')
-        .not('trip_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-
-      if (segs && segs.length > 0 && segs[0].trip_id) {
-        const latestTripId = segs[0].trip_id as string;
-        navigate(`/?tripId=${latestTripId}`);
-        toast({
-          title: "Mode Dev activé",
-          description: "Redirection vers le dernier voyage traité",
-        });
-      } else {
-        toast({
-          title: "Aucun voyage trouvé",
-          description: "Créez d'abord un voyage pour utiliser le mode dev",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load latest trip:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le dernier voyage",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingLatestTrip(false);
-    }
-  };
-
-  const createNewTrip = async () => {
-    setIsCreatingTrip(true);
-    try {
-      const result = await createTrip();
-      if (result.success && result.trip_id) {
-        setTripId(result.trip_id);
-        setCurrentPhase('upload');
-        console.log('New trip created:', result.trip_id);
-        
-        toast({
-          title: "Voyage créé",
-          description: "Vous pouvez maintenant uploader vos documents",
-        });
-      } else {
-        throw new Error(result.error || 'Failed to create trip');
-      }
-    } catch (error) {
-      console.error('Failed to create trip:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer le voyage",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingTrip(false);
-    }
-  };
 
   const handleFilesProcessed = (documentIds: string[]) => {
     setProcessedDocuments(prev => [...prev, ...documentIds]);
@@ -221,21 +169,18 @@ export default function IndexNew() {
     });
   };
 
-  const resetApp = () => {
-    setCurrentPhase('create-trip');
-    setProcessedDocuments([]);
-    setIsProcessing(false);
-    setTripId(null);
+  const handleBackToDashboard = () => {
+    navigate('/');
   };
 
   const getPhaseProgress = (): number => {
-    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
+    const phaseOrder: AppPhase[] = ['upload', 'processing', 'timeline', 'validated'];
     const currentIndex = phaseOrder.indexOf(currentPhase);
     return ((currentIndex + 1) / phaseOrder.length) * 100;
   };
 
   const isPhaseCompleted = (phase: AppPhase): boolean => {
-    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
+    const phaseOrder: AppPhase[] = ['upload', 'processing', 'timeline', 'validated'];
     const currentIndex = phaseOrder.indexOf(currentPhase);
     const phaseIndex = phaseOrder.indexOf(phase);
     return phaseIndex < currentIndex || (phase === currentPhase && currentPhase === 'validated');
