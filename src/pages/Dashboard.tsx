@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { getUserTrips } from '@/services/tripService';
@@ -16,7 +17,11 @@ import {
   Loader2,
   FileText,
   ArrowRight,
-  Zap
+  Zap,
+  Search,
+  CheckCircle2,
+  FileEdit,
+  TrendingUp
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -35,6 +40,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'validated'>('all');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -182,6 +189,32 @@ export default function Dashboard() {
     });
   };
 
+  // Filtrage des voyages
+  const filteredTrips = trips.filter(trip => {
+    // Filtre par statut
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'validated' && trip.status !== 'validated') return false;
+      if (statusFilter === 'draft' && trip.status !== 'draft') return false;
+    }
+
+    // Filtre par recherche
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const titleMatch = trip.title?.toLowerCase().includes(query);
+      const destinationMatch = trip.destination_zone?.toLowerCase().includes(query);
+      return titleMatch || destinationMatch;
+    }
+
+    return true;
+  });
+
+  // Statistiques
+  const stats = {
+    total: trips.length,
+    validated: trips.filter(t => t.status === 'validated').length,
+    draft: trips.filter(t => t.status === 'draft').length,
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto px-4 py-8">
@@ -197,6 +230,83 @@ export default function Dashboard() {
           </div>
           <UserMenu />
         </header>
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Total de voyages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Voyages validés
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{stats.validated}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <FileEdit className="h-4 w-4" />
+                Voyages en cours
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{stats.draft}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recherche et filtres */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Rechercher un voyage par titre ou destination..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              size="sm"
+            >
+              Tous ({stats.total})
+            </Button>
+            <Button
+              variant={statusFilter === 'draft' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('draft')}
+              size="sm"
+            >
+              Brouillon ({stats.draft})
+            </Button>
+            <Button
+              variant={statusFilter === 'validated' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('validated')}
+              size="sm"
+            >
+              Validés ({stats.validated})
+            </Button>
+          </div>
+        </div>
 
         {/* Actions principales */}
         <div className="flex gap-4 mb-8">
@@ -244,6 +354,19 @@ export default function Dashboard() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : filteredTrips.length === 0 && searchQuery ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h2 className="text-2xl font-semibold mb-2">Aucun voyage trouvé</h2>
+              <p className="text-muted-foreground mb-6">
+                Aucun résultat pour "{searchQuery}"
+              </p>
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Effacer la recherche
+              </Button>
+            </CardContent>
+          </Card>
         ) : trips.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
@@ -260,7 +383,7 @@ export default function Dashboard() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trips.map((trip) => (
+            {filteredTrips.map((trip) => (
               <Card
                 key={trip.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer group"
