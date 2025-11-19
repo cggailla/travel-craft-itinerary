@@ -410,128 +410,248 @@ export default function Dashboard() {
         ) : filteredTrips.length === 0 && searchQuery ? (
           <Card className="text-center py-12">
             <CardContent>
-              <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-2xl font-semibold mb-2">Aucun voyage trouvé</h2>
-              <p className="text-muted-foreground mb-6">
-                Aucun résultat pour "{searchQuery}"
-              </p>
-              <Button variant="outline" onClick={() => setSearchQuery('')}>
-                Effacer la recherche
-              </Button>
+              <p className="text-muted-foreground">Aucun voyage ne correspond à votre recherche.</p>
             </CardContent>
           </Card>
-        ) : trips.length === 0 ? (
+        ) : filteredTrips.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
-              <Plane className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-2xl font-semibold mb-2">Aucun voyage pour le moment</h2>
-              <p className="text-muted-foreground mb-6">
-                Commencez par créer votre premier carnet de voyage !
-              </p>
-              <Button onClick={() => setShowCreateDialog(true)} disabled={isCreatingTrip}>
+              <p className="text-muted-foreground mb-4">Aucun voyage créé pour le moment.</p>
+              <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Créer mon premier voyage
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTrips.map((trip) => (
-              <Card
-                key={trip.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer group relative"
-                onClick={() => handleTripClick(trip)}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant={trip.status === 'validated' ? 'default' : 'secondary'}>
-                      {trip.status === 'validated' ? 'Validé' : 'Brouillon'}
-                    </Badge>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
-                        onClick={(e) => handleDeleteClick(trip, e)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTrips.map((trip, index) => {
+              const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
+              const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+              
+              const statusConfig = {
+                validated: {
+                  gradient: 'from-green-500/10 via-emerald-500/5 to-transparent',
+                  borderColor: 'border-green-500/20',
+                  iconBg: 'bg-green-500/10',
+                  iconColor: 'text-green-600 dark:text-green-400',
+                  badgeVariant: 'default' as const,
+                  badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]',
+                },
+                timeline: {
+                  gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
+                  borderColor: 'border-blue-500/20',
+                  iconBg: 'bg-blue-500/10',
+                  iconColor: 'text-blue-600 dark:text-blue-400',
+                  badgeVariant: 'secondary' as const,
+                  badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
+                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]',
+                },
+                upload: {
+                  gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
+                  borderColor: 'border-orange-500/20',
+                  iconBg: 'bg-orange-500/10',
+                  iconColor: 'text-orange-600 dark:text-orange-400',
+                  badgeVariant: 'outline' as const,
+                  badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+                  shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]',
+                },
+              };
+
+              const config = statusConfig[trip.currentPhase];
+              const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+
+              return (
+                <div
+                  key={trip.id}
+                  className={`group relative animate-slide-up`}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {/* Nouveau ribbon */}
+                  {isNew && (
+                    <div className="absolute -top-2 -right-2 z-20">
+                      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse-glow">
+                        Nouveau
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="line-clamp-1">
-                    {trip.title || 'Sans titre'}
-                  </CardTitle>
-                  {trip.destination_zone && (
-                    <CardDescription className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {trip.destination_zone}
-                    </CardDescription>
                   )}
-                </CardHeader>
 
-                <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      <span>
-                        {trip.documentCount} document{trip.documentCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    {trip.segmentCount > 0 && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>
-                          {trip.segmentCount} segment{trip.segmentCount !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    )}
-                    {trip.status === 'draft' && (
-                      <div className="text-xs mt-2">
-                        Phase: {getPhaseLabel(trip.currentPhase)}
-                      </div>
-                    )}
-                    <div className="text-xs">
-                      Créé le {formatDate(trip.created_at)}
-                    </div>
-                  </div>
-                </CardContent>
+                  <Card
+                    onClick={() => handleTripClick(trip)}
+                    className={`
+                      relative overflow-hidden cursor-pointer h-full
+                      transition-all duration-300 ease-out
+                      border-2 ${config.borderColor}
+                      ${config.shadowHover}
+                      hover:-translate-y-2 hover:scale-[1.02]
+                      backdrop-blur-sm bg-card/95
+                      before:absolute before:inset-0 before:bg-gradient-to-br before:${config.gradient}
+                      before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300
+                    `}
+                  >
+                    {/* Bannière de statut en haut */}
+                    <div className={`h-2 w-full bg-gradient-to-r ${config.badgeClass} transition-all duration-300 group-hover:h-3`} />
 
-                <CardFooter className="flex flex-col gap-2">
-                  {trip.status === 'validated' ? (
-                    <>
-                      <Button className="w-full group-hover:bg-primary/90" size="sm">
-                        Voir le carnet
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                      {trip.hasPdf && trip.pdfUrl && (
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          size="sm"
-                          asChild
-                        >
-                          <a
-                            href={trip.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+                    {/* Badge de statut avec glassmorphism */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <Badge 
+                        variant={config.badgeVariant}
+                        className={`
+                          ${config.badgeClass} 
+                          backdrop-blur-md shadow-lg
+                          border border-white/20
+                          flex items-center gap-1.5
+                          transition-transform duration-300 group-hover:scale-110
+                        `}
+                      >
+                        {isRecent && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse-glow" />
+                        )}
+                        {getPhaseLabel(trip.currentPhase)}
+                      </Badge>
+                    </div>
+
+                    <CardHeader className="pb-3 pt-6 relative">
+                      {/* Icône de destination grande et stylisée */}
+                      <div className={`
+                        absolute -top-8 left-6 w-16 h-16 rounded-2xl
+                        ${config.iconBg} backdrop-blur-md
+                        flex items-center justify-center
+                        shadow-lg border-2 border-white/10
+                        transition-all duration-300 group-hover:scale-110 group-hover:rotate-3
+                      `}>
+                        <MapPin className={`h-8 w-8 ${config.iconColor} transition-all duration-300 group-hover:animate-float`} />
+                      </div>
+
+                      <div className="mt-6">
+                        <CardTitle className="text-xl font-bold tracking-tight mb-2 line-clamp-2 transition-all duration-300 group-hover:text-primary group-hover:translate-x-1">
+                          {trip.title || 'Voyage sans titre'}
+                        </CardTitle>
+                        {trip.destination_zone && (
+                          <CardDescription className="text-base font-medium flex items-center gap-2 text-foreground/80">
+                            <Plane className="h-4 w-4" />
+                            {trip.destination_zone}
+                          </CardDescription>
+                        )}
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      {/* Stats visuelles enrichies */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 transition-all duration-300 hover:bg-blue-500/20">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
+                          <span className="text-xs text-muted-foreground">Documents</span>
+                          <span className="text-lg font-bold font-mono">{trip.documentCount}</span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 transition-all duration-300 hover:bg-purple-500/20">
+                          <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400 mb-1" />
+                          <span className="text-xs text-muted-foreground">Segments</span>
+                          <span className="text-lg font-bold font-mono">{trip.segmentCount}</span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:bg-orange-500/20">
+                          <Zap className="h-4 w-4 text-orange-600 dark:text-orange-400 mb-1" />
+                          <span className="text-xs text-muted-foreground">Phase</span>
+                          <span className="text-xs font-bold uppercase">{trip.currentPhase}</span>
+                        </div>
+                      </div>
+
+                      {/* Barre de progression pour les brouillons */}
+                      {trip.currentPhase !== 'validated' && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>Avancement</span>
+                            <span className="font-semibold">{progress}%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full bg-gradient-to-r ${config.badgeClass} transition-all duration-500 ease-out`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Date avec icône */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Créé le {formatDate(trip.created_at)}</span>
+                      </div>
+                    </CardContent>
+
+                    <CardFooter className="flex flex-col gap-2 pt-4 border-t border-border/50">
+                      {trip.status === 'validated' ? (
+                        <>
+                          <Button
+                            variant="default"
+                            className="w-full group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTripClick(trip);
+                            }}
                           >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Télécharger le PDF
-                          </a>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Voir le booklet
+                            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                          </Button>
+                          {trip.hasPdf && trip.pdfUrl && (
+                            <Button
+                              variant="outline"
+                              className="w-full relative overflow-hidden group/pdf"
+                              size="sm"
+                              asChild
+                            >
+                              <a
+                                href={trip.pdfUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
+                                <FileText className="mr-2 h-4 w-4" />
+                                Télécharger le PDF
+                                {trip.hasPdf && (
+                                  <span className="ml-2 inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
+                                )}
+                              </a>
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button
+                          variant="default"
+                          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTripClick(trip);
+                          }}
+                        >
+                          <FileEdit className="mr-2 h-4 w-4" />
+                          Continuer l'édition
+                          <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </Button>
                       )}
-                    </>
-                  ) : (
-                    <Button variant="outline" className="w-full" size="sm">
-                      Continuer
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            ))}
+
+                      {/* Bouton supprimer avec hover state amélioré */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
+                        onClick={(e) => handleDeleteClick(trip, e)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                        Supprimer
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </div>
+              );
+            })}
           </div>
         )}
 
