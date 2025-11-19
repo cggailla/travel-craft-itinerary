@@ -17,7 +17,11 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
   const navigate = useNavigate();
 
   const handleView = () => {
-    navigate(`/?tripId=${trip.id}`);
+    if (trip.status === 'draft') {
+      navigate(`/trip/${trip.id}`);
+    } else {
+      navigate(`/booklet?tripId=${trip.id}`);
+    }
   };
 
   const getStatusVariant = (status: string) => {
