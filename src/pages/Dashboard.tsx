@@ -509,13 +509,17 @@ export default function Dashboard() {
                           variant="outline"
                           className="w-full"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(trip.pdfUrl!, '_blank');
-                          }}
+                          asChild
                         >
-                          <FileText className="mr-2 h-4 w-4" />
-                          Télécharger le PDF
+                          <a
+                            href={trip.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Télécharger le PDF
+                          </a>
                         </Button>
                       )}
                     </>
