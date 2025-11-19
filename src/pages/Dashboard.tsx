@@ -37,6 +37,8 @@ interface TripWithPhase extends Trip {
   currentPhase: TripPhase;
   segmentCount?: number;
   documentCount?: number;
+  hasPdf?: boolean;
+  pdfUrl?: string | null;
 }
 
 export default function Dashboard() {
@@ -93,6 +95,8 @@ export default function Dashboard() {
             currentPhase,
             segmentCount: segmentCount || 0,
             documentCount: documentCount || 0,
+            hasPdf: !!trip.last_pdf_url,
+            pdfUrl: trip.last_pdf_url,
           };
         })
       );
@@ -493,14 +497,30 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="flex gap-2">
+                <CardFooter className="flex flex-col gap-2">
                   {trip.status === 'validated' ? (
-                    <Button className="flex-1 group-hover:bg-primary/90" size="sm">
-                      Voir le carnet
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button className="w-full group-hover:bg-primary/90" size="sm">
+                        Voir le carnet
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                      {trip.hasPdf && trip.pdfUrl && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(trip.pdfUrl!, '_blank');
+                          }}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Télécharger le PDF
+                        </Button>
+                      )}
+                    </>
                   ) : (
-                    <Button variant="outline" className="flex-1" size="sm">
+                    <Button variant="outline" className="w-full" size="sm">
                       Continuer
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
