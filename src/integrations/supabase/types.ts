@@ -105,6 +105,107 @@ export type Database = {
           },
         ]
       }
+      pdf_job_sections: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          job_id: string
+          pages: number | null
+          partial_path: string | null
+          partial_url: string | null
+          section_index: number
+          section_key: string
+          size_bytes: number | null
+          status: string
+          step_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_id: string
+          pages?: number | null
+          partial_path?: string | null
+          partial_url?: string | null
+          section_index: number
+          section_key: string
+          size_bytes?: number | null
+          status?: string
+          step_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_id?: string
+          pages?: number | null
+          partial_path?: string | null
+          partial_url?: string | null
+          section_index?: number
+          section_key?: string
+          size_bytes?: number | null
+          status?: string
+          step_index?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_job_sections_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_jobs: {
+        Row: {
+          completed_sections: number
+          created_at: string
+          data_path: string | null
+          error: string | null
+          final_pdf_url: string | null
+          id: string
+          mode: string | null
+          status: string
+          total_sections: number
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_sections?: number
+          created_at?: string
+          data_path?: string | null
+          error?: string | null
+          final_pdf_url?: string | null
+          id?: string
+          mode?: string | null
+          status?: string
+          total_sections?: number
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_sections?: number
+          created_at?: string
+          data_path?: string | null
+          error?: string | null
+          final_pdf_url?: string | null
+          id?: string
+          mode?: string | null
+          status?: string
+          total_sections?: number
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       travel_recommendations: {
         Row: {
           address: string | null
@@ -536,10 +637,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_abandoned_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_abandoned_data: { Args: never; Returns: undefined }
       get_grouped_segments: {
         Args: { p_trip_id: string }
         Returns: {
@@ -551,10 +649,7 @@ export type Database = {
           total_days: number
         }[]
       }
-      get_user_session_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_session_id: { Args: never; Returns: string }
       group_similar_segments: {
         Args: { p_trip_id: string }
         Returns: undefined
