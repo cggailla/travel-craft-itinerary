@@ -1,152 +1,136 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
-import { TripCard } from '@/components/TripCard';
-import { DashboardStats } from '@/components/DashboardStats';
-import { Plus, Search, Loader2, Package } from 'lucide-react';
+
+import { 
+  Upload, 
+  Cpu, 
+  Calendar, 
+  CheckCircle, 
+  RefreshCw,
+  FileText,
+  Settings
+} from 'lucide-react';
+import FileUploadNew from '@/components/FileUploadNew';
+import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
-import { getUserTrips, deleteTrip, createTrip as createTripService, type Trip } from '@/services/tripService';
+import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+
+type AppPhase = 'create-trip' | 'upload' | 'processing' | 'timeline' | 'validated';
+
+interface PhaseConfig {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+const phases: Record<AppPhase, PhaseConfig> = {
+  'create-trip': {
+    title: 'Nouveau voyage',
+    description: 'Créer votre carnet de voyage',
+    icon: <Settings className="h-5 w-5" />,
+    color: 'bg-muted'
+  },
+  upload: {
+    title: 'Upload de documents',
+    description: 'Glissez-déposez vos documents de voyage',
+    icon: <Upload className="h-5 w-5" />,
+    color: 'bg-muted'
+  },
+  processing: {
+    title: 'Traitement IA',
+    description: 'Extraction des informations de voyage',
+    icon: <Cpu className="h-5 w-5" />,
+    color: 'bg-primary'
+  },
+  timeline: {
+    title: 'Chronologie',
+    description: 'Visualisation de votre itinéraire',
+    icon: <Calendar className="h-5 w-5" />,
+    color: 'bg-accent'
+  },
+  validated: {
+    title: 'Validé',
+    description: 'Carnet de voyage finalisé',
+    icon: <CheckCircle className="h-5 w-5" />,
+    color: 'bg-secondary'
+  }
+};
 
 export default function IndexNew() {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [filteredTrips, setFilteredTrips] = useState<Trip[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'validated'>('all');
+  const [currentPhase, setCurrentPhase] = useState<AppPhase>('create-trip');
+  const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [tripId, setTripId] = useState<string | null>(null);
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [isLoadingLatestTrip, setIsLoadingLatestTrip] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newTripTitle, setNewTripTitle] = useState('');
-  const [newTripDestination, setNewTripDestination] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Load trips on mount
-  useEffect(() => {
-    loadTrips();
-  }, []);
-
-  // Filter trips when search or filter changes
-  useEffect(() => {
-    filterTrips();
-  }, [searchQuery, statusFilter, trips]);
-
-  // Check if tripId is provided in URL params (direct access to a trip)
+  // Check if tripId is provided in URL params
   useEffect(() => {
     const urlTripId = searchParams.get('tripId');
     if (urlTripId) {
-      navigate(`/booklet?tripId=${urlTripId}`);
+      setTripId(urlTripId);
+      setCurrentPhase('timeline');
+      loadExistingTripData(urlTripId);
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, toast]);
 
-  const loadTrips = async () => {
-    setIsLoading(true);
+  const loadExistingTripData = async (tripId: string) => {
     try {
-      const userTrips = await getUserTrips();
-      setTrips(userTrips);
-    } catch (error) {
-      console.error('Error loading trips:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les voyages",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // Récupérer les documents associés à ce trip
+      const { data: documents, error: docError } = await supabase
+        .from('documents')  
+        .select('id')
+        .eq('trip_id', tripId);
 
-  const filterTrips = () => {
-    let filtered = [...trips];
+      if (docError) throw docError;
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(trip => trip.status === statusFilter);
-    }
+      // Vérifier si tous les segments sont validés
+      const { data: segments, error: segError } = await supabase
+        .from('travel_segments')
+        .select('validated')
+        .eq('trip_id', tripId);
 
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(trip => 
-        trip.title?.toLowerCase().includes(query) ||
-        trip.destination_zone?.toLowerCase().includes(query)
-      );
-    }
+      if (segError) throw segError;
 
-    setFilteredTrips(filtered);
-  };
-
-  const handleCreateTrip = async () => {
-    if (!newTripTitle.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez entrer un titre",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsCreatingTrip(true);
-    try {
-      const result = await createTripService({
-        title: newTripTitle,
-        destination_zone: newTripDestination || undefined,
-      });
-
-      if (result.success && result.trip) {
-        toast({
-          title: "Voyage créé",
-          description: "Vous pouvez maintenant ajouter des documents",
-        });
-        setIsDialogOpen(false);
-        setNewTripTitle('');
-        setNewTripDestination('');
+      if (documents && documents.length > 0) {
+        const docIds = documents.map(doc => doc.id);
+        setProcessedDocuments(docIds);
         
-        // Navigate to the workflow page
-        navigate(`/trip/${result.trip.id}`);
-        navigate(`/booklet?tripId=${result.trip.id}`);
+        // Si tous les segments sont validés, passer en phase validated
+        const allValidated = segments && segments.length > 0 && segments.every(s => s.validated);
+        if (allValidated) {
+          setCurrentPhase('validated');
+          toast({
+            title: "Trip validé chargé",
+            description: "Tous les segments sont validés - carnet prêt à générer",
+          });
+        } else {
+          toast({
+            title: "Trip chargé",
+            description: `${documents.length} documents trouvés pour ce voyage`,
+          });
+        }
       } else {
-        throw new Error(result.error || 'Erreur lors de la création du voyage');
-      }
-    } catch (error) {
-      console.error('Error creating trip:', error);
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de créer le voyage",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreatingTrip(false);
-    }
-  };
-
-  const handleDeleteTrip = async (tripId: string) => {
-    try {
-      const result = await deleteTrip(tripId);
-      
-      if (result.success) {
         toast({
-          title: "Voyage supprimé",
-          description: "Le voyage a été supprimé avec succès",
+          title: "Trip chargé", 
+          description: "Aucun document trouvé pour ce voyage",
         });
-        // Reload trips
-        loadTrips();
-      } else {
-        throw new Error(result.error || 'Erreur lors de la suppression');
       }
     } catch (error) {
-      console.error('Error deleting trip:', error);
+      console.error('Failed to load trip data:', error);
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de supprimer le voyage",
+        description: "Impossible de charger les données du voyage",
         variant: "destructive",
       });
     }
@@ -155,26 +139,31 @@ export default function IndexNew() {
   const loadLatestTrip = async () => {
     setIsLoadingLatestTrip(true);
     try {
-      const { data: latestTrip, error } = await supabase
-        .from('trips')
-        .select('id')
+      const { data: segs, error } = await supabase
+        .from('travel_segments')
+        .select('trip_id, created_at')
+        .not('trip_id', 'is', null)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
       if (error) throw error;
 
-      if (latestTrip) {
-        navigate(`/trip/${latestTrip.id}`);
+      if (segs && segs.length > 0 && segs[0].trip_id) {
+        const latestTripId = segs[0].trip_id as string;
+        navigate(`/?tripId=${latestTripId}`);
+        toast({
+          title: "Mode Dev activé",
+          description: "Redirection vers le dernier voyage traité",
+        });
       } else {
         toast({
-          title: "Aucun voyage",
-          description: "Aucun voyage trouvé",
+          title: "Aucun voyage trouvé",
+          description: "Créez d'abord un voyage pour utiliser le mode dev",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error loading latest trip:', error);
+      console.error('Failed to load latest trip:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger le dernier voyage",
@@ -185,172 +174,206 @@ export default function IndexNew() {
     }
   };
 
+  const createNewTrip = async () => {
+    setIsCreatingTrip(true);
+    try {
+      const result = await createTrip();
+      if (result.success && result.trip_id) {
+        setTripId(result.trip_id);
+        setCurrentPhase('upload');
+        console.log('New trip created:', result.trip_id);
+        
+        toast({
+          title: "Voyage créé",
+          description: "Vous pouvez maintenant uploader vos documents",
+        });
+      } else {
+        throw new Error(result.error || 'Failed to create trip');
+      }
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingTrip(false);
+    }
+  };
+
+  const handleFilesProcessed = (documentIds: string[]) => {
+    setProcessedDocuments(prev => [...prev, ...documentIds]);
+    setCurrentPhase('timeline');
+    
+    toast({
+      title: "Documents traités",
+      description: `${documentIds.length} documents analysés avec succès`,
+    });
+  };
+
+  const handleValidated = () => {
+    setCurrentPhase('validated');
+    
+    toast({
+      title: "Carnet validé",
+      description: "Votre carnet de voyage est maintenant finalisé",
+    });
+  };
+
+  const resetApp = () => {
+    setCurrentPhase('create-trip');
+    setProcessedDocuments([]);
+    setIsProcessing(false);
+    setTripId(null);
+  };
+
+  const getPhaseProgress = (): number => {
+    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
+    const currentIndex = phaseOrder.indexOf(currentPhase);
+    return ((currentIndex + 1) / phaseOrder.length) * 100;
+  };
+
+  const isPhaseCompleted = (phase: AppPhase): boolean => {
+    const phaseOrder: AppPhase[] = ['create-trip', 'upload', 'processing', 'timeline', 'validated'];
+    const currentIndex = phaseOrder.indexOf(currentPhase);
+    const phaseIndex = phaseOrder.indexOf(phase);
+    return phaseIndex < currentIndex || (phase === currentPhase && currentPhase === 'validated');
+  };
+
+  const isPhaseActive = (phase: AppPhase): boolean => {
+    return phase === currentPhase;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Package className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Carnets de Voyage</h1>
-              <p className="text-sm text-muted-foreground">Gérez vos voyages</p>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <header className="text-center mb-12">
+          <div className="flex items-center justify-center space-x-3 mb-4 relative">
+            {/* User Menu - Position absolue en haut à droite */}
+            <div className="absolute right-0 top-0">
+              <UserMenu />
             </div>
+            
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white">
+              <FileText className="h-8 w-8" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Travel Booklet Builder
+            </h1>
           </div>
-          <UserMenu />
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Welcome Section */}
-        <div>
-          <h2 className="text-3xl font-bold mb-2">Tableau de bord</h2>
-          <p className="text-muted-foreground">
-            Bienvenue sur votre espace de gestion de voyages
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
+            Transformez vos documents de voyage en carnet organisé grâce à l'intelligence artificielle
           </p>
-        </div>
-
-        {/* Stats */}
-        {!isLoading && <DashboardStats trips={trips} />}
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="gap-2">
-                <Plus className="h-5 w-5" />
-                Créer un nouveau voyage
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Créer un nouveau voyage</DialogTitle>
-                <DialogDescription>
-                  Entrez les informations de base pour votre voyage
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Titre du voyage *</Label>
-                  <Input
-                    id="title"
-                    placeholder="Ex: Voyage en Italie"
-                    value={newTripTitle}
-                    onChange={(e) => setNewTripTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="destination">Destination (optionnel)</Label>
-                  <Input
-                    id="destination"
-                    placeholder="Ex: Rome, Florence, Venise"
-                    value={newTripDestination}
-                    onChange={(e) => setNewTripDestination(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={handleCreateTrip}
-                  disabled={isCreatingTrip}
-                >
-                  {isCreatingTrip && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Créer
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Button 
-            variant="outline" 
-            size="lg"
-            onClick={loadLatestTrip}
-            disabled={isLoadingLatestTrip}
-          >
-            {isLoadingLatestTrip && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Dev Mode: Charger dernier voyage
-          </Button>
-        </div>
-
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Mes voyages</CardTitle>
-            <CardDescription>
-              Recherchez et filtrez vos carnets de voyage
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher par titre ou destination..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Filtrer par statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="draft">Brouillon</SelectItem>
-                  <SelectItem value="validated">Validé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trips Grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : filteredTrips.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">
-                {trips.length === 0 ? 'Aucun voyage' : 'Aucun résultat'}
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {trips.length === 0 
-                  ? 'Créez votre premier carnet de voyage pour commencer'
-                  : 'Aucun voyage ne correspond à vos critères de recherche'
-                }
-              </p>
-              {trips.length === 0 && (
-                <Button onClick={() => setIsDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer un voyage
-                </Button>
+          
+          {/* Mode Dev Button */}
+          <div className="flex justify-center">
+            <Button 
+              onClick={loadLatestTrip}
+              disabled={isLoadingLatestTrip}
+              variant="outline"
+              size="sm"
+              className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+            >
+              {isLoadingLatestTrip ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Chargement...
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Mode Dev - Charger dernier voyage
+                </>
               )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTrips.map((trip) => (
-              <TripCard
-                key={trip.id}
-                trip={trip}
-                onDelete={handleDeleteTrip}
-              />
-            ))}
+            </Button>
           </div>
-        )}
-      </main>
+        </header>
 
-      {/* Footer */}
-      <footer className="border-t mt-12 py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>Carnets de Voyage - Organisez vos aventures avec l'IA</p>
+
+        {/* Phase Content */}
+        <div className="space-y-8">
+          {currentPhase === 'create-trip' && (
+            <div className="space-y-6">
+              <Card className="border-2 border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <span>Créer un nouveau voyage</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center py-8">
+                  <div className="space-y-4">
+                    <p className="text-lg text-muted-foreground">
+                      Commencez par créer votre carnet de voyage
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Tous vos documents seront organisés dans ce carnet
+                    </p>
+                    <Button 
+                      onClick={createNewTrip} 
+                      disabled={isCreatingTrip}
+                      size="lg"
+                      className="mt-6"
+                    >
+                      {isCreatingTrip ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Création en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Créer un nouveau voyage
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentPhase === 'upload' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Upload className="h-5 w-5" />
+                    <span>Upload de documents</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FileUploadNew
+                    onFilesProcessed={handleFilesProcessed}
+                    onProcessingUpdate={setIsProcessing}
+                    tripId={tripId}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+
+          {(currentPhase === 'timeline' || currentPhase === 'validated') && (
+            <div className="space-y-6">
+              <TravelTimelineNew
+                documentIds={processedDocuments}
+                onValidated={handleValidated}
+                tripId={tripId}
+              />
+            </div>
+          )}
         </div>
-      </footer>
+
+        {/* Footer */}
+        <footer className="mt-16 text-center text-sm text-muted-foreground">
+          <p>
+            Propulsé par l'intelligence artificielle • Vos documents restent privés et sécurisés
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
