@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { CreateTripDialog } from '@/components/CreateTripDialog';
-import { getUserTrips } from '@/services/tripService';
+import { DeleteTripDialog } from '@/components/DeleteTripDialog';
+import { getUserTrips, deleteTrip } from '@/services/tripService';
 import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +23,9 @@ import {
   Search,
   CheckCircle2,
   FileEdit,
-  TrendingUp
+  TrendingUp,
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -44,6 +47,9 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'validated'>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -172,6 +178,46 @@ export default function Dashboard() {
       navigate(`/booklet?tripId=${trip.id}`);
     } else {
       navigate(`/trip/${trip.id}`);
+    }
+  };
+
+  const handleDeleteClick = (trip: TripWithPhase, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher la navigation
+    setTripToDelete(trip);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteTrip(tripToDelete.id);
+      
+      if (result.success) {
+        toast({
+          title: "Voyage supprimé",
+          description: `"${tripToDelete.title || 'Sans titre'}" a été supprimé définitivement`,
+        });
+        
+        // Recharger la liste des voyages
+        await loadTrips();
+        
+        // Fermer le dialog
+        setShowDeleteDialog(false);
+        setTripToDelete(null);
+      } else {
+        throw new Error(result.error || 'Échec de la suppression');
+      }
+    } catch (error) {
+      console.error('Failed to delete trip:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le voyage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -389,7 +435,7 @@ export default function Dashboard() {
             {filteredTrips.map((trip) => (
               <Card
                 key={trip.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer group"
+                className="hover:shadow-lg transition-shadow cursor-pointer group relative"
                 onClick={() => handleTripClick(trip)}
               >
                 <CardHeader>
@@ -397,7 +443,17 @@ export default function Dashboard() {
                     <Badge variant={trip.status === 'validated' ? 'default' : 'secondary'}>
                       {trip.status === 'validated' ? 'Validé' : 'Brouillon'}
                     </Badge>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                        onClick={(e) => handleDeleteClick(trip, e)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <CardTitle className="line-clamp-1">
                     {trip.title || 'Sans titre'}
@@ -460,6 +516,15 @@ export default function Dashboard() {
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           onConfirm={handleCreateNewTrip}
+        />
+
+        {/* Dialog de suppression de voyage */}
+        <DeleteTripDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={handleConfirmDelete}
+          tripTitle={tripToDelete?.title}
+          isDeleting={isDeleting}
         />
       </div>
     </div>
