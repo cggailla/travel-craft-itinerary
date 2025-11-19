@@ -404,6 +404,7 @@ export default function Dashboard() {
                       backdrop-blur-sm bg-card/95
                       before:absolute before:inset-0 before:bg-gradient-to-br before:${config.gradient}
                       before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300
+                      before:pointer-events-none
                     `}>
                     {/* Bannière de statut en haut */}
                     <div className={`h-2 w-full bg-gradient-to-r ${config.badgeClass} transition-all duration-300 group-hover:h-3`} />
@@ -479,7 +480,7 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
 
-                    <CardFooter className="flex flex-col gap-2 pt-4 border-t border-border/50">
+                    <CardFooter className="flex flex-col gap-2 pt-4 border-t border-border/50 relative z-10">
                       {trip.status === 'validated' ? <>
                           <Button variant="default" className="w-full group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300" size="sm" onClick={e => {
                     e.stopPropagation();
