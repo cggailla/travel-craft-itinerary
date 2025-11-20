@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { QuotePreview } from "./QuotePreview";
+import { QuoteTemplate } from "./QuoteTemplate";
 import { getQuoteData, updateQuotePdfUrl, QuoteData } from "@/services/quoteService";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
@@ -137,7 +137,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
         </div>
 
         <Card className="overflow-hidden">
-          <QuotePreview data={quoteData} />
+          <QuoteTemplate data={quoteData} />
         </Card>
       </div>
     </div>
