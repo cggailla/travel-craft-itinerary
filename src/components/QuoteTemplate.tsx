@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 import { MapPin, Calendar, Star, CheckCircle2, MessageCircle, Phone, Mail, Globe } from "lucide-react";
 import { EditableText } from "./EditableText";
 import { EditableContent } from "./EditableContent";
+import { EditableDate } from "./EditableDate";
 
 interface QuoteTemplateProps {
   data: QuoteData;
@@ -14,13 +15,20 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   // États pour l'en-tête
   const [editableTitle, setEditableTitle] = useState(data.title);
   const [editableDestination, setEditableDestination] = useState(data.destination);
+  const [editableStartDate, setEditableStartDate] = useState<Date>(
+    data.startDate ? new Date(data.startDate) : new Date()
+  );
+  const [editableEndDate, setEditableEndDate] = useState<Date>(
+    data.endDate ? new Date(data.endDate) : new Date()
+  );
   
-  // États pour les steps (titres et descriptions éditables)
+  // États pour les steps (titres, descriptions et dates éditables)
   const [stepsData, setStepsData] = useState(
     data.steps.map(step => ({
       ...step,
       editableTitle: step.title,
       editableDescription: step.description || "",
+      editableDate: step.date ? new Date(step.date) : new Date(),
       segments: step.segments.map(seg => ({
         ...seg,
         editableTitle: seg.title,
@@ -77,6 +85,12 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   const updateStepDescription = (stepIndex: number, newDesc: string) => {
     setStepsData(prev => prev.map((step, idx) => 
       idx === stepIndex ? { ...step, editableDescription: newDesc } : step
+    ));
+  };
+
+  const updateStepDate = (stepIndex: number, newDate: Date) => {
+    setStepsData(prev => prev.map((step, idx) => 
+      idx === stepIndex ? { ...step, editableDate: newDate } : step
     ));
   };
 
@@ -152,9 +166,19 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
               <span data-pdf-quote-duration>{data.duration} jours</span>
             </div>
           </div>
-          {data.startDate && data.endDate && (
-            <p className="text-sm text-muted-foreground mt-2" data-pdf-quote-dates>
-              Du {formatDate(data.startDate)} au {formatDate(data.endDate)}
+          {editableStartDate && editableEndDate && (
+            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1" data-pdf-quote-dates>
+              Du <EditableDate 
+                value={editableStartDate}
+                onChange={setEditableStartDate}
+                className="text-sm text-muted-foreground"
+                data-pdf-quote-start-date
+              /> au <EditableDate 
+                value={editableEndDate}
+                onChange={setEditableEndDate}
+                className="text-sm text-muted-foreground"
+                data-pdf-quote-end-date
+              />
             </p>
           )}
         </div>
@@ -179,8 +203,13 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
                     data-pdf-step-title
                   />
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    {step.date && (
-                      <span data-pdf-step-date>{formatDate(step.date)}</span>
+                    {step.editableDate && (
+                      <EditableDate
+                        value={step.editableDate}
+                        onChange={(newDate) => updateStepDate(stepIndex, newDate)}
+                        className="text-sm text-muted-foreground"
+                        data-pdf-step-date
+                      />
                     )}
                     {step.location && (
                       <span className="flex items-center gap-1" data-pdf-step-location>
