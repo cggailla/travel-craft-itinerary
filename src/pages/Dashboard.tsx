@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'validated'>('all');
+  const [phaseFilter, setPhaseFilter] = useState<'all' | 'upload' | 'timeline' | 'validated'>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
@@ -216,10 +216,9 @@ export default function Dashboard() {
 
   // Filtrage des voyages
   const filteredTrips = trips.filter(trip => {
-    // Filtre par statut
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'validated' && trip.status !== 'validated') return false;
-      if (statusFilter === 'draft' && trip.status !== 'draft') return false;
+    // Filtre par phase
+    if (phaseFilter !== 'all') {
+      if (trip.currentPhase !== phaseFilter) return false;
     }
 
     // Filtre par recherche
@@ -235,8 +234,9 @@ export default function Dashboard() {
   // Statistiques
   const stats = {
     total: trips.length,
-    validated: trips.filter(t => t.status === 'validated').length,
-    draft: trips.filter(t => t.status === 'draft').length
+    upload: trips.filter(t => t.currentPhase === 'upload').length,
+    timeline: trips.filter(t => t.currentPhase === 'timeline').length,
+    validated: trips.filter(t => t.currentPhase === 'validated').length
   };
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
@@ -301,7 +301,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-4xl font-bold font-mono text-orange-600 dark:text-orange-400">
-                {stats.draft}
+                {stats.upload + stats.timeline}
               </div>
               <p className="text-xs text-muted-foreground mt-2">En préparation</p>
             </CardContent>
@@ -321,30 +321,60 @@ export default function Dashboard() {
             />
           </div>
           
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             <Button 
-              variant={statusFilter === 'all' ? 'default' : 'outline'} 
-              onClick={() => setStatusFilter('all')} 
-              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'all' ? 'shadow-lg shadow-primary/30' : 'hover:border-primary/50'}`}
+              variant={phaseFilter === 'all' ? 'default' : 'outline'} 
+              onClick={() => setPhaseFilter('all')} 
+              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
+                phaseFilter === 'all' 
+                  ? 'shadow-lg shadow-primary/30 bg-gradient-to-r from-primary to-primary/90' 
+                  : 'hover:border-primary/50 hover:bg-primary/5'
+              }`}
             >
-              Tous
-              <Badge variant="secondary" className="ml-2 font-mono">{stats.total}</Badge>
+              <span>Tous</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.total}</Badge>
             </Button>
+            
             <Button 
-              variant={statusFilter === 'draft' ? 'default' : 'outline'} 
-              onClick={() => setStatusFilter('draft')} 
-              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'draft' ? 'shadow-lg shadow-primary/30' : 'hover:border-orange-500/50'}`}
+              variant={phaseFilter === 'upload' ? 'default' : 'outline'} 
+              onClick={() => setPhaseFilter('upload')} 
+              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
+                phaseFilter === 'upload' 
+                  ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' 
+                  : 'hover:border-orange-500/50 hover:bg-orange-500/5'
+              }`}
             >
-              Brouillon
-              <Badge variant="secondary" className="ml-2 font-mono">{stats.draft}</Badge>
+              <FileText className="mr-1.5 h-4 w-4" />
+              <span>Upload</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.upload}</Badge>
             </Button>
+            
             <Button 
-              variant={statusFilter === 'validated' ? 'default' : 'outline'} 
-              onClick={() => setStatusFilter('validated')} 
-              className={`h-12 px-6 font-semibold transition-all duration-300 ${statusFilter === 'validated' ? 'shadow-lg shadow-primary/30' : 'hover:border-green-500/50'}`}
+              variant={phaseFilter === 'timeline' ? 'default' : 'outline'} 
+              onClick={() => setPhaseFilter('timeline')} 
+              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
+                phaseFilter === 'timeline' 
+                  ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' 
+                  : 'hover:border-blue-500/50 hover:bg-blue-500/5'
+              }`}
             >
-              Validés
-              <Badge variant="secondary" className="ml-2 font-mono">{stats.validated}</Badge>
+              <Calendar className="mr-1.5 h-4 w-4" />
+              <span>Chronologie</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.timeline}</Badge>
+            </Button>
+            
+            <Button 
+              variant={phaseFilter === 'validated' ? 'default' : 'outline'} 
+              onClick={() => setPhaseFilter('validated')} 
+              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
+                phaseFilter === 'validated' 
+                  ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' 
+                  : 'hover:border-green-500/50 hover:bg-green-500/5'
+              }`}
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+              <span>Finalisés</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.validated}</Badge>
             </Button>
           </div>
         </div>
