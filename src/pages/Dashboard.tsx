@@ -168,7 +168,7 @@ export default function Dashboard() {
   };
   const handleTripClick = (trip: TripWithPhase) => {
     if (trip.status === 'validated') {
-      navigate(`/booklet?tripId=${trip.id}`);
+      navigate(`/output-choice?tripId=${trip.id}`);
     } else {
       navigate(`/trip/${trip.id}`);
     }
