@@ -20,7 +20,7 @@ export interface SupabaseImage {
 function buildStoragePath(
   userId: string,
   tripId: string,
-  imageType: 'cover' | 'step' | 'test' | 'quote',
+  imageType: 'cover' | 'step' | 'test' | 'quote' | 'quote-step',
   fileName: string,
   position?: number,
   stepId?: string
@@ -28,7 +28,14 @@ function buildStoragePath(
   const extension = fileName.split('.').pop();
   
   let baseName: string;
-  if (imageType === 'step' && stepId) {
+  if (imageType === 'quote') {
+    // Image de couverture du devis
+    baseName = `quote_cover_${position || Date.now()}.${extension}`;
+  } else if (imageType === 'quote-step' && stepId) {
+    // Images des étapes du devis
+    baseName = `quote_step_${stepId}_${position || Date.now()}.${extension}`;
+  } else if (imageType === 'step' && stepId) {
+    // Images des étapes du booklet
     baseName = `step_${stepId}_${position || Date.now()}.${extension}`;
   } else if (position !== undefined) {
     baseName = `${imageType}_${position}.${extension}`;
@@ -46,7 +53,7 @@ function buildStoragePath(
 export async function uploadImageToSupabase(params: {
   file: File;
   tripId: string;
-  imageType: 'cover' | 'step' | 'test' | 'quote';
+  imageType: 'cover' | 'step' | 'test' | 'quote' | 'quote-step';
   position?: number;
   stepId?: string;
 }): Promise<{ success: boolean; data?: SupabaseImage; error?: string }> {
