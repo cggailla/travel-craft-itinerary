@@ -229,19 +229,30 @@ export function DynamicItinerary({
       }
 
       setStepStatus('Génération du contenu enrichi...');
-      setAiContents(new Map());
+      setAiContents(existingAiContents);
 
-      const aiRequests = steps.map((step, index) => {
-        const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
-        const primaryLocationFromSummary = parsedStepInfo?.location;
-        
-        console.log(`🌍 Creating AI request for step ${index + 1}:`);
-        console.log(`  - Step ID: ${step.stepId}`);
-        console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
-        console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
-        
-        return createAIContentRequest(step, primaryLocationFromSummary);
-      });
+      const aiRequests = steps
+        .filter(step => !existingAiContents.has(step.stepId))
+        .map((step, index) => {
+          const parsedStepInfo = parsedStepsMap.get(index + 1);
+          const primaryLocationFromSummary = parsedStepInfo?.location;
+          
+          console.log(`🌍 Creating AI request for step ${index + 1} (missing content):`);
+          console.log(`  - Step ID: ${step.stepId}`);
+          console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
+          console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
+          
+          return createAIContentRequest(step, primaryLocationFromSummary);
+        });
+
+      if (aiRequests.length === 0) {
+        console.log('✅ Tout le contenu AI est déjà disponible, pas de génération nécessaire');
+        setStepStatus('');
+        setIsGenerating(false);
+        return;
+      }
+
+      console.log(`⚡ Génération de ${aiRequests.length}/${steps.length} steps manquants`);
       const results = await generateAllStepsAIContent(
         aiRequests, 
         tripId,
