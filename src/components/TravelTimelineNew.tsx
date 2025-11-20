@@ -8,6 +8,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { parseISO as parseISODate, formatISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getTravelSegments, validateSegments } from '@/services/documentService';
+import { supabase } from '@/integrations/supabase/client';
 import { deleteSegment, updateSegment } from '@/services/segmentValidationService';
 import { TravelSegment, SegmentType } from '@/types/travel';
 import { useToast } from '@/hooks/use-toast';
@@ -199,13 +200,29 @@ export default function TravelTimelineNew({
     try {
       setValidating(true);
       const segmentIds = unvalidatedSegments.map(s => s.id);
-      const result = await validateSegments(segmentIds);
+      const result = await validateSegments(segmentIds, tripId);
       if (result.success) {
         // Update local state
         setSegments(prev => prev.map(s => segmentIds.includes(s.id) ? {
           ...s,
           validated: true
         } : s));
+        
+        // Mettre à jour le status du trip à 'validated'
+        if (tripId) {
+          const { error: tripError } = await supabase
+            .from('trips')
+            .update({ 
+              status: 'validated',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', tripId);
+          
+          if (tripError) {
+            console.error('Error updating trip status:', tripError);
+          }
+        }
+        
         toast({
           title: "Validation réussie",
           description: `${segmentIds.length} segments validés`
@@ -242,8 +259,8 @@ export default function TravelTimelineNew({
           title: "Validation réussie",
           description: `${result.validatedSegments} segments validés`
         });
-        // Rediriger vers la génération du carnet
-        window.location.href = `/booklet?tripId=${tripId}`;
+        // Appeler onValidated pour afficher le choix devis/carnet
+        onValidated?.();
       } else {
         throw new Error(result.error);
       }
