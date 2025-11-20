@@ -9,6 +9,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import Dashboard from "./pages/Dashboard";
 import IndexNew from "./pages/IndexNew";
 import TravelBooklet from "./pages/TravelBooklet";
+import TravelQuote from "./pages/TravelQuote";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,9 @@ const App = () => (
               
               {/* Génération PDF */}
               <Route path="/booklet" element={<TravelBooklet />} />
+              
+              {/* Génération Devis */}
+              <Route path="/quote" element={<TravelQuote />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -602,7 +602,10 @@ export type Database = {
           last_enriched_at: string | null
           last_pdf_generated_at: string | null
           last_pdf_url: string | null
+          last_quote_generated_at: string | null
+          last_quote_pdf_url: string | null
           local_correspondent_phone: string | null
+          output_type: string | null
           status: string
           title: string | null
           updated_at: string
@@ -616,7 +619,10 @@ export type Database = {
           last_enriched_at?: string | null
           last_pdf_generated_at?: string | null
           last_pdf_url?: string | null
+          last_quote_generated_at?: string | null
+          last_quote_pdf_url?: string | null
           local_correspondent_phone?: string | null
+          output_type?: string | null
           status?: string
           title?: string | null
           updated_at?: string
@@ -630,7 +636,10 @@ export type Database = {
           last_enriched_at?: string | null
           last_pdf_generated_at?: string | null
           last_pdf_url?: string | null
+          last_quote_generated_at?: string | null
+          last_quote_pdf_url?: string | null
           local_correspondent_phone?: string | null
+          output_type?: string | null
           status?: string
           title?: string | null
           updated_at?: string

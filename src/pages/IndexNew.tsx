@@ -15,6 +15,7 @@ import FileUploadNew from '@/components/FileUploadNew';
 import TravelTimelineNew from '@/components/TravelTimelineNew';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { OutputTypeChoice } from '@/components/OutputTypeChoice';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 
 type AppPhase = 'upload' | 'processing' | 'timeline' | 'validated';
@@ -58,6 +59,7 @@ export default function IndexNew() {
   const [processedDocuments, setProcessedDocuments] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [tripId, setTripId] = useState<string | null>(null);
+  const [showOutputChoice, setShowOutputChoice] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -165,11 +167,40 @@ export default function IndexNew() {
 
   const handleValidated = () => {
     setCurrentPhase('validated');
+    setShowOutputChoice(true);
     
     toast({
-      title: "Carnet validé",
-      description: "Votre carnet de voyage est maintenant finalisé",
+      title: "Voyage validé",
+      description: "Choisissez maintenant ce que vous souhaitez générer",
     });
+  };
+
+  const handleOutputTypeSelected = async (type: 'quote' | 'booklet') => {
+    if (!tripId) return;
+
+    try {
+      // Mettre à jour le type de sortie dans la DB
+      const { error } = await supabase
+        .from('trips')
+        .update({ output_type: type })
+        .eq('id', tripId);
+
+      if (error) throw error;
+
+      // Rediriger vers la page appropriée
+      if (type === 'quote') {
+        navigate(`/quote?tripId=${tripId}`);
+      } else {
+        navigate(`/booklet?tripId=${tripId}`);
+      }
+    } catch (error) {
+      console.error('Error updating output type:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder votre choix",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBackToDashboard = () => {
@@ -268,10 +299,17 @@ export default function IndexNew() {
             </Card>
           )}
 
-          {(currentPhase === 'timeline' || currentPhase === 'validated') && tripId && (
+          {currentPhase === 'timeline' && tripId && (
             <TravelTimelineNew 
               tripId={tripId}
               onValidated={handleValidated}
+            />
+          )}
+
+          {currentPhase === 'validated' && showOutputChoice && tripId && (
+            <OutputTypeChoice
+              tripId={tripId}
+              onChoiceSelected={handleOutputTypeSelected}
             />
           )}
         </div>
