@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import IndexNew from "./pages/IndexNew";
 import TravelBooklet from "./pages/TravelBooklet";
 import TravelQuote from "./pages/TravelQuote";
+import OutputChoice from "./pages/OutputChoice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,9 @@ const App = () => (
               {/* Création/édition de voyage */}
               <Route path="/trip/create" element={<IndexNew />} />
               <Route path="/trip/:tripId" element={<IndexNew />} />
+              
+              {/* Choix entre Devis et Carnet */}
+              <Route path="/output-choice" element={<OutputChoice />} />
               
               {/* Génération PDF */}
               <Route path="/booklet" element={<TravelBooklet />} />
