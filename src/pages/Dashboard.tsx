@@ -255,11 +255,11 @@ export default function Dashboard() {
         <header className="flex justify-between items-center mb-12 relative">
           <div className="space-y-2">
             <h1 className="text-5xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent mb-3 tracking-tight">
-              Mes carnets de voyage
+              Tableau de bord
             </h1>
             <p className="text-lg text-muted-foreground/80 font-medium flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
-              Gérez et créez vos carnets de voyage personnalisés
+              Gérez vos dossiers voyage : carnets et devis personnalisés
             </p>
           </div>
           <div className="relative">
