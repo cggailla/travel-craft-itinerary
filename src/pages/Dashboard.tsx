@@ -549,8 +549,8 @@ export default function Dashboard() {
                     e.stopPropagation();
                     handleTripClick(trip);
                   }}>
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Voir le booklet
+                            <FileText className="mr-2 h-4 w-4" />
+                            Choisir le format
                             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                           </Button>
                           {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" asChild>
@@ -693,8 +693,8 @@ export default function Dashboard() {
                       e.stopPropagation();
                       handleTripClick(trip);
                     }}>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Voir le booklet
+                              <FileText className="mr-2 h-4 w-4" />
+                              Choisir le format
                             </Button>
                             {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" asChild>
                                 <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
