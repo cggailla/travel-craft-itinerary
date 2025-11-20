@@ -8,6 +8,7 @@ export default function TravelQuote() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const tripId = searchParams.get("tripId");
+  const autoGenerate = searchParams.get("autoGenerate") === "true";
 
   if (!tripId) {
     return (
@@ -39,7 +40,7 @@ export default function TravelQuote() {
         </div>
       </header>
       
-      <QuoteGenerator tripId={tripId} />
+      <QuoteGenerator tripId={tripId} autoGenerate={autoGenerate} />
     </div>
   );
 }
