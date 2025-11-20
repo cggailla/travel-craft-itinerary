@@ -1,6 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AIContentRequest, AIContentResult } from '@/types/enrichedStep';
 
+/**
+ * Save AI-generated content to the database
+ */
+export async function saveAIContentToDatabase(
+  stepId: string, 
+  aiContent: AIContentResult
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('travel_steps')
+      .update({ 
+        ai_content: {
+          overview: aiContent.overview,
+          tips: aiContent.tips,
+          localContext: aiContent.localContext,
+          generated_at: new Date().toISOString(),
+          version: '1.0',
+          is_custom: false
+        },
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', stepId);
+
+    if (error) {
+      console.error('❌ Error saving AI content to database:', error);
+      throw error;
+    }
+
+    console.log(`✅ AI content saved to database for step ${stepId}`);
+  } catch (error) {
+    console.error('❌ Failed to save AI content to database:', error);
+    // Ne pas bloquer la génération si la sauvegarde échoue
+  }
+}
+
 export interface ParsedStepInfo {
   stepNumber: number;
   title: string;
@@ -319,6 +354,9 @@ async function generateStepAIContentWithRetry(
       const result = await generateStepAIContent(request);
       
       if (result.success) {
+        // ✅ Sauvegarder le contenu en base de données
+        await saveAIContentToDatabase(request.stepId, result);
+        
         onProgress?.(request.stepId, 'completed', undefined, result);
         return result;
       }
