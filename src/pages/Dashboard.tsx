@@ -252,8 +252,10 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="relative">
-            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
-            <UserMenu />
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl pointer-events-none" />
+            <div className="relative z-10">
+              <UserMenu />
+            </div>
           </div>
         </header>
 
