@@ -229,19 +229,34 @@ export function DynamicItinerary({
       }
 
       setStepStatus('Génération du contenu enrichi...');
-      setAiContents(new Map());
 
-      const aiRequests = steps.map((step, index) => {
-        const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
-        const primaryLocationFromSummary = parsedStepInfo?.location;
-        
-        console.log(`🌍 Creating AI request for step ${index + 1}:`);
-        console.log(`  - Step ID: ${step.stepId}`);
-        console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
-        console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
-        
-        return createAIContentRequest(step, primaryLocationFromSummary);
-      });
+      // ✅ Ne générer QUE les steps sans ai_content
+      const aiRequests = steps
+        .filter(step => !step.aiContent) // Filtrer ceux qui n'ont PAS de contenu
+        .map((step, index) => {
+          const originalIndex = steps.indexOf(step);
+          const parsedStepInfo = parsedStepsMap.get(originalIndex + 1);
+          const primaryLocationFromSummary = parsedStepInfo?.location;
+          
+          console.log(`🌍 Creating AI request for step ${originalIndex + 1} (MISSING CONTENT):`);
+          console.log(`  - Step ID: ${step.stepId}`);
+          console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
+          console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
+          
+          return createAIContentRequest(step, primaryLocationFromSummary);
+        });
+
+      // ✅ Si tous les steps ont du contenu, ne rien générer
+      if (aiRequests.length === 0) {
+        console.log('✅ Tout le contenu AI est déjà en cache, pas de génération nécessaire');
+        setStepStatus('Contenu chargé depuis le cache');
+        setProgress(100);
+        setIsGenerating(false);
+        return;
+      }
+      
+      console.log(`⚡ Génération de ${aiRequests.length} steps manquants sur ${steps.length} total`);
+      
       const results = await generateAllStepsAIContent(
         aiRequests, 
         tripId,
