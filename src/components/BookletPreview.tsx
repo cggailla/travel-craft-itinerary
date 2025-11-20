@@ -5,9 +5,10 @@ interface BookletPreviewProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
+  autoGenerate?: boolean;
 }
 
-export function BookletPreview({ data, options, tripId }: BookletPreviewProps) {
+export function BookletPreview({ data, options, tripId, autoGenerate }: BookletPreviewProps) {
   return (
     <div className="w-full">
       <div className="bg-white shadow-lg mx-auto" style={{ maxWidth: '210mm' }}>
@@ -16,6 +17,7 @@ export function BookletPreview({ data, options, tripId }: BookletPreviewProps) {
             data={data}
             options={options}
             tripId={tripId}
+            autoGenerate={autoGenerate}
           />
         </div>
       </div>

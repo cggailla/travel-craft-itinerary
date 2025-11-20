@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function TravelBooklet() {
   const [searchParams] = useSearchParams();
   const tripId = searchParams.get("tripId");
+  const autoGenerate = searchParams.get("autoGenerate") === "true";
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function TravelBooklet() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {tripId && <BookletGenerator tripId={tripId} />}
+        {tripId && <BookletGenerator tripId={tripId} autoGenerate={autoGenerate} />}
       </main>
     </div>
   );

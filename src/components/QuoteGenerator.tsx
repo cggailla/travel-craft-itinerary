@@ -9,9 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface QuoteGeneratorProps {
   tripId: string;
+  autoGenerate?: boolean;
 }
 
-export function QuoteGenerator({ tripId }: QuoteGeneratorProps) {
+export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -20,6 +21,19 @@ export function QuoteGenerator({ tripId }: QuoteGeneratorProps) {
   useEffect(() => {
     loadQuoteData();
   }, [tripId]);
+
+  // Auto-génération si demandée via le paramètre URL
+  useEffect(() => {
+    if (autoGenerate && quoteData && !isGenerating) {
+      console.log('🚀 Auto-génération du devis déclenchée');
+      handleGeneratePdf();
+      
+      // Nettoyer l'URL pour éviter de re-déclencher au refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('autoGenerate');
+      window.history.replaceState({}, '', url);
+    }
+  }, [autoGenerate, quoteData]);
 
   const loadQuoteData = async () => {
     try {

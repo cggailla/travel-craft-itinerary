@@ -56,7 +56,9 @@ export function OutputTypeChoice({ tripId, onChoiceSelected }: OutputTypeChoiceP
             <Button 
               className="w-full mt-4 gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
               size="lg"
-              onClick={() => onChoiceSelected('quote')}
+              onClick={() => {
+                window.location.href = `/quote?tripId=${tripId}&autoGenerate=true`;
+              }}
             >
               Générer le devis
               <ArrowRight className="h-4 w-4" />
@@ -101,7 +103,9 @@ export function OutputTypeChoice({ tripId, onChoiceSelected }: OutputTypeChoiceP
               className="w-full mt-4 gap-2 group-hover:bg-secondary group-hover:text-secondary-foreground"
               variant="secondary"
               size="lg"
-              onClick={() => onChoiceSelected('booklet')}
+              onClick={() => {
+                window.location.href = `/booklet?tripId=${tripId}&autoGenerate=true`;
+              }}
             >
               Générer le carnet
               <ArrowRight className="h-4 w-4" />

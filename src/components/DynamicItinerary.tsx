@@ -16,6 +16,7 @@ interface DynamicItineraryProps {
   options: BookletOptions;
   tripId: string;
   allSegments?: BookletData["segments"];
+  autoGenerate?: boolean;
 }
 
 export function DynamicItinerary({
@@ -23,6 +24,7 @@ export function DynamicItinerary({
   options,
   tripId,
   allSegments = [],
+  autoGenerate,
 }: DynamicItineraryProps) {
   const [enrichedSteps, setEnrichedSteps] = useState<EnrichedStep[]>([]);
   const [aiContents, setAiContents] = useState<Map<string, AIContentResult>>(new Map());
@@ -33,8 +35,22 @@ export function DynamicItinerary({
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [stepStatus, setStepStatus] = useState<string>('');
 
+  // Auto-génération si demandée via le paramètre URL
   useEffect(() => {
-    if (data.segments.length > 0 && tripId) {
+    if (autoGenerate && !isGenerating && enrichedSteps.length === 0 && tripId) {
+      console.log('🚀 Auto-génération déclenchée via autoGenerate');
+      generateContent();
+      
+      // Nettoyer l'URL pour éviter de re-déclencher au refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('autoGenerate');
+      window.history.replaceState({}, '', url);
+    }
+  }, [autoGenerate, tripId]);
+
+  // Génération normale quand les segments changent
+  useEffect(() => {
+    if (data.segments.length > 0 && tripId && !autoGenerate) {
       generateContent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
