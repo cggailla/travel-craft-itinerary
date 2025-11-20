@@ -51,9 +51,8 @@ export function EditableText({
     }
   };
 
-  const editableClassName = inline 
-    ? `${className} outline-none cursor-text hover:bg-gray-100 rounded transition-colors`
-    : `${className} outline-none focus:ring-1 focus:ring-gray-400 focus:ring-offset-1 rounded px-1 cursor-text hover:bg-gray-50 transition-colors`;
+  // Style sobre et uniforme avec semantic tokens
+  const editableClassName = `${className} outline-none cursor-text hover:bg-muted/30 focus:bg-muted/50 rounded transition-colors px-0.5`;
 
   return (
     <Component
