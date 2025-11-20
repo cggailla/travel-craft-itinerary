@@ -20,7 +20,7 @@ export interface SupabaseImage {
 function buildStoragePath(
   userId: string,
   tripId: string,
-  imageType: 'cover' | 'step' | 'test',
+  imageType: 'cover' | 'step' | 'test' | 'quote',
   fileName: string,
   position?: number,
   stepId?: string
@@ -46,7 +46,7 @@ function buildStoragePath(
 export async function uploadImageToSupabase(params: {
   file: File;
   tripId: string;
-  imageType: 'cover' | 'step' | 'test';
+  imageType: 'cover' | 'step' | 'test' | 'quote';
   position?: number;
   stepId?: string;
 }): Promise<{ success: boolean; data?: SupabaseImage; error?: string }> {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QuoteData } from "@/services/quoteService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -6,6 +6,8 @@ import { MapPin, Calendar, Star, CheckCircle2, MessageCircle, Phone, Mail, Globe
 import { EditableText } from "./EditableText";
 import { EditableContent } from "./EditableContent";
 import { EditableDate } from "./EditableDate";
+import { ImageUploader } from "./ImageUploader";
+import { listSessionImages, SupabaseImage } from "@/services/supabaseImageService";
 
 interface QuoteTemplateProps {
   data: QuoteData;
@@ -69,6 +71,53 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   const [contactPhone, setContactPhone] = useState("+33 1 23 45 67 89");
   const [contactEmail, setContactEmail] = useState("contact@adgentes.fr");
   const [contactWebsite, setContactWebsite] = useState("www.adgentes.fr");
+
+  // États pour les images
+  const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
+  const [stepImages, setStepImages] = useState<Record<string, SupabaseImage | undefined>>({});
+
+  // Charger les images depuis Supabase
+  useEffect(() => {
+    const loadImages = async () => {
+      const result = await listSessionImages(data.tripId);
+      if (result.success && result.data) {
+        // Image de couverture du devis
+        const quoteCover = result.data.find(img => 
+          img.storage_path.includes('quote_cover')
+        );
+        if (quoteCover) setQuoteCoverImage(quoteCover);
+
+        // Images des étapes (1 par step)
+        const imagesByStep: Record<string, SupabaseImage | undefined> = {};
+        data.steps.forEach(step => {
+          const stepImage = result.data!.find(img =>
+            img.storage_path.includes(`step_${step.id}`)
+          );
+          if (stepImage) imagesByStep[step.id] = stepImage;
+        });
+        setStepImages(imagesByStep);
+      }
+    };
+    loadImages();
+  }, [data.tripId, data.steps]);
+
+  // Callbacks pour l'image de couverture
+  const handleQuoteCoverUploaded = (image: SupabaseImage) => {
+    setQuoteCoverImage(image);
+  };
+
+  const handleQuoteCoverDeleted = () => {
+    setQuoteCoverImage(undefined);
+  };
+
+  // Callbacks pour les images des étapes
+  const handleStepImageUploaded = (stepId: string) => async (image: SupabaseImage) => {
+    setStepImages(prev => ({ ...prev, [stepId]: image }));
+  };
+
+  const handleStepImageDeleted = (stepId: string) => () => {
+    setStepImages(prev => ({ ...prev, [stepId]: undefined }));
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -184,6 +233,30 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
         </div>
       </div>
 
+      {/* Image de couverture du devis */}
+      <div className="px-8 pt-8">
+        <div className="no-print">
+          <ImageUploader
+            tripId={data.tripId}
+            imageType="quote"
+            position={1}
+            currentImage={quoteCoverImage}
+            onImageUploaded={handleQuoteCoverUploaded}
+            onImageDeleted={handleQuoteCoverDeleted}
+          />
+        </div>
+        <div className="print-only">
+          {quoteCoverImage && (
+            <img
+              src={quoteCoverImage.public_url}
+              alt="Couverture du devis"
+              className="w-full h-auto object-contain"
+              data-pdf-quote-cover-image
+            />
+          )}
+        </div>
+      </div>
+
       {/* Programme du voyage */}
       <div className="p-8" data-pdf-program-section>
         <h2 className="text-2xl font-bold mb-6">Votre programme</h2>
@@ -271,6 +344,31 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
                   ))}
                 </div>
               )}
+
+              {/* Image de l'étape */}
+              <div className="mt-4">
+                <div className="no-print">
+                  <ImageUploader
+                    tripId={data.tripId}
+                    stepId={step.id}
+                    imageType="step"
+                    position={1}
+                    currentImage={stepImages[step.id]}
+                    onImageUploaded={handleStepImageUploaded(step.id)}
+                    onImageDeleted={handleStepImageDeleted(step.id)}
+                  />
+                </div>
+                <div className="print-only">
+                  {stepImages[step.id] && (
+                    <img
+                      src={stepImages[step.id]!.public_url}
+                      alt={`Image ${step.editableTitle}`}
+                      className="w-full h-auto object-contain"
+                      data-pdf-step-image={step.id}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
