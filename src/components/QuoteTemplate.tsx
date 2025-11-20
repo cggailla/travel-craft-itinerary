@@ -81,17 +81,17 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
     const loadImages = async () => {
       const result = await listSessionImages(data.tripId);
       if (result.success && result.data) {
-        // Image de couverture du devis
+        // Image de couverture du devis (commence par "quote_cover")
         const quoteCover = result.data.find(img => 
-          img.storage_path.includes('quote_cover')
+          img.file_name.startsWith('quote_cover')
         );
         if (quoteCover) setQuoteCoverImage(quoteCover);
 
-        // Images des étapes (1 par step)
+        // Images des étapes du devis (commence par "quote_step_")
         const imagesByStep: Record<string, SupabaseImage | undefined> = {};
         data.steps.forEach(step => {
           const stepImage = result.data!.find(img =>
-            img.storage_path.includes(`step_${step.id}`)
+            img.file_name.startsWith(`quote_step_${step.id}`)
           );
           if (stepImage) imagesByStep[step.id] = stepImage;
         });
@@ -351,7 +351,7 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
                   <ImageUploader
                     tripId={data.tripId}
                     stepId={step.id}
-                    imageType="step"
+                    imageType="quote-step"
                     position={1}
                     currentImage={stepImages[step.id]}
                     onImageUploaded={handleStepImageUploaded(step.id)}
