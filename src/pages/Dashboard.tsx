@@ -315,92 +315,40 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row gap-4 mb-10">
           <div className="flex-1 relative group">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors duration-300 group-focus-within:text-primary" />
-            <Input 
-              type="text" 
-              placeholder="Rechercher un voyage par titre ou destination..." 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-              className="pl-12 h-12 text-base border-2 focus:border-primary/50 bg-card/50 backdrop-blur-sm transition-all duration-300 shadow-sm hover:shadow-md" 
-            />
+            <Input type="text" placeholder="Rechercher un voyage par titre ou destination..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-12 text-base border-2 focus:border-primary/50 bg-card/50 backdrop-blur-sm transition-all duration-300 shadow-sm hover:shadow-md" />
           </div>
           
           {/* Toggle vue grille/liste */}
           <div className="flex gap-1 p-1 bg-muted/50 rounded-lg border border-border/50">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              className={`h-10 px-4 transition-all duration-300 ${
-                viewMode === 'grid' ? 'shadow-sm' : 'hover:bg-background/50'
-              }`}
-            >
+            <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className={`h-10 px-4 transition-all duration-300 ${viewMode === 'grid' ? 'shadow-sm' : 'hover:bg-background/50'}`}>
               <Grid3x3 className="h-4 w-4 mr-2" />
               Grille
             </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              className={`h-10 px-4 transition-all duration-300 ${
-                viewMode === 'list' ? 'shadow-sm' : 'hover:bg-background/50'
-              }`}
-            >
+            <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className={`h-10 px-4 transition-all duration-300 ${viewMode === 'list' ? 'shadow-sm' : 'hover:bg-background/50'}`}>
               <List className="h-4 w-4 mr-2" />
               Liste
             </Button>
           </div>
           
           <div className="flex gap-2 flex-wrap">
-            <Button 
-              variant={phaseFilter === 'all' ? 'default' : 'outline'} 
-              onClick={() => setPhaseFilter('all')} 
-              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
-                phaseFilter === 'all' 
-                  ? 'shadow-lg shadow-primary/30 bg-gradient-to-r from-primary to-primary/90' 
-                  : 'hover:border-primary/50 hover:bg-primary/5'
-              }`}
-            >
+            <Button variant={phaseFilter === 'all' ? 'default' : 'outline'} onClick={() => setPhaseFilter('all')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'all' ? 'shadow-lg shadow-primary/30 bg-gradient-to-r from-primary to-primary/90' : 'hover:border-primary/50 hover:bg-primary/5'}`}>
               <span>Tous</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.total}</Badge>
             </Button>
             
-            <Button 
-              variant={phaseFilter === 'upload' ? 'default' : 'outline'} 
-              onClick={() => setPhaseFilter('upload')} 
-              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
-                phaseFilter === 'upload' 
-                  ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' 
-                  : 'hover:border-orange-500/50 hover:bg-orange-500/5'
-              }`}
-            >
+            <Button variant={phaseFilter === 'upload' ? 'default' : 'outline'} onClick={() => setPhaseFilter('upload')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'upload' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
               <FileText className="mr-1.5 h-4 w-4" />
               <span>Upload</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.upload}</Badge>
             </Button>
             
-            <Button 
-              variant={phaseFilter === 'timeline' ? 'default' : 'outline'} 
-              onClick={() => setPhaseFilter('timeline')} 
-              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
-                phaseFilter === 'timeline' 
-                  ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' 
-                  : 'hover:border-blue-500/50 hover:bg-blue-500/5'
-              }`}
-            >
+            <Button variant={phaseFilter === 'timeline' ? 'default' : 'outline'} onClick={() => setPhaseFilter('timeline')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'timeline' ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' : 'hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
               <Calendar className="mr-1.5 h-4 w-4" />
               <span>Chronologie</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.timeline}</Badge>
             </Button>
             
-            <Button 
-              variant={phaseFilter === 'validated' ? 'default' : 'outline'} 
-              onClick={() => setPhaseFilter('validated')} 
-              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${
-                phaseFilter === 'validated' 
-                  ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' 
-                  : 'hover:border-green-500/50 hover:bg-green-500/5'
-              }`}
-            >
+            <Button variant={phaseFilter === 'validated' ? 'default' : 'outline'} onClick={() => setPhaseFilter('validated')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'validated' ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' : 'hover:border-green-500/50 hover:bg-green-500/5'}`}>
               <CheckCircle2 className="mr-1.5 h-4 w-4" />
               <span>Finalisés</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.validated}</Badge>
@@ -410,12 +358,7 @@ export default function Dashboard() {
 
         {/* Actions principales avec design moderne */}
         <div className="flex flex-col sm:flex-row gap-4 mb-12">
-          <Button 
-            onClick={() => setShowCreateDialog(true)} 
-            disabled={isCreatingTrip} 
-            size="lg" 
-            className="group flex-1 sm:max-w-md h-14 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary shadow-xl hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02]"
-          >
+          <Button onClick={() => setShowCreateDialog(true)} disabled={isCreatingTrip} size="lg" className="group flex-1 sm:max-w-md h-14 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary hover:to-primary shadow-xl hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02]">
             {isCreatingTrip ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Création en cours...
@@ -426,21 +369,7 @@ export default function Dashboard() {
               </>}
           </Button>
 
-          <Button 
-            onClick={handleDevMode} 
-            disabled={isLoadingDevMode} 
-            variant="outline" 
-            size="lg"
-            className="h-14 px-8 text-base font-semibold border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm"
-          >
-            {isLoadingDevMode ? <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Chargement...
-              </> : <>
-                <Zap className="mr-2 h-5 w-5 text-primary" />
-                Mode Dev
-              </>}
-          </Button>
+          
         </div>
 
         {/* Liste des voyages avec états vides améliorés */}
