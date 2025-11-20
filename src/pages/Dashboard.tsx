@@ -18,6 +18,7 @@ type TripPhase = 'upload' | 'timeline' | 'validated';
 interface TripWithPhase extends Trip {
   currentPhase: TripPhase;
   segmentCount?: number;
+  stepCount?: number;
   documentCount?: number;
   hasPdf?: boolean;
   pdfUrl?: string | null;
@@ -56,6 +57,14 @@ export default function Dashboard() {
           head: true
         }).eq('trip_id', trip.id);
 
+        // Compter les étapes
+        const {
+          count: stepCount
+        } = await supabase.from('travel_steps').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('trip_id', trip.id);
+
         // Compter les documents
         const {
           count: documentCount
@@ -77,6 +86,7 @@ export default function Dashboard() {
           ...trip,
           currentPhase,
           segmentCount: segmentCount || 0,
+          stepCount: stepCount || 0,
           documentCount: documentCount || 0,
           hasPdf: !!trip.last_pdf_url,
           pdfUrl: trip.last_pdf_url
@@ -502,8 +512,8 @@ export default function Dashboard() {
                         
                         <div className="flex flex-col items-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 transition-all duration-300 hover:bg-purple-500/20">
                           <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400 mb-1" />
-                          <span className="text-xs text-muted-foreground">Segments</span>
-                          <span className="text-lg font-bold font-mono">{trip.segmentCount}</span>
+                          <span className="text-xs text-muted-foreground">{trip.status === 'validated' && trip.stepCount ? 'Étapes' : 'Segments'}</span>
+                          <span className="text-lg font-bold font-mono">{trip.status === 'validated' && trip.stepCount ? trip.stepCount : trip.segmentCount}</span>
                         </div>
                         
                         <div className="flex flex-col items-center p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:bg-orange-500/20">
