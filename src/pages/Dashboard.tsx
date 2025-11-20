@@ -11,7 +11,7 @@ import { getUserTrips, deleteTrip } from '@/services/tripService';
 import { createTrip } from '@/services/documentService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
 type TripPhase = 'upload' | 'timeline' | 'validated';
@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<'all' | 'upload' | 'timeline' | 'validated'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
@@ -323,6 +324,32 @@ export default function Dashboard() {
             />
           </div>
           
+          {/* Toggle vue grille/liste */}
+          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg border border-border/50">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className={`h-10 px-4 transition-all duration-300 ${
+                viewMode === 'grid' ? 'shadow-sm' : 'hover:bg-background/50'
+              }`}
+            >
+              <Grid3x3 className="h-4 w-4 mr-2" />
+              Grille
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={`h-10 px-4 transition-all duration-300 ${
+                viewMode === 'list' ? 'shadow-sm' : 'hover:bg-background/50'
+              }`}
+            >
+              <List className="h-4 w-4 mr-2" />
+              Liste
+            </Button>
+          </div>
+          
           <div className="flex gap-2 flex-wrap">
             <Button 
               variant={phaseFilter === 'all' ? 'default' : 'outline'} 
@@ -447,7 +474,7 @@ export default function Dashboard() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardContent>
-          </Card> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredTrips.map((trip, index) => {
           const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
           const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
@@ -610,6 +637,153 @@ export default function Dashboard() {
                         Supprimer
                       </Button>
                     </CardFooter>
+                  </Card>
+                </div>;
+        })}
+          </div> : <div className="flex flex-col gap-4">
+            {filteredTrips.map((trip, index) => {
+          const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
+          const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+          const statusConfig = {
+            validated: {
+              gradient: 'from-green-500/10 via-emerald-500/5 to-transparent',
+              borderColor: 'border-green-500/20',
+              iconBg: 'bg-green-500/10',
+              iconColor: 'text-green-600 dark:text-green-400',
+              badgeVariant: 'default' as const,
+              badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
+            },
+            timeline: {
+              gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
+              borderColor: 'border-blue-500/20',
+              iconBg: 'bg-blue-500/10',
+              iconColor: 'text-blue-600 dark:text-blue-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
+            },
+            upload: {
+              gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
+              borderColor: 'border-orange-500/20',
+              iconBg: 'bg-orange-500/10',
+              iconColor: 'text-orange-600 dark:text-orange-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            }
+          };
+          const config = statusConfig[trip.currentPhase];
+          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          return <div key={trip.id} className="group relative animate-fade-in" style={{
+            animationDelay: `${index * 30}ms`
+          }}>
+                  {isNew && <div className="absolute -top-2 -left-2 z-20">
+                      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse-glow">
+                        Nouveau
+                      </div>
+                    </div>}
+
+                  <Card onClick={() => handleTripClick(trip)} className={`
+                      relative overflow-hidden cursor-pointer
+                      transition-all duration-300 ease-out
+                      border-2 ${config.borderColor}
+                      ${config.shadowHover}
+                      hover:-translate-y-1
+                      backdrop-blur-sm bg-card/95
+                      before:absolute before:inset-0 before:bg-gradient-to-br before:${config.gradient}
+                      before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300
+                      before:pointer-events-none
+                    `}>
+                    <div className="flex items-center gap-6 p-6">
+                      {/* Icône et info principale */}
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className={`${config.iconBg} p-4 rounded-xl transition-all duration-300 group-hover:scale-110`}>
+                          <MapPin className={`h-8 w-8 ${config.iconColor}`} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-bold tracking-tight line-clamp-1 transition-all duration-300 group-hover:text-primary">
+                              {trip.title || 'Voyage sans titre'}
+                            </h3>
+                            <Badge variant={config.badgeVariant} className={`
+                                ${config.badgeClass} 
+                                backdrop-blur-md shadow-lg
+                                border border-white/20
+                                flex items-center gap-1.5
+                                flex-shrink-0
+                              `}>
+                              {isRecent && <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse-glow" />}
+                              {getPhaseLabel(trip.currentPhase)}
+                            </Badge>
+                          </div>
+                          
+                          {trip.destination_zone && <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                              <Plane className="h-3.5 w-3.5" />
+                              {trip.destination_zone}
+                            </p>}
+                        </div>
+                      </div>
+
+                      {/* Stats compactes */}
+                      <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-w-[80px]">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 mb-1" />
+                          <span className="text-xs text-muted-foreground">Documents</span>
+                          <span className="text-lg font-bold font-mono">{trip.documentCount}</span>
+                        </div>
+                        
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 min-w-[80px]">
+                          <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400 mb-1" />
+                          <span className="text-xs text-muted-foreground">Segments</span>
+                          <span className="text-lg font-bold font-mono">{trip.segmentCount}</span>
+                        </div>
+
+                        <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border border-border/50 min-w-[100px]">
+                          <Calendar className="h-4 w-4 text-muted-foreground mb-1" />
+                          <span className="text-xs text-muted-foreground">Créé le</span>
+                          <span className="text-xs font-semibold">{formatDate(trip.created_at)}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {trip.status === 'validated' ? <>
+                            <Button variant="default" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg" size="sm" onClick={e => {
+                      e.stopPropagation();
+                      handleTripClick(trip);
+                    }}>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Voir le booklet
+                            </Button>
+                            {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" asChild>
+                                <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                                  <FileText className="h-4 w-4" />
+                                </a>
+                              </Button>}
+                          </> : <Button variant="default" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg" size="sm" onClick={e => {
+                    e.stopPropagation();
+                    handleTripClick(trip);
+                  }}>
+                            <FileEdit className="mr-2 h-4 w-4" />
+                            Continuer
+                          </Button>}
+
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={e => handleDeleteClick(trip, e)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Barre de progression pour brouillons */}
+                    {trip.currentPhase !== 'validated' && <div className="px-6 pb-4">
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full bg-gradient-to-r ${config.badgeClass} transition-all duration-500 ease-out`} style={{
+                    width: `${progress}%`
+                  }} />
+                        </div>
+                      </div>}
                   </Card>
                 </div>;
         })}
