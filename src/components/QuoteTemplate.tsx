@@ -15,6 +15,21 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   const [editableTitle, setEditableTitle] = useState(data.title);
   const [editableDestination, setEditableDestination] = useState(data.destination);
   
+  // États pour les steps (titres et descriptions éditables)
+  const [stepsData, setStepsData] = useState(
+    data.steps.map(step => ({
+      ...step,
+      editableTitle: step.title,
+      editableDescription: step.description || "",
+      segments: step.segments.map(seg => ({
+        ...seg,
+        editableTitle: seg.title,
+        editableDescription: seg.description || "",
+        editableProvider: seg.provider || ""
+      }))
+    }))
+  );
+  
   // États pour "Pourquoi réserver"
   const [whyBookTitle, setWhyBookTitle] = useState("Pourquoi réserver avec AD Gentes ?");
   const [expertiseTitle, setExpertiseTitle] = useState("Expertise locale");
@@ -50,6 +65,58 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     return format(new Date(dateString), "d MMMM yyyy", { locale: fr });
+  };
+
+  // Handlers pour mettre à jour les steps
+  const updateStepTitle = (stepIndex: number, newTitle: string) => {
+    setStepsData(prev => prev.map((step, idx) => 
+      idx === stepIndex ? { ...step, editableTitle: newTitle } : step
+    ));
+  };
+
+  const updateStepDescription = (stepIndex: number, newDesc: string) => {
+    setStepsData(prev => prev.map((step, idx) => 
+      idx === stepIndex ? { ...step, editableDescription: newDesc } : step
+    ));
+  };
+
+  const updateSegmentTitle = (stepIndex: number, segmentIndex: number, newTitle: string) => {
+    setStepsData(prev => prev.map((step, sIdx) => 
+      sIdx === stepIndex 
+        ? {
+            ...step,
+            segments: step.segments.map((seg, segIdx) =>
+              segIdx === segmentIndex ? { ...seg, editableTitle: newTitle } : seg
+            )
+          }
+        : step
+    ));
+  };
+
+  const updateSegmentDescription = (stepIndex: number, segmentIndex: number, newDesc: string) => {
+    setStepsData(prev => prev.map((step, sIdx) => 
+      sIdx === stepIndex 
+        ? {
+            ...step,
+            segments: step.segments.map((seg, segIdx) =>
+              segIdx === segmentIndex ? { ...seg, editableDescription: newDesc } : seg
+            )
+          }
+        : step
+    ));
+  };
+
+  const updateSegmentProvider = (stepIndex: number, segmentIndex: number, newProvider: string) => {
+    setStepsData(prev => prev.map((step, sIdx) => 
+      sIdx === stepIndex 
+        ? {
+            ...step,
+            segments: step.segments.map((seg, segIdx) =>
+              segIdx === segmentIndex ? { ...seg, editableProvider: newProvider } : seg
+            )
+          }
+        : step
+    ));
   };
 
   return (
@@ -97,14 +164,20 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
       <div className="p-8" data-pdf-program-section>
         <h2 className="text-2xl font-bold mb-6">Votre programme</h2>
         <div className="space-y-6">
-          {data.steps.map((step, index) => (
+          {stepsData.map((step, stepIndex) => (
             <div key={step.id} className="border rounded-lg p-6 bg-card" data-pdf-step data-pdf-step-id={step.id}>
               <div className="flex items-start gap-4 mb-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">{index + 1}</span>
+                  <span className="text-lg font-bold text-primary">{stepIndex + 1}</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-1" data-pdf-step-title>{step.title}</h3>
+                  <EditableText
+                    value={step.editableTitle}
+                    onChange={(newTitle) => updateStepTitle(stepIndex, newTitle)}
+                    as="h3"
+                    className="text-xl font-semibold mb-1"
+                    data-pdf-step-title
+                  />
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     {step.date && (
                       <span data-pdf-step-date>{formatDate(step.date)}</span>
@@ -119,22 +192,50 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
                 </div>
               </div>
               
-              {step.description && (
-                <p className="text-muted-foreground mb-4" data-pdf-step-description>{step.description}</p>
+              {step.editableDescription && (
+                <EditableText
+                  value={step.editableDescription}
+                  onChange={(newDesc) => updateStepDescription(stepIndex, newDesc)}
+                  multiline
+                  as="p"
+                  className="text-muted-foreground mb-4"
+                  data-pdf-step-description
+                />
               )}
 
               {step.segments.length > 0 && (
                 <div className="space-y-2 mt-4" data-pdf-step-segments>
-                  {step.segments.map((segment) => (
+                  {step.segments.map((segment, segmentIndex) => (
                     <div key={segment.id} className="flex items-start gap-3 text-sm pl-16" data-pdf-segment data-pdf-segment-id={segment.id}>
                       <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
-                        <span className="font-medium" data-pdf-segment-title>{segment.title}</span>
-                        {segment.provider && (
-                          <span className="text-muted-foreground ml-2" data-pdf-segment-provider>({segment.provider})</span>
+                        <EditableText
+                          value={segment.editableTitle}
+                          onChange={(newTitle) => updateSegmentTitle(stepIndex, segmentIndex, newTitle)}
+                          inline
+                          className="font-medium"
+                          data-pdf-segment-title
+                        />
+                        {segment.editableProvider && (
+                          <span className="text-muted-foreground ml-2">
+                            (<EditableText
+                              value={segment.editableProvider}
+                              onChange={(newProvider) => updateSegmentProvider(stepIndex, segmentIndex, newProvider)}
+                              inline
+                              className="text-muted-foreground"
+                              data-pdf-segment-provider
+                            />)
+                          </span>
                         )}
-                        {segment.description && (
-                          <p className="text-muted-foreground mt-1" data-pdf-segment-description>{segment.description}</p>
+                        {segment.editableDescription && (
+                          <EditableText
+                            value={segment.editableDescription}
+                            onChange={(newDesc) => updateSegmentDescription(stepIndex, segmentIndex, newDesc)}
+                            multiline
+                            as="p"
+                            className="text-muted-foreground mt-1"
+                            data-pdf-segment-description
+                          />
                         )}
                       </div>
                     </div>
