@@ -605,7 +605,10 @@ export type Database = {
           last_quote_generated_at: string | null
           last_quote_pdf_url: string | null
           local_correspondent_phone: string | null
+          number_of_people: number | null
           output_type: string | null
+          participants: string | null
+          price: number | null
           status: string
           title: string | null
           updated_at: string
@@ -622,7 +625,10 @@ export type Database = {
           last_quote_generated_at?: string | null
           last_quote_pdf_url?: string | null
           local_correspondent_phone?: string | null
+          number_of_people?: number | null
           output_type?: string | null
+          participants?: string | null
+          price?: number | null
           status?: string
           title?: string | null
           updated_at?: string
@@ -639,7 +645,10 @@ export type Database = {
           last_quote_generated_at?: string | null
           last_quote_pdf_url?: string | null
           local_correspondent_phone?: string | null
+          number_of_people?: number | null
           output_type?: string | null
+          participants?: string | null
+          price?: number | null
           status?: string
           title?: string | null
           updated_at?: string

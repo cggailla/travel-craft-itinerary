@@ -14,6 +14,9 @@ export type TripUpdate = Database['public']['Tables']['trips']['Update'];
 export async function createTrip(tripData: {
   title: string;
   destination_zone?: string;
+  price?: number;
+  participants?: string;
+  number_of_people?: number;
 }): Promise<{ success: boolean; trip?: Trip; error?: string }> {
   try {
     console.log('🔐 [NIVEAU 2] Vérification authentification pour création voyage...');
@@ -31,6 +34,9 @@ export async function createTrip(tripData: {
         user_id: userId, // ✅ NIVEAU 2 : Lié à l'utilisateur
         title: tripData.title,
         destination_zone: tripData.destination_zone,
+        price: tripData.price,
+        participants: tripData.participants,
+        number_of_people: tripData.number_of_people,
         status: 'draft',
       })
       .select()

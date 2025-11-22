@@ -10,13 +10,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plane } from 'lucide-react';
 import { z } from 'zod';
 
 interface CreateTripDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (data: { title: string; destination_zone: string }) => Promise<void>;
+  onConfirm: (data: { 
+    title: string; 
+    destination_zone: string;
+    price?: number;
+    participants?: string;
+    number_of_people?: number;
+  }) => Promise<void>;
 }
 
 // Schéma de validation zod
@@ -30,14 +37,43 @@ const tripSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "La destination est requise" })
-    .max(200, { message: "La destination ne peut pas dépasser 200 caractères" })
+    .max(200, { message: "La destination ne peut pas dépasser 200 caractères" }),
+  price: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true;
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    }, { message: "Le prix doit être un nombre positif" }),
+  participants: z
+    .string()
+    .max(500, { message: "Les participants ne peuvent pas dépasser 500 caractères" })
+    .optional(),
+  number_of_people: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true;
+      const num = parseInt(val);
+      return !isNaN(num) && num > 0;
+    }, { message: "Le nombre de personnes doit être un nombre entier positif" })
 });
 
 export function CreateTripDialog({ open, onOpenChange, onConfirm }: CreateTripDialogProps) {
   const [title, setTitle] = useState('');
   const [destinationZone, setDestinationZone] = useState('');
+  const [price, setPrice] = useState('');
+  const [participants, setParticipants] = useState('');
+  const [numberOfPeople, setNumberOfPeople] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [errors, setErrors] = useState<{ title?: string; destination_zone?: string }>({});
+  const [errors, setErrors] = useState<{ 
+    title?: string; 
+    destination_zone?: string;
+    price?: string;
+    participants?: string;
+    number_of_people?: string;
+  }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,24 +83,39 @@ export function CreateTripDialog({ open, onOpenChange, onConfirm }: CreateTripDi
     try {
       const validatedData = tripSchema.parse({
         title: title,
-        destination_zone: destinationZone
+        destination_zone: destinationZone,
+        price: price,
+        participants: participants,
+        number_of_people: numberOfPeople
       });
 
       setIsCreating(true);
       await onConfirm({
         title: validatedData.title,
-        destination_zone: validatedData.destination_zone
+        destination_zone: validatedData.destination_zone,
+        price: validatedData.price ? parseFloat(validatedData.price) : undefined,
+        participants: validatedData.participants || undefined,
+        number_of_people: validatedData.number_of_people ? parseInt(validatedData.number_of_people) : undefined
       });
       
       // Réinitialiser le formulaire après succès
       setTitle('');
       setDestinationZone('');
+      setPrice('');
+      setParticipants('');
+      setNumberOfPeople('');
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Convertir les erreurs zod en objet d'erreurs
-        const fieldErrors: { title?: string; destination_zone?: string } = {};
+        const fieldErrors: { 
+          title?: string; 
+          destination_zone?: string;
+          price?: string;
+          participants?: string;
+          number_of_people?: string;
+        } = {};
         error.errors.forEach((err) => {
-          const field = err.path[0] as 'title' | 'destination_zone';
+          const field = err.path[0] as 'title' | 'destination_zone' | 'price' | 'participants' | 'number_of_people';
           fieldErrors[field] = err.message;
         });
         setErrors(fieldErrors);
@@ -81,6 +132,9 @@ export function CreateTripDialog({ open, onOpenChange, onConfirm }: CreateTripDi
         // Réinitialiser le formulaire à la fermeture
         setTitle('');
         setDestinationZone('');
+        setPrice('');
+        setParticipants('');
+        setNumberOfPeople('');
         setErrors({});
       }
     }
@@ -143,6 +197,64 @@ export function CreateTripDialog({ open, onOpenChange, onConfirm }: CreateTripDi
               <p className="text-xs text-muted-foreground">
                 {destinationZone.length}/200 caractères
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="price">
+                Prix du voyage <span className="text-xs text-muted-foreground">(optionnel)</span>
+              </Label>
+              <Input
+                id="price"
+                type="text"
+                placeholder="Ex: 2500"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                disabled={isCreating}
+                className={errors.price ? 'border-destructive' : ''}
+              />
+              {errors.price && (
+                <p className="text-sm text-destructive">{errors.price}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="participants">
+                Participants <span className="text-xs text-muted-foreground">(optionnel)</span>
+              </Label>
+              <Textarea
+                id="participants"
+                placeholder="Ex: Jean Dupont, Marie Martin, Pierre Durand..."
+                value={participants}
+                onChange={(e) => setParticipants(e.target.value)}
+                maxLength={500}
+                disabled={isCreating}
+                rows={3}
+                className={errors.participants ? 'border-destructive' : ''}
+              />
+              {errors.participants && (
+                <p className="text-sm text-destructive">{errors.participants}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {participants.length}/500 caractères
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="numberOfPeople">
+                Nombre de personnes <span className="text-xs text-muted-foreground">(optionnel)</span>
+              </Label>
+              <Input
+                id="numberOfPeople"
+                type="text"
+                placeholder="Ex: 4"
+                value={numberOfPeople}
+                onChange={(e) => setNumberOfPeople(e.target.value)}
+                disabled={isCreating}
+                className={errors.number_of_people ? 'border-destructive' : ''}
+              />
+              {errors.number_of_people && (
+                <p className="text-sm text-destructive">{errors.number_of_people}</p>
+              )}
             </div>
           </div>
 
