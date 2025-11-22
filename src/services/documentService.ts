@@ -1,9 +1,13 @@
 import { supabase } from '@/integrations/supabase/client'
-import { sessionManager } from '@/utils/sessionManager'
+import { requireAuth, getCurrentUserId } from '@/utils/authHelpers'
+import type { Database } from '@/integrations/supabase/types'
 
 // Supabase configuration
 const SUPABASE_URL = "https://jjlhsikgczigvtdzfroa.supabase.co"
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqbGhzaWtnY3ppZ3Z0ZHpmcm9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxODQ3ODIsImV4cCI6MjA3Mzc2MDc4Mn0.RFZ7mWCxgJpy-tJt5HudvjcHnX3Hoa2HEIcqvV8uHvo"
+
+export type Document = Database['public']['Tables']['documents']['Row'];
+export type DocumentInsert = Database['public']['Tables']['documents']['Insert'];
 
 export interface DocumentUploadResult {
   success: boolean
@@ -30,23 +34,35 @@ export interface TravelSegmentResponse {
 }
 
 /**
- * Create a new trip
+ * 🔐 NIVEAU 2 : Create a new trip (avec vérification auth)
+ * 
+ * ⚠️ ATTENTION: Cette fonction ne supporte QUE title et destination_zone
+ * Pour créer un voyage avec price, participants, number_of_people,
+ * utilisez createTrip() depuis @/services/tripService
  */
-export async function createTrip(): Promise<{ success: boolean; trip_id?: string; error?: string }> {
+export async function createTrip(tripData?: { 
+  title?: string; 
+  destination_zone?: string; 
+}): Promise<{ success: boolean; trip_id?: string; error?: string }> {
   try {
-    // Get current user session ID for secure access
-    const userId = await sessionManager.getCurrentUserId();
+    console.log('🔐 [NIVEAU 2] Vérification authentification pour création trip...');
     
-    // Use Supabase client for better RLS handling
+    // ✅ NIVEAU 2 : Get current user session ID for secure access
+    const userId = await requireAuth();
+    console.log('✅ [NIVEAU 2] User authentifié:', userId);
+    
+    // ✅ NIVEAU 2 : Use Supabase client for better RLS handling
     const { data, error } = await supabase
       .from('trips')
       .insert({
-        title: 'Nouveau carnet de voyage',
+        title: tripData?.title || 'Nouveau carnet de voyage',
+        destination_zone: tripData?.destination_zone || null,
         status: 'draft',
-        user_id: userId
+        user_id: userId // ✅ NIVEAU 2 : Lié à l'utilisateur
       })
       .select()
       .single();
+    // ✅ NIVEAU 3 : RLS vérifie que auth.uid() = user_id
 
     if (error) {
       console.error('Supabase error:', error);
@@ -67,49 +83,94 @@ export async function createTrip(): Promise<{ success: boolean; trip_id?: string
 }
 
 /**
- * Upload a document to the backend for processing
+ * 🔐 Upload a document to the backend for processing (avec logs détaillés)
  */
 export async function uploadDocument(file: File, tripId: string | null = null): Promise<DocumentUploadResult> {
+  console.group('📤 Upload Document Debug');
+
   try {
-    // Get current user session ID for secure access
-    const userId = await sessionManager.getCurrentUserId();
-    
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('user_id', userId)
+    console.log('Step 1️⃣ Vérification authentification...');
+    await requireAuth();
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Aucun token de session valide trouvé');
+    }
+
+    console.log('✅ Utilisateur connecté, token récupéré :', session.access_token.slice(0, 15) + '...');
+
+    // --- Préparation du FormData ---
+    console.log('Step 2️⃣ Préparation du FormData...');
+    const formData = new FormData();
+    formData.append('file', file);
     if (tripId) {
-      formData.append('trip_id', tripId)
+      formData.append('trip_id', tripId);
     }
 
-    // Use fetch directly for file uploads to avoid Supabase JS issues with FormData
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-document`, {
+    console.log('📦 FormData contenu :');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  - ${key}: File(name="${value.name}", size=${value.size}, type=${value.type})`);
+      } else {
+        console.log(`  - ${key}: ${value}`);
+      }
+    }
+
+    const targetUrl = `${SUPABASE_URL}/functions/v1/upload-document`;
+    console.log('🎯 URL cible :', targetUrl);
+
+    // --- Envoi de la requête ---
+    console.log('Step 3️⃣ Envoi de la requête fetch...');
+    const response = await fetch(targetUrl, {
       method: 'POST',
-      body: formData
-    })
+      mode: 'cors', // Important pour debug CORS
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: formData,
+    });
 
+    console.log('📡 Requête envoyée, statut HTTP reçu :', response.status);
+
+    // --- Gestion de la réponse ---
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Upload failed: ${response.status} - ${errorText}`)
+      console.warn('⚠️ Réponse non OK, lecture du message d’erreur...');
+      const errorText = await response.text();
+      console.error('Réponse complète du serveur :', errorText);
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
     }
 
-    const data = await response.json()
-    return data as DocumentUploadResult
+    const data = await response.json();
+    console.log('✅ Réponse JSON parsée avec succès :', data);
+
+    console.groupEnd();
+    return data as DocumentUploadResult;
   } catch (error) {
-    console.error('Upload error:', error)
+    console.error('❌ Erreur pendant l’upload :', error);
+    console.groupEnd();
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed'
-    }
+      error: error instanceof Error ? error.message : 'Upload failed',
+    };
   }
 }
+
 
 // Extract text via OCR
 export const extractText = async (documentId: string): Promise<{ success: boolean; error?: string; ocrText?: string; confidence?: number }> => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
+
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ document_id: documentId })
     })
@@ -139,10 +200,16 @@ export const extractText = async (documentId: string): Promise<{ success: boolea
  */
 export async function processDocument(documentId: string): Promise<ProcessingResult> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/process-document`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ document_id: documentId })
     })
@@ -171,6 +238,11 @@ export async function getTravelSegments(
   status?: 'all' | 'validated' | 'unvalidated'
 ): Promise<TravelSegmentResponse> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+
     const params = new URLSearchParams()
     if (tripId) params.append('trip_id', tripId)
     if (status) params.append('status', status)
@@ -179,6 +251,9 @@ export async function getTravelSegments(
     
     const response = await fetch(url, {
       method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
     })
 
     if (!response.ok) {
@@ -205,20 +280,33 @@ export async function getTravelSegments(
  */
 export async function validateSegments(segmentIds: string[], tripId: string | null = null): Promise<{ success: boolean; error?: string }> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session token');
+    }
+    const rid = Date.now().toString();
+    const payload = { segment_ids: segmentIds, trip_id: tripId };
+    console.info('[validateSegments:call]', { rid, payload: { tripId, segmentCount: segmentIds.length } });
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/validate-segments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ segment_ids: segmentIds, trip_id: tripId })
+      body: JSON.stringify(payload)
     })
+
+    console.info('[validateSegments:response]', { rid, status: response.status, url: response.url });
 
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('[validateSegments:responseError]', { rid, status: response.status, errorText });
       throw new Error(`Validation failed: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
+    console.info('[validateSegments:responseJson]', { rid, dataSummary: { success: data.success, validated_count: data.validated_count } });
     return data
   } catch (error) {
     console.error('Validate segments error:', error)

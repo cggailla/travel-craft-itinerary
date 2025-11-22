@@ -4,64 +4,162 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "true",
 };
 
+const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
+
+
 serve(async (req) => {
+  console.log("🌍 Generate general info function called");
+
+  // ------------------------------------------------------------
+  // 1️⃣ CORS preflight
+  // ------------------------------------------------------------
+    // --- Global CORS handler ---
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
-    const { tripId } = await req.json();
+    // ------------------------------------------------------------
+    // 2️⃣ Lecture du body JSON
+    // ------------------------------------------------------------
+    const { tripId } = await req.json().catch(() => ({}));
 
     if (!tripId) {
+      console.warn("❌ Missing tripId in request body");
       return new Response(
         JSON.stringify({ success: false, error: "tripId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const perplexityApiKey = Deno.env.get("PERPLEXITY_API_KEY");
+    // ------------------------------------------------------------
+    // 3️⃣ Authentification JWT
+    // ------------------------------------------------------------
+    const authHeader =
+      req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("❌ Missing or malformed Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
+    }
 
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+    // Client temporaire (sans RLS) pour décoder le user
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: authError } = await supabase.auth.getUser(
+      token,
+    );
+
+    if (authError || !userData?.user) {
+      console.error("❌ Invalid token", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
+    }
+
+    const userId = userData.user.id;
+    console.log("✅ Authenticated user id:", userId);
+
+    // ✅ Client RLS-aware
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    // ------------------------------------------------------------
+    // 4️⃣ Vérification ownership du trip
+    // ------------------------------------------------------------
+    console.log("🔍 Checking trip ownership for tripId:", tripId);
+    const { data: tripOwner, error: tripOwnerErr } = await supabaseUser
+      .from("trips")
+      .select("user_id")
+      .eq("id", tripId)
+      .single();
+
+    if (tripOwnerErr || !tripOwner || tripOwner.user_id !== userId) {
+      console.warn("🚫 Forbidden access to trip", tripOwnerErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Forbidden" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        },
+      );
+    }
+
+    console.log(`✅ Trip ownership confirmed for trip ${tripId}`);
+
+    // ------------------------------------------------------------
+    // 5️⃣ Vérification clé API Perplexity
+    // ------------------------------------------------------------
     if (!perplexityApiKey) {
-      console.error("PERPLEXITY_API_KEY not configured");
+      console.error("❌ PERPLEXITY_API_KEY not configured");
       return new Response(
         JSON.stringify({ success: false, error: "Perplexity API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get trip and destination zone
-    console.log(`Fetching trip ${tripId}`);
-    const { data: trip, error: tripError } = await supabase
+    // ------------------------------------------------------------
+    // 6️⃣ Récupération de la destination du voyage
+    // ------------------------------------------------------------
+    console.log(`📦 Fetching destination zone for trip ${tripId}`);
+    const { data: tripData, error: tripError } = await supabaseUser
       .from("trips")
       .select("destination_zone")
       .eq("id", tripId)
       .single();
 
-    if (tripError || !trip) {
-      console.error("Error fetching trip:", tripError);
+    if (tripError || !tripData) {
+      console.error("❌ Trip not found:", tripError);
       return new Response(
         JSON.stringify({ success: false, error: "Trip not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    const destinationZone = trip.destination_zone;
+    const destinationZone = tripData.destination_zone;
     if (!destinationZone) {
-      console.error("Destination zone not set for trip");
+      console.error("⚠️ Destination zone not set for trip");
       return new Response(
         JSON.stringify({ success: false, error: "Destination zone not set" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    console.log(`Generating general info for ${destinationZone}`);
+    console.log(`🌎 Generating general info for destination: ${destinationZone}`);
 
     // Call Perplexity API
     const prompt = `Recherche et génère des informations générales complètes sur ${destinationZone} pour un carnet de voyage en français.
@@ -244,7 +342,7 @@ CONSIGNES:
     }
 
     // Check if general info already exists
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseUser
       .from("trip_general_info")
       .select("id")
       .eq("trip_id", tripId)
@@ -253,7 +351,7 @@ CONSIGNES:
     if (existing) {
       // Update existing
       console.log("Updating existing general info");
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseUser
         .from("trip_general_info")
         .update({
           destination_country: destinationZone,
@@ -273,7 +371,7 @@ CONSIGNES:
     } else {
       // Insert new
       console.log("Inserting new general info");
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseUser
         .from("trip_general_info")
         .insert({
           trip_id: tripId,

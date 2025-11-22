@@ -99,6 +99,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
         className="text-lg font-bold pb-2 border-b border-gray-300"
         as="h2"
         multiline
+        data-pdf-contact-title
       />
 
       <div className="space-y-6 text-sm leading-relaxed">
@@ -109,6 +110,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             onChange={(val) => updateText('section1Title', val)}
             className="font-semibold mb-2"
             as="h3"
+            data-pdf-contact-before-title
           />
           <EditableText
             value={texts.section1Text}
@@ -116,6 +118,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             className="ml-6 text-gray-700"
             multiline
             as="p"
+            data-pdf-contact-before-text
           />
         </div>
 
@@ -126,6 +129,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             suppressContentEditableWarning
             onBlur={(e) => updateText('section2Title', e.currentTarget.textContent || texts.section2Title)}
             className="font-semibold mb-2 outline-none"
+            data-pdf-contact-day-title
           >
             {texts.section2Title}
           </h3>
@@ -138,6 +142,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section2aTitle', e.currentTarget.textContent || texts.section2aTitle)}
                 className="font-medium mb-1 outline-none"
+                data-pdf-contact-day-flights-title
               >
                 {texts.section2aTitle}
               </h4>
@@ -146,6 +151,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section2aText', e.currentTarget.textContent || texts.section2aText)}
                 className="ml-4 text-gray-700 outline-none"
+                data-pdf-contact-day-flights-text
               >
                 {texts.section2aText}
               </p>
@@ -158,6 +164,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section2bTitle', e.currentTarget.textContent || texts.section2bTitle)}
                 className="font-medium outline-none"
+                data-pdf-contact-day-agency-title
               >
                 {texts.section2bTitle}
               </h4>
@@ -172,6 +179,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             suppressContentEditableWarning
             onBlur={(e) => updateText('section3Title', e.currentTarget.textContent || texts.section3Title)}
             className="font-semibold mb-2 outline-none"
+            data-pdf-contact-after-title
           >
             {texts.section3Title}
           </h3>
@@ -181,6 +189,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             suppressContentEditableWarning
             onBlur={(e) => updateText('section3Intro', e.currentTarget.textContent || texts.section3Intro)}
             className="ml-6 text-gray-700 mb-3 outline-none"
+            data-pdf-contact-after-intro
           >
             {texts.section3Intro}
           </p>
@@ -193,6 +202,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section3aTitle', e.currentTarget.textContent || texts.section3aTitle)}
                 className="font-medium mb-1 outline-none"
+                data-pdf-contact-after-flights-title
               >
                 {texts.section3aTitle}
               </h4>
@@ -201,6 +211,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section3aText', e.currentTarget.textContent || texts.section3aText)}
                 className="ml-4 text-gray-700 outline-none"
+                data-pdf-contact-after-flights-text
               >
                 {texts.section3aText}
               </p>
@@ -213,6 +224,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section3bTitle', e.currentTarget.textContent || texts.section3bTitle)}
                 className="font-medium mb-2 outline-none"
+                data-pdf-contact-after-local-title
               >
                 {texts.section3bTitle}
               </h4>
@@ -243,7 +255,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                     </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="font-medium">
+                      <span className="font-medium" data-pdf-contact-local-phone>
                         {localPhone || "Numéro non défini"}
                       </span>
                       <Button 
@@ -265,6 +277,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                   suppressContentEditableWarning
                   onBlur={(e) => updateText('section3bItem1', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem1)}
                   className="outline-none"
+                  data-pdf-contact-local-item1
                 >
                   • {texts.section3bItem1}
                 </li>
@@ -273,6 +286,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                   suppressContentEditableWarning
                   onBlur={(e) => updateText('section3bItem2', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem2)}
                   className="outline-none"
+                  data-pdf-contact-local-item2
                 >
                   • {texts.section3bItem2}
                 </li>
@@ -281,6 +295,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                   suppressContentEditableWarning
                   onBlur={(e) => updateText('section3bItem3', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem3)}
                   className="outline-none"
+                  data-pdf-contact-local-item3
                 >
                   • {texts.section3bItem3}
                 </li>
@@ -289,6 +304,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                   suppressContentEditableWarning
                   onBlur={(e) => updateText('section3bItem4', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem4)}
                   className="outline-none"
+                  data-pdf-contact-local-item4
                 >
                   • {texts.section3bItem4}
                 </li>
@@ -297,6 +313,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                   suppressContentEditableWarning
                   onBlur={(e) => updateText('section3bItem5', e.currentTarget.textContent?.replace('• ', '') || texts.section3bItem5)}
                   className="outline-none"
+                  data-pdf-contact-local-item5
                 >
                   • {texts.section3bItem5}
                 </li>
@@ -307,6 +324,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section3bNote', e.currentTarget.textContent || texts.section3bNote)}
                 className="ml-4 mt-3 text-gray-700 italic text-xs outline-none"
+                data-pdf-contact-after-local-note
               >
                 {texts.section3bNote}
               </p>
@@ -319,6 +337,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
                 suppressContentEditableWarning
                 onBlur={(e) => updateText('section3cTitle', e.currentTarget.textContent || texts.section3cTitle)}
                 className="font-medium outline-none"
+                data-pdf-contact-after-agency-title
               >
                 {texts.section3cTitle}
               </h4>
@@ -333,6 +352,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
             suppressContentEditableWarning
             onBlur={(e) => updateText('section4Title', e.currentTarget.textContent || texts.section4Title)}
             className="font-semibold mb-2 outline-none"
+            data-pdf-contact-emergency-title
           >
             {texts.section4Title}
           </h3>
@@ -343,6 +363,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
               suppressContentEditableWarning
               onBlur={(e) => updateText('section4Text1', e.currentTarget.textContent || texts.section4Text1)}
               className="text-gray-700 outline-none"
+              data-pdf-contact-emergency-text1
             >
               {texts.section4Text1}
             </p>
@@ -352,6 +373,7 @@ export function EmergencyContactsSection({ tripId }: EmergencyContactsSectionPro
               suppressContentEditableWarning
               onBlur={(e) => updateText('section4Text2', e.currentTarget.textContent || texts.section4Text2)}
               className="text-gray-700 outline-none"
+              data-pdf-contact-emergency-text2
             >
               {texts.section4Text2}
             </p>

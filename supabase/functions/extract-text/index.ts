@@ -66,8 +66,20 @@ serve(async (req) => {
     if (!document_id) throw new Error('Missing document_id');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Auth: require Bearer token and use ANON client so RLS applies
+    const authHeader = (req.headers.get('authorization') || req.headers.get('Authorization') || '');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+
+    const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 })
+    }
+    const user = userData.user;
 
     console.log('Processing document for OCR:', document_id);
 
@@ -78,6 +90,20 @@ serve(async (req) => {
       .eq('id', document_id)
       .single();
     if (docError || !document) throw new Error(`Document not found: ${docError?.message ?? 'unknown error'}`);
+
+    // Verify ownership: the document's trip belongs to the user (or documents.user_id)
+    const docTripId = document.trip_id || document.tripId || document.trip;
+    if (!docTripId) {
+      // If document stores user_id directly, check it
+      if (document.user_id && document.user_id !== user.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+      }
+    } else {
+      const { data: tripOwner, error: tripErr } = await supabase.from('trips').select('user_id').eq('id', docTripId).single();
+      if (tripErr || !tripOwner || tripOwner.user_id !== user.id) {
+        return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 })
+      }
+    }
 
     // 2) Load job row
     const { data: job, error: jobError } = await supabase

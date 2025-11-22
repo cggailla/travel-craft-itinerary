@@ -1,6 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AIContentRequest, AIContentResult } from '@/types/enrichedStep';
 
+/**
+ * Save AI-generated content to the database
+ */
+export async function saveAIContentToDatabase(
+  stepId: string, 
+  aiContent: AIContentResult
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('travel_steps')
+      .update({ 
+        ai_content: {
+          overview: aiContent.overview,
+          tips: aiContent.tips,
+          localContext: aiContent.localContext,
+          generated_at: new Date().toISOString(),
+          version: '1.0',
+          is_custom: false
+        },
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', stepId);
+
+    if (error) {
+      console.error('❌ Error saving AI content to database:', error);
+      throw error;
+    }
+
+    console.log(`✅ AI content saved to database for step ${stepId}`);
+  } catch (error) {
+    console.error('❌ Failed to save AI content to database:', error);
+    // Ne pas bloquer la génération si la sauvegarde échoue
+  }
+}
+
 export interface ParsedStepInfo {
   stepNumber: number;
   title: string;
@@ -148,13 +183,26 @@ export async function generateAndParseTripSummary(tripId: string): Promise<Parse
  */
 async function consolidateStepSegments(tripId: string): Promise<void> {
   console.log(`Consolidating duplicate segments for trip: ${tripId}`);
-  
+  // Diagnostic: log session presence and invocation details
+  try {
+    const s = await supabase.auth.getSession();
+    console.log('[ai] consolidate-step-segments - session present?', !!s?.data?.session, { user: s?.data?.session?.user?.email });
+  } catch (e) {
+    console.warn('[ai] consolidate-step-segments - could not read session', e);
+  }
+  console.log('[ai] Invoking consolidate-step-segments', { tripId });
+
   const { data, error } = await supabase.functions.invoke('consolidate-step-segments', {
     body: { tripId }
   });
 
   if (error) {
     console.error('Error consolidating segments:', error);
+    try {
+      console.error('Error details:', { name: (error as any)?.name, message: (error as any)?.message, status: (error as any)?.status, body: (error as any)?.body });
+    } catch (er) {
+      // ignore
+    }
     throw new Error(`Failed to consolidate segments: ${error.message}`);
   }
 
@@ -171,13 +219,26 @@ async function consolidateStepSegments(tripId: string): Promise<void> {
  */
 export async function generateTripSummary(tripId: string): Promise<string> {
   console.log(`Generating trip summary for trip: ${tripId}`);
-  
+  // Diagnostic: log session presence and invocation details
+  try {
+    const s = await supabase.auth.getSession();
+    console.log('[ai] generate-trip-summary - session present?', !!s?.data?.session, { user: s?.data?.session?.user?.email });
+  } catch (e) {
+    console.warn('[ai] generate-trip-summary - could not read session', e);
+  }
+  console.log('[ai] Invoking generate-trip-summary', { tripId });
+
   const { data, error } = await supabase.functions.invoke('generate-trip-summary', {
     body: { tripId }
   });
 
   if (error) {
     console.error('Error calling generate-trip-summary function:', error);
+    try {
+      console.error('Error details:', { name: (error as any)?.name, message: (error as any)?.message, status: (error as any)?.status, body: (error as any)?.body });
+    } catch (er) {
+      // ignore
+    }
     return '';
   }
 
@@ -201,7 +262,15 @@ export async function generateTripSummary(tripId: string): Promise<string> {
 export async function generateStepAIContent(request: AIContentRequest): Promise<AIContentResult> {
   try {
     console.log(`Generating AI content for step ${request.stepId}`);
-    
+    // Diagnostic: session presence and payload summary
+    try {
+      const s = await supabase.auth.getSession();
+      console.log('[ai] generate-step-ai-content - session present?', !!s?.data?.session, { user: s?.data?.session?.user?.email });
+    } catch (e) {
+      console.warn('[ai] generate-step-ai-content - could not read session', e);
+    }
+  console.log('[ai] Invoking generate-step-ai-content', { stepId: request.stepId, payloadSummary: { keys: Object.keys(request || {}) } });
+
     const { data, error } = await supabase.functions.invoke('generate-step-ai-content', {
       body: request
     });
@@ -240,6 +309,11 @@ export async function generateStepAIContent(request: AIContentRequest): Promise<
 
   } catch (error) {
     console.error('Error in generateStepAIContent:', error);
+    try {
+      console.error('Error details:', { name: (error as any)?.name, message: (error as any)?.message, stack: (error as any)?.stack });
+    } catch (er) {
+      // ignore
+    }
     return {
       stepId: request.stepId,
       overview: '',
@@ -280,6 +354,9 @@ async function generateStepAIContentWithRetry(
       const result = await generateStepAIContent(request);
       
       if (result.success) {
+        // ✅ Sauvegarder le contenu en base de données
+        await saveAIContentToDatabase(request.stepId, result);
+        
         onProgress?.(request.stepId, 'completed', undefined, result);
         return result;
       }

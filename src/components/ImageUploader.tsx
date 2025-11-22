@@ -10,12 +10,14 @@ import {
 interface ImageUploaderProps {
   tripId: string;
   stepId?: string;
-  imageType: 'cover' | 'step';
+  imageType: 'cover' | 'step' | 'quote' | 'quote-step' | 'quote-pricing';
   position?: number;
   currentImage?: SupabaseImage;
   onImageUploaded?: (image: SupabaseImage) => void;
   onImageDeleted?: () => void;
   label?: string;
+  className?: string;
+  height?: string;
 }
 
 export function ImageUploader({
@@ -26,7 +28,9 @@ export function ImageUploader({
   currentImage,
   onImageUploaded,
   onImageDeleted,
-  label
+  label,
+  className = '',
+  height = 'h-80'
 }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -79,7 +83,8 @@ export function ImageUploader({
       file,
       tripId,
       imageType,
-      position
+      position,
+      stepId
     });
 
     setIsUploading(false);
@@ -117,7 +122,7 @@ export function ImageUploader({
   };
 
   return (
-    <div className="no-print w-full" data-has-image={currentImage ? "true" : "false"}>
+    <div className={`no-print w-full ${className}`} data-has-image={currentImage ? "true" : "false"}>
       <input
         ref={fileInputRef}
         type="file"
@@ -128,7 +133,7 @@ export function ImageUploader({
       />
       
       {currentImage ? (
-        // Image uploaded - show image with delete on hover, natural size
+        // Image uploaded - show image with delete on hover
         <div 
           className="relative group w-full cursor-pointer"
           onClick={handleDelete}
@@ -139,30 +144,36 @@ export function ImageUploader({
           <img
             src={currentImage.public_url}
             alt="Image uploadée"
-            className="w-full h-auto object-contain"
+            className={`w-full object-cover ${height}`}
+            onError={(e) => {
+              console.error('❌ Échec du chargement de l\'image:', currentImage.public_url, e);
+              // fallback to placeholder
+              const target = e.currentTarget as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
           />
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex items-center justify-center">
             <X className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
       ) : (
-        // Drop zone - minimal design with fixed height
+        // Drop zone
         <label
           htmlFor={`file-upload-${imageType}-${position || stepId || 'default'}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-            h-80 w-full flex items-center justify-center cursor-pointer
+            ${height} w-full flex items-center justify-center cursor-pointer
             border-2 border-dashed transition-all
-            ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}
-            ${isUploading ? 'opacity-50 pointer-events-none' : 'hover:border-gray-400 hover:bg-gray-100'}
+            ${isDragging ? 'border-primary bg-primary/10' : 'border-border bg-muted/30'}
+            ${isUploading ? 'opacity-50 pointer-events-none' : 'hover:border-primary/50 hover:bg-muted/50'}
           `}
         >
           {isUploading ? (
-            <Loader2 className="h-10 w-10 text-gray-400 animate-spin" />
+            <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
           ) : (
-            <Upload className="h-10 w-10 text-gray-400" />
+            <Upload className="h-10 w-10 text-muted-foreground" />
           )}
         </label>
       )}

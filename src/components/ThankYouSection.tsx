@@ -21,6 +21,7 @@ export function ThankYouSection({ greeting = "Chers voyageurs" }: ThankYouSectio
           className="font-medium inline"
           as="span"
           inline
+          data-pdf-thankyou-greeting
         />
         ,
       </p>
@@ -30,6 +31,7 @@ export function ThankYouSection({ greeting = "Chers voyageurs" }: ThankYouSectio
         onChange={setPara1}
         multiline
         as="p"
+        data-pdf-thankyou-para1
       />
       
       <EditableText
@@ -37,12 +39,14 @@ export function ThankYouSection({ greeting = "Chers voyageurs" }: ThankYouSectio
         onChange={setPara2}
         multiline
         as="p"
+        data-pdf-thankyou-para2
       />
       
       <EditableText
         value={para3}
         onChange={setPara3}
         as="p"
+        data-pdf-thankyou-para3
       />
       
       <EditableText
@@ -50,6 +54,7 @@ export function ThankYouSection({ greeting = "Chers voyageurs" }: ThankYouSectio
         onChange={setClosing}
         className="font-medium"
         as="p"
+        data-pdf-thankyou-closing
       />
     </div>
   );

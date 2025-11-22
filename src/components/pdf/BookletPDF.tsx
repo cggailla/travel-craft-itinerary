@@ -1,495 +1,290 @@
-/**
- * Génération PDF avec @react-pdf/renderer
- * Règles strictes de pagination appliquées
- */
+import React from "react";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 
-import React from 'react';
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-  Font,
-} from '@react-pdf/renderer';
-import { PDFBookletData } from '@/services/pdfBookletService';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+/* ----------------------------- TYPES DE DONNÉES ----------------------------- */
+export type Segment = {
+  type: "flight" | "transfer" | "hotel" | "train" | "activity" | "transport" | "other";
+  title: string;
+  info: string[]; // lignes indentées (• …)
+};
 
-// Enregistrer les polices (optionnel)
-// Font.register({
-//   family: 'Roboto',
-//   src: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
-// });
+export type Step = {
+  dateLabel: string; // ex: "Lundi 12 mai 2025"
+  title: string;
+  overview?: string; // texte enrichi d'aperçu
+  segments: Segment[]; // chaque segment est insécable
+  tips?: string[]; // conseils (bloc jaune)
+  localInfo?: string; // info locale (bloc vert)
+  photos?: string[]; // 0..n URLs / dataURI
+};
 
-// Styles PDF avec règles strictes
+export type BookletData = {
+  logoUrl: string; // URL/dataURI du logo
+  tripTitle: string;
+  startDateLabel: string; // "10/04/2025"
+  endDateLabel: string; // "20/04/2025"
+  totalDays: number;
+  coverPhotos: string[]; // au moins 0..2 (on affiche max 2)
+  steps: Step[];
+  thankYouText: string; // texte brut
+  generalInfoText: string; // texte brut (peut contenir des listes en lignes)
+  emergencyContactsText: string; // texte brut hiérarchisé (contacts)
+  emergencyNotesText: string; // "notes d'urgence"
+};
+
+/* --------------------------------- STYLES ---------------------------------- */
+const COLORS = {
+  primary: "#822a62", // AdGentes
+  greyBg: "#F4F5F6",
+  text: "#222222",
+  mid: "#555555",
+  light: "#8a8a8a",
+  tip: "#FFF7D6",
+  local: "#E7F6EA",
+};
+
 const styles = StyleSheet.create({
-  // Page
   page: {
-    padding: '15mm 12mm',
-    fontSize: 10,
-    fontFamily: 'Helvetica',
-    lineHeight: 1.5,
-  },
-
-  // ─────────────────────────────────────────
-  // PAGE DE GARDE
-  // ─────────────────────────────────────────
-  coverPage: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '100%',
-  },
-
-  coverHeader: {
-    borderBottom: '2px solid #1a1a1a',
-    paddingBottom: 8,
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  coverTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    color: '#1a1a1a',
-  },
-
-  coverImage: {
-    width: '100%',
-    maxHeight: '35%', // Max 35% de la hauteur de page pour avoir 2 images
-    objectFit: 'contain',
-    marginBottom: 8,
-  },
-
-  coverInfo: {
-    backgroundColor: '#f5f5f5',
-    padding: 8,
-    textAlign: 'center',
-    fontSize: 9,
-    color: '#4a4a4a',
-  },
-
-  // ─────────────────────────────────────────
-  // EN-TÊTE D'ÉTAPE (ne jamais couper)
-  // ─────────────────────────────────────────
-  stepHeader: {
-    backgroundColor: '#f0f0f0',
-    padding: 12,
-    borderRadius: 4,
-    border: '1px solid #d0d0d0',
-    marginBottom: 12,
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    // ⭐ RÈGLE : Garder ensemble (ne pas couper)
-    break: 'avoid',
-  },
-
-  stepDateRange: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#4a4a4a',
-    marginRight: 8,
-  },
-
-  stepTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    textTransform: 'uppercase',
-    flex: 1,
-  },
-
-  // ─────────────────────────────────────────
-  // CONTENU TEXTUEL (peut se couper entre lignes)
-  // ─────────────────────────────────────────
-  overviewSection: {
-    marginBottom: 12,
-    paddingLeft: 12,
-    borderLeft: '2px solid #d0d0d0',
-  },
-
-  overviewText: {
-    fontSize: 9,
-    fontStyle: 'italic',
-    color: '#4a4a4a',
-    lineHeight: 1.6,
-    // ⭐ RÈGLE : Peut se couper, mais par ligne entière (orphans/widows)
-    orphans: 2,
-    widows: 2,
-  },
-
-  tipsSection: {
-    marginBottom: 12,
-  },
-
-  tipItem: {
-    fontSize: 9,
-    color: '#4a4a4a',
-    marginBottom: 4,
-    paddingLeft: 16,
-  },
-
-  // ─────────────────────────────────────────
-  // SEGMENTS (⭐ NE JAMAIS COUPER)
-  // ─────────────────────────────────────────
-  segmentsContainer: {
-    marginBottom: 8,
-  },
-
-  segmentCard: {
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 4,
-    border: '1px solid #e0e0e0',
-    // ⭐⭐⭐ RÈGLE CRITIQUE : Ne JAMAIS couper un segment
-    break: 'avoid',
-  },
-
-  segmentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-
-  segmentRole: {
-    fontSize: 8,
-    color: '#ffffff',
-    backgroundColor: '#822a62',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    marginRight: 8,
-    textTransform: 'uppercase',
-  },
-
-  segmentTitle: {
+    fontFamily: "Helvetica",
     fontSize: 11,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    flex: 1,
-  },
-
-  segmentDetail: {
-    fontSize: 9,
-    color: '#4a4a4a',
-    marginBottom: 3,
+    color: COLORS.text,
+    paddingTop: 36,
+    paddingBottom: 36,
+    paddingHorizontal: 40,
     lineHeight: 1.4,
   },
 
-  segmentDescription: {
-    fontSize: 9,
-    color: '#4a4a4a',
-    marginTop: 4,
-    lineHeight: 1.5,
+  /* ----- Couverture ----- */
+  banner: {
+    width: "100%",
+    backgroundColor: COLORS.primary,
+    color: "white",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  bannerLogo: { height: 20, width: 100, objectFit: "contain" },
+  bannerTitle: { fontSize: 14, fontWeight: 700, textAlign: "right" },
 
-  // ─────────────────────────────────────────
-  // IMAGES (règle des 30%)
-  // ─────────────────────────────────────────
-  imageContainer: {
-    marginVertical: 8,
-    // ⭐ RÈGLE : Ne jamais couper une image
-    break: 'avoid',
+  coverTitle: { fontSize: 22, fontWeight: 700, marginTop: 16, textAlign: "center" },
+  coverImgWrap: { marginTop: 16 },
+  coverImg: { width: "100%", height: 180, objectFit: "cover" },
+  dateStrip: {
+    marginTop: 14,
+    backgroundColor: COLORS.greyBg,
+    paddingVertical: 8,
+    textAlign: "center",
   },
+  dateText: { fontSize: 12, color: COLORS.mid },
 
-  stepImage: {
-    width: '100%',
-    // ⭐ RÈGLE : Min 30% de la hauteur de page, max 60%
-    minHeight: '30%',
-    maxHeight: '60%',
-    objectFit: 'contain',
-  },
-
-  // ─────────────────────────────────────────
-  // SECTIONS GÉNÉRALES
-  // ─────────────────────────────────────────
+  /* ----- Titres sections ----- */
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#822a62',
-    marginTop: 20,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    borderBottom: '2px solid #822a62',
+    fontWeight: 700,
+    color: COLORS.primary,
+    borderBottom: `1pt solid ${COLORS.primary}`,
     paddingBottom: 4,
-  },
-
-  generalInfoBox: {
-    backgroundColor: '#f5e6f0',
-    padding: 12,
-    borderRadius: 4,
     marginBottom: 12,
-    break: 'avoid',
   },
 
-  generalInfoText: {
-    fontSize: 9,
-    color: '#4a4a4a',
-    marginBottom: 4,
-    lineHeight: 1.5,
-  },
-
-  emergencyContact: {
-    padding: 10,
-    backgroundColor: '#fff5f5',
+  /* ----- Étapes & segments ----- */
+  stepHeader: {
+    backgroundColor: COLORS.greyBg,
     borderRadius: 4,
-    marginBottom: 8,
-    border: '1px solid #fecaca',
-    break: 'avoid',
+    padding: 8,
+    marginTop: 12,
+  },
+  stepHeaderText: { fontSize: 12, fontWeight: 700, color: "#333" },
+  overview: { marginTop: 8, textAlign: "justify" },
+
+  segmentCard: {
+    borderLeft: `2pt solid ${COLORS.primary}`,
+    paddingLeft: 10,
+    marginTop: 8,
+  },
+  segRow: { flexDirection: "row" },
+  segType: { width: 90, fontSize: 11, fontWeight: 700, color: COLORS.primary },
+  segTitleWrap: { flex: 1 },
+  segTitle: { fontSize: 11, fontWeight: 500 },
+  segInfo: { fontSize: 10, color: "#444", marginLeft: 6, marginTop: 2 },
+
+  tipBlock: {
+    backgroundColor: COLORS.tip,
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 8,
+  },
+  localBlock: {
+    backgroundColor: COLORS.local,
+    borderRadius: 4,
+    padding: 8,
+    marginTop: 8,
   },
 
-  emergencyTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#991b1b',
-    marginBottom: 4,
+  stepPhoto: { width: "100%", height: 150, objectFit: "cover", marginTop: 8 },
+
+  endOfServices: {
+    marginTop: 18,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: 700,
   },
 
-  emergencyDetail: {
-    fontSize: 9,
-    color: '#4a4a4a',
-    marginBottom: 2,
-  },
+  /* ----- Texte brut sections suivantes ----- */
+  paragraph: { marginTop: 6, textAlign: "justify" },
+
+  /* ----- Notes perso page ----- */
+  ruledLine: { height: 18, borderBottom: "1pt solid #D7DADF" },
 });
 
-interface BookletPDFProps {
-  data: PDFBookletData;
-}
+/* ---------------------------- HELPERS / FORMATAGE --------------------------- */
+const formatType = (t: Segment["type"]) => {
+  switch (t) {
+    case "flight":
+      return "Vol";
+    case "transfer":
+      return "Transfert";
+    case "hotel":
+      return "Hébergement";
+    case "train":
+      return "Train";
+    case "activity":
+      return "Activité";
+    case "transport":
+      return "Transport";
+    default:
+      return "Prestation";
+  }
+};
 
-export const BookletPDF: React.FC<BookletPDFProps> = ({ data }) => {
-  const formatDate = (date: Date) => format(date, 'dd/MM');
-  const formatLongDate = (date: Date) => format(date, 'EEEE d MMMM yyyy', { locale: fr });
+/* ------------------------------ COMPOSANT PDF ------------------------------- */
+export const StaticBookletTemplate: React.FC<{ data: BookletData }> = ({ data }) => {
+  const durationLabel = data.totalDays > 1 ? `${data.totalDays} jours` : `${data.totalDays} jour`;
 
   return (
     <Document>
-      {/* ═══════════════════════════════════════════════════════════
-          PAGE DE GARDE (toujours seule sur sa page)
-          ═══════════════════════════════════════════════════════════ */}
+      {/* =============================== COUVERTURE =============================== */}
       <Page size="A4" style={styles.page}>
-        <View style={styles.coverPage}>
-          {/* En-tête */}
-          <View style={styles.coverHeader}>
-            <Text style={styles.coverTitle}>{data.tripTitle}</Text>
-          </View>
+        <View style={styles.banner} wrap={false}>
+          <Image src={data.logoUrl} style={styles.bannerLogo} />
+          <Text style={styles.bannerTitle}>Carnet de voyage</Text>
+        </View>
 
-          {/* Images de couverture (adaptées automatiquement) */}
-          {data.coverImages && data.coverImages.length > 0 && (
-            <View>
-              {data.coverImages.slice(0, 2).map((image, idx) => (
-                <Image
-                  key={idx}
-                  src={image.public_url}
-                  style={styles.coverImage}
-                />
-              ))}
-            </View>
-          )}
+        <Text style={styles.coverTitle}>{data.tripTitle}</Text>
 
-          {/* Informations du voyage */}
-          <View style={styles.coverInfo}>
-            {data.startDate && (
-              <Text>
-                {formatLongDate(data.startDate)}
-                {data.endDate && data.endDate !== data.startDate && (
-                  <> - {formatLongDate(data.endDate)}</>
-                )}
-              </Text>
-            )}
-            {data.destination && <Text style={{ marginTop: 4 }}>{data.destination}</Text>}
-          </View>
+        <View style={styles.coverImgWrap} wrap={false}>
+          {data.coverPhotos.slice(0, 2).map((src, i) => (
+            <Image key={i} src={src} style={styles.coverImg} />
+          ))}
+        </View>
+
+        <View style={styles.dateStrip} wrap={false}>
+          <Text style={styles.dateText}>
+            {data.startDateLabel} – {data.endDateLabel}
+          </Text>
+          <Text style={styles.dateText}>Durée : {durationLabel}</Text>
         </View>
       </Page>
 
-      {/* ═══════════════════════════════════════════════════════════
-          INFORMATIONS GÉNÉRALES
-          ═══════════════════════════════════════════════════════════ */}
-      {data.generalInfo && (
-        <Page size="A4" style={styles.page}>
-          <Text style={styles.sectionTitle}>Informations Générales</Text>
-
-          {data.generalInfo.description && (
-            <View style={styles.generalInfoBox}>
-              <Text style={styles.generalInfoText}>{data.generalInfo.description}</Text>
-            </View>
-          )}
-
-          {data.generalInfo.accommodation && (
-            <View style={styles.generalInfoBox}>
-              <Text style={[styles.generalInfoText, { fontWeight: 'bold', marginBottom: 4 }]}>
-                🏨 Hébergement
-              </Text>
-              <Text style={styles.generalInfoText}>{data.generalInfo.accommodation}</Text>
-            </View>
-          )}
-
-          {data.generalInfo.transportation && (
-            <View style={styles.generalInfoBox}>
-              <Text style={[styles.generalInfoText, { fontWeight: 'bold', marginBottom: 4 }]}>
-                🚗 Transport
-              </Text>
-              <Text style={styles.generalInfoText}>{data.generalInfo.transportation}</Text>
-            </View>
-          )}
-
-          {data.generalInfo.tips && data.generalInfo.tips.length > 0 && (
-            <View style={styles.generalInfoBox}>
-              <Text style={[styles.generalInfoText, { fontWeight: 'bold', marginBottom: 4 }]}>
-                💡 Conseils pratiques
-              </Text>
-              {data.generalInfo.tips.map((tip, idx) => (
-                <Text key={idx} style={styles.tipItem}>
-                  • {tip}
-                </Text>
-              ))}
-            </View>
-          )}
-        </Page>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          ITINÉRAIRE DÉTAILLÉ (étapes)
-          ═══════════════════════════════════════════════════════════ */}
+      {/* =========================== PROGRAMME DÉTAILLÉ =========================== */}
       <Page size="A4" style={styles.page}>
-        <Text style={styles.sectionTitle}>Itinéraire Détaillé</Text>
+        <Text style={styles.sectionTitle}>Programme détaillé</Text>
 
-        {data.steps.map((step, stepIndex) => {
-          // ⭐ RÈGLE : Si moins de 25% d'espace, commencer sur nouvelle page
-          const isNewStepSection = stepIndex > 0;
-          
-          return (
-            <View key={step.stepId} wrap={false} minPresenceAhead={60}>
-              {/* En-tête d'étape (ne se coupe jamais) */}
-              <View style={styles.stepHeader}>
-                <Text style={styles.stepDateRange}>
-                  {formatDate(step.startDate)}
-                  {step.endDate && step.endDate !== step.startDate && (
-                    <> → {formatDate(step.endDate)}</>
-                  )}
-                  {' : '}
-                </Text>
-                <Text style={styles.stepTitle}>{step.stepTitle}</Text>
-              </View>
-
-              {/* Overview (peut se couper entre lignes) */}
-              {step.aiContent?.overview && (
-                <View style={styles.overviewSection}>
-                  <Text style={styles.overviewText}>{step.aiContent.overview}</Text>
-                </View>
-              )}
-
-              {/* Tips */}
-              {step.aiContent?.tips && step.aiContent.tips.length > 0 && (
-                <View style={styles.tipsSection}>
-                  {step.aiContent.tips.map((tip, idx) => (
-                    <Text key={idx} style={styles.tipItem}>
-                      • {tip}
-                    </Text>
-                  ))}
-                </View>
-              )}
-
-              {/* Segments (⭐ JAMAIS coupés) */}
-              <View style={styles.segmentsContainer}>
-                {step.sections.map((section) =>
-                  section.segments
-                    .filter((seg) => !seg.isExcluded)
-                    .map((segment) => (
-                      <View key={segment.id} style={styles.segmentCard}>
-                        {/* En-tête segment */}
-                        <View style={styles.segmentHeader}>
-                          <Text style={styles.segmentRole}>{segment.role}</Text>
-                          <Text style={styles.segmentTitle}>
-                            {segment.title || segment.provider || 'Sans titre'}
-                          </Text>
-                        </View>
-
-                        {/* Détails */}
-                        {segment.address && (
-                          <Text style={styles.segmentDetail}>📍 {segment.address}</Text>
-                        )}
-                        {segment.startTime && (
-                          <Text style={styles.segmentDetail}>
-                            ⏰ {segment.startTime}
-                            {segment.endTime && ` - ${segment.endTime}`}
-                          </Text>
-                        )}
-                        {segment.phone && (
-                          <Text style={styles.segmentDetail}>📞 {segment.phone}</Text>
-                        )}
-                        {segment.duration && (
-                          <Text style={styles.segmentDetail}>⏱️ {segment.duration}</Text>
-                        )}
-
-                        {/* Description */}
-                        {segment.description && (
-                          <Text style={styles.segmentDescription}>{segment.description}</Text>
-                        )}
-                      </View>
-                    ))
-                )}
-              </View>
-
-              {/* Images d'étape (⭐ Min 30%, ne se coupent jamais) */}
-              {step.images && step.images.length > 0 && (
-                <View>
-                  {step.images.map((image, imgIdx) => (
-                    <View key={imgIdx} style={styles.imageContainer}>
-                      <Image src={image.public_url} style={styles.stepImage} />
-                    </View>
-                  ))}
-                </View>
-              )}
+        {data.steps.map((step, sIdx) => (
+          <View key={sIdx}>
+            {/* Bandeau gris (insécable avec la 1re ligne qui suit) */}
+            <View style={styles.stepHeader} wrap={false}>
+              <Text style={styles.stepHeaderText}>
+                {step.dateLabel} : {step.title}
+              </Text>
             </View>
-          );
-        })}
+
+            {step.overview && <Text style={styles.overview}>{step.overview}</Text>}
+
+            {/* Segments (chaque segment est insécable) */}
+            {step.segments.map((seg, i) => (
+              <View key={i} style={styles.segmentCard} wrap={false}>
+                <View style={styles.segRow}>
+                  <Text style={styles.segType}>{formatType(seg.type)}</Text>
+                  <View style={styles.segTitleWrap}>
+                    <Text style={styles.segTitle}>{seg.title}</Text>
+                    {seg.info.map((line, j) => (
+                      <Text key={j} style={styles.segInfo}>
+                        • {line}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            {/* Conseils */}
+            {step.tips && step.tips.length > 0 && (
+              <View style={styles.tipBlock} wrap={false}>
+                {step.tips.map((t, i) => (
+                  <Text key={i}>• {t}</Text>
+                ))}
+              </View>
+            )}
+
+            {/* Info locale */}
+            {step.localInfo && (
+              <View style={styles.localBlock} wrap={false}>
+                <Text>{step.localInfo}</Text>
+              </View>
+            )}
+
+            {/* Photos d'étape (chaque photo est insécable) */}
+            {step.photos?.map((src, i) => (
+              <View key={i} wrap={false}>
+                <Image src={src} style={styles.stepPhoto} />
+              </View>
+            ))}
+          </View>
+        ))}
+
+        <Text style={styles.endOfServices}>FIN DE NOS SERVICES</Text>
       </Page>
 
-      {/* ═══════════════════════════════════════════════════════════
-          CONTACTS D'URGENCE
-          ═══════════════════════════════════════════════════════════ */}
-      {data.emergencyContacts && data.emergencyContacts.length > 0 && (
-        <Page size="A4" style={styles.page}>
-          <Text style={styles.sectionTitle}>Contacts d'Urgence</Text>
+      {/* ============================== REMERCIEMENTS ============================= */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.sectionTitle} break>
+          Remerciements
+        </Text>
+        <Text style={styles.paragraph}>{data.thankYouText}</Text>
+      </Page>
 
-          {data.emergencyContacts.map((contact, idx) => (
-            <View key={idx} style={styles.emergencyContact}>
-              <Text style={styles.emergencyTitle}>{contact.name}</Text>
-              {contact.phone && (
-                <Text style={styles.emergencyDetail}>📞 {contact.phone}</Text>
-              )}
-              {contact.email && (
-                <Text style={styles.emergencyDetail}>✉️ {contact.email}</Text>
-              )}
-              {contact.address && (
-                <Text style={styles.emergencyDetail}>📍 {contact.address}</Text>
-              )}
-            </View>
+      {/* ========================= INFORMATIONS COMPLÉMENTAIRES =================== */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.sectionTitle} break>
+          Informations complémentaires
+        </Text>
+        <Text style={styles.paragraph}>{data.generalInfoText}</Text>
+      </Page>
+
+      {/* ============================== CONTACTS D'URGENCE ======================== */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.sectionTitle} break>
+          Contacts d'urgence
+        </Text>
+        <Text style={styles.paragraph}>{data.emergencyContactsText}</Text>
+      </Page>
+
+      {/* =============================== NOTES D'URGENCE ========================== */}
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.sectionTitle} break>
+          Notes d'urgence
+        </Text>
+        <Text style={styles.paragraph}>{data.emergencyNotesText}</Text>
+        {/* page lignée simple */}
+        <View style={{ marginTop: 16 }}>
+          {Array.from({ length: 20 }).map((_, i) => (
+            <View key={i} style={styles.ruledLine} />
           ))}
-        </Page>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════
-          PAGE DE REMERCIEMENTS
-          ═══════════════════════════════════════════════════════════ */}
-      {data.thankYouMessage && (
-        <Page size="A4" style={styles.page}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={[styles.sectionTitle, { textAlign: 'center', border: 'none' }]}>
-              Merci !
-            </Text>
-            <Text style={[styles.overviewText, { textAlign: 'center', marginTop: 20 }]}>
-              {data.thankYouMessage}
-            </Text>
-          </View>
-        </Page>
-      )}
+        </View>
+      </Page>
     </Document>
   );
 };

@@ -1,0 +1,177 @@
+/* PDF Export Styles - Landscape Slide-Based Layout */
+
+/* Base slide container for screen preview */
+.quote-slide {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  padding: 3rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Slide number indicator */
+.quote-slide-number {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+/* PDF Preview Mode */
+.quote-pdf-preview .quote-slide {
+  aspect-ratio: 297 / 210; /* A4 Landscape ratio */
+  height: auto;
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Print-specific styles */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .quote-slide {
+    width: 297mm;
+    height: 210mm;
+    max-width: none;
+    margin: 0;
+    padding: 20mm;
+    box-shadow: none;
+    border-radius: 0;
+    page-break-after: always;
+    break-after: page;
+    background: white;
+  }
+
+  .quote-slide:last-child {
+    page-break-after: auto;
+  }
+
+  /* Hide non-print elements */
+  .no-print,
+  button,
+  .quote-slide-number {
+    display: none !important;
+  }
+
+  /* Optimize text for print */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Ensure images fit properly */
+  img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+  }
+}
+
+/* Slide content constraints */
+.quote-slide-content {
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Two-column layout for slides */
+.quote-slide-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  height: 100%;
+  align-items: center;
+}
+
+/* Image containers in slides */
+.quote-slide-image {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 1.5rem;
+}
+
+.quote-slide-image-small {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 1rem;
+}
+
+/* Grid layouts for multi-item slides */
+.quote-slide-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.quote-slide-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+/* Compact text for PDF */
+.quote-pdf-preview h1,
+.quote-pdf-preview .text-4xl {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.quote-pdf-preview h2,
+.quote-pdf-preview .text-3xl {
+  font-size: 1.75rem;
+  line-height: 1.3;
+}
+
+.quote-pdf-preview h3,
+.quote-pdf-preview .text-2xl {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.quote-pdf-preview p,
+.quote-pdf-preview .text-base {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.quote-pdf-preview .text-sm {
+  font-size: 0.875rem;
+}
+
+/* Pagination helpers */
+.quote-page-break {
+  page-break-before: always;
+  break-before: page;
+}
+
+/* Overflow warning for preview mode */
+.quote-slide.overflow-warning::after {
+  content: "⚠️ Contenu débordant";
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: hsl(0 84% 60%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  z-index: 1000;
+}

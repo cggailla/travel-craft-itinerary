@@ -50,14 +50,11 @@ RETURNS trigger AS $$
 BEGIN
   -- When a trip is validated, cleanup other draft trips for same user (if user_id exists)
   IF NEW.status = 'validated' AND OLD.status != 'validated' THEN
-    -- Delete other draft trips for this user (excluding the validated one)
-    DELETE FROM trips 
-    WHERE id != NEW.id 
-      AND status = 'draft'
-      AND (NEW.user_id IS NULL OR user_id = NEW.user_id)
-      AND created_at < NEW.updated_at;
-      
-    RAISE NOTICE 'Cleaned up draft trips after validation';
+    -- Previously we deleted other draft trips here. This behavior was causing
+    -- foreign key conflicts when related records (e.g. documents) still
+    -- referenced those trips. To avoid accidental deletes during validation
+    -- we now keep trips intact and log a notice for diagnostics.
+    RAISE NOTICE 'Skipping automatic cleanup of draft trips after validation (disabled)';
   END IF;
   
   RETURN NEW;

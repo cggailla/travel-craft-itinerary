@@ -52,15 +52,30 @@
     --travel-sand: 45 60% 80%;
     --travel-forest: 142 76% 36%;
     
+    /* Status colors for trip cards */
+    --status-draft: 30 90% 55%;
+    --status-draft-light: 30 90% 95%;
+    --status-progress: 210 100% 55%;
+    --status-progress-light: 210 100% 95%;
+    --status-validated: 142 76% 45%;
+    --status-validated-light: 142 76% 95%;
+    
     /* Gradients */
     --gradient-sky: linear-gradient(135deg, hsl(316 60% 85%), hsl(316 51% 33%));
     --gradient-ocean: linear-gradient(135deg, hsl(316 51% 45%), hsl(316 55% 28%));
     --gradient-success: linear-gradient(135deg, hsl(316 51% 33%), hsl(316 55% 28%));
+    --gradient-draft: linear-gradient(135deg, hsl(30 90% 65%), hsl(30 90% 55%));
+    --gradient-progress: linear-gradient(135deg, hsl(210 100% 65%), hsl(210 100% 55%));
+    --gradient-validated: linear-gradient(135deg, hsl(142 76% 55%), hsl(142 76% 45%));
+    --gradient-card-hover: linear-gradient(135deg, hsl(316 51% 33% / 0.03), hsl(316 51% 45% / 0.05));
     
     /* Shadows */
     --shadow-soft: 0 4px 20px hsl(316 51% 33% / 0.1);
     --shadow-medium: 0 8px 30px hsl(316 51% 33% / 0.15);
     --shadow-strong: 0 20px 50px hsl(316 51% 33% / 0.25);
+    --shadow-glow-draft: 0 8px 30px hsl(30 90% 55% / 0.3);
+    --shadow-glow-progress: 0 8px 30px hsl(210 100% 55% / 0.3);
+    --shadow-glow-validated: 0 8px 30px hsl(142 76% 45% / 0.3);
     
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -132,10 +147,25 @@
     --travel-sand: 45 60% 70%;
     --travel-forest: 142 76% 45%;
     
+    /* Status colors for trip cards - dark mode */
+    --status-draft: 30 90% 60%;
+    --status-draft-light: 30 60% 25%;
+    --status-progress: 210 100% 60%;
+    --status-progress-light: 210 60% 25%;
+    --status-validated: 142 76% 50%;
+    --status-validated-light: 142 50% 25%;
+    
     /* Gradients - darker versions */
     --gradient-sky: linear-gradient(135deg, hsl(316 40% 40%), hsl(316 51% 55%));
     --gradient-ocean: linear-gradient(135deg, hsl(316 51% 25%), hsl(316 51% 55%));
     --gradient-success: linear-gradient(135deg, hsl(316 51% 25%), hsl(316 51% 45%));
+    --gradient-draft: linear-gradient(135deg, hsl(30 90% 55%), hsl(30 90% 65%));
+    --gradient-progress: linear-gradient(135deg, hsl(210 100% 55%), hsl(210 100% 65%));
+    --gradient-validated: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 55%));
+    --gradient-card-hover: linear-gradient(135deg, hsl(316 51% 55% / 0.05), hsl(316 51% 60% / 0.08));
+    --shadow-glow-draft: 0 8px 30px hsl(30 90% 55% / 0.2);
+    --shadow-glow-progress: 0 8px 30px hsl(210 100% 55% / 0.2);
+    --shadow-glow-validated: 0 8px 30px hsl(142 76% 45% / 0.2);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

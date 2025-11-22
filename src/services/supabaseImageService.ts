@@ -1,41 +1,26 @@
 /**
- * Service pour gérer les images avec Supabase Storage
- * Version test avec gestion de session
+ * Service to manage images with Supabase Storage
+ * Simplified for a PUBLIC bucket (no signed URLs, no HEAD checks)
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { requireAuth } from '@/utils/authHelpers';
 
 export interface SupabaseImage {
-  storage_path: string;      // Chemin dans le bucket (ex: "session_abc123/trip_xyz/cover_1.jpg")
-  public_url: string;         // URL publique de l'image
-  file_name: string;          // Nom du fichier original
-  uploaded_at: string;        // Timestamp d'upload
+  storage_path: string;    // Path in the bucket (ex: "userId/trip_xyz/cover_1.jpg")
+  public_url: string;      // Publicly accessible image URL
+  file_name: string;       // Original file name
+  uploaded_at: string;     // Upload timestamp
 }
 
 /**
- * Génère un ID de session unique stocké dans sessionStorage
- * La session est unique par onglet/fenêtre du navigateur
- */
-export function getOrCreateSessionId(): string {
-  let sessionId = sessionStorage.getItem('upload_session_id');
-  
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    sessionStorage.setItem('upload_session_id', sessionId);
-    console.log('🆕 Nouvelle session créée:', sessionId);
-  }
-  
-  return sessionId;
-}
-
-/**
- * Construit le chemin de stockage dans le bucket
- * Format: {sessionId}/{tripId}/{imageType}_{position/stepId}.{extension}
+ * Build the storage path inside the bucket
+ * Format: {userId}/{tripId}/{imageType}_{position/stepId}.{extension}
  */
 function buildStoragePath(
-  sessionId: string,
+  userId: string,
   tripId: string,
-  imageType: 'cover' | 'step' | 'test',
+  imageType: 'cover' | 'step' | 'test' | 'quote' | 'quote-step' | 'quote-pricing',
   fileName: string,
   position?: number,
   stepId?: string
@@ -43,8 +28,17 @@ function buildStoragePath(
   const extension = fileName.split('.').pop();
   
   let baseName: string;
-  if (imageType === 'step' && stepId) {
-    // Pour les images d'étapes, inclure le stepId
+  if (imageType === 'quote') {
+    // Image de couverture du devis
+    baseName = `quote_cover_${position || Date.now()}.${extension}`;
+  } else if (imageType === 'quote-pricing') {
+    // Image de la section tarifaire du devis
+    baseName = `quote-pricing_${position || Date.now()}.${extension}`;
+  } else if (imageType === 'quote-step' && stepId) {
+    // Images des étapes du devis
+    baseName = `quote_step_${stepId}_${position || Date.now()}.${extension}`;
+  } else if (imageType === 'step' && stepId) {
+    // Images des étapes du booklet
     baseName = `step_${stepId}_${position || Date.now()}.${extension}`;
   } else if (position !== undefined) {
     baseName = `${imageType}_${position}.${extension}`;
@@ -52,182 +46,175 @@ function buildStoragePath(
     baseName = `${imageType}_${Date.now()}.${extension}`;
   }
   
-  return `${sessionId}/${tripId}/${baseName}`;
+  return `${userId}/${tripId}/${baseName}`;
 }
 
 /**
- * Upload une image vers Supabase Storage
+ * Upload an image to Supabase Storage
+ * → Works directly with public bucket
  */
 export async function uploadImageToSupabase(params: {
   file: File;
   tripId: string;
-  imageType: 'cover' | 'step' | 'test';
+  imageType: 'cover' | 'step' | 'test' | 'quote' | 'quote-step' | 'quote-pricing';
   position?: number;
   stepId?: string;
 }): Promise<{ success: boolean; data?: SupabaseImage; error?: string }> {
   try {
     const { file, tripId, imageType, position, stepId } = params;
-    
-    // Valider le fichier
+
+    // Verify user authentication
+    const userId = await requireAuth();
+
+    // Validate file type and size
     if (!file.type.startsWith('image/')) {
-      return { success: false, error: 'Le fichier doit être une image' };
+      return { success: false, error: 'The file must be an image.' };
     }
 
-    // Limiter la taille (10 MB max)
     const maxSize = 10 * 1024 * 1024; // 10 MB
     if (file.size > maxSize) {
-      return { success: false, error: 'L\'image ne doit pas dépasser 10 MB' };
+      return { success: false, error: 'Image size must not exceed 10 MB.' };
     }
 
-    const sessionId = getOrCreateSessionId();
-    const storagePath = buildStoragePath(sessionId, tripId, imageType, file.name, position, stepId);
+    const storagePath = buildStoragePath(userId, tripId, imageType, file.name, position, stepId);
+    console.log('📤 Uploading to Supabase:', storagePath);
 
-    console.log('📤 Upload vers Supabase:', storagePath);
-
-    // Upload vers Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Upload to Supabase Storage (public bucket)
+    const { error: uploadError } = await supabase.storage
       .from('trip-images')
       .upload(storagePath, file, {
         cacheControl: '3600',
-        upsert: true, // Remplacer si existe déjà
+        upsert: true,
       });
 
     if (uploadError) {
-      console.error('❌ Erreur upload Supabase:', uploadError);
+      console.error('❌ Upload error:', uploadError);
       return { success: false, error: uploadError.message };
     }
 
-    // Obtenir l'URL publique
+    // Directly get public URL (bucket is public)
     const { data: urlData } = supabase.storage
       .from('trip-images')
       .getPublicUrl(storagePath);
 
-    if (!urlData?.publicUrl) {
-      return { success: false, error: 'Impossible d\'obtenir l\'URL publique' };
-    }
+    const publicUrl = urlData.publicUrl;
 
     const image: SupabaseImage = {
       storage_path: storagePath,
-      public_url: urlData.publicUrl,
+      public_url: publicUrl,
       file_name: file.name,
       uploaded_at: new Date().toISOString(),
     };
 
-    console.log('✅ Upload réussi:', image);
+    console.log('✅ Upload successful:', image);
     return { success: true, data: image };
 
   } catch (error) {
-    console.error('❌ Erreur inattendue:', error);
+    console.error('❌ Unexpected error:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
 }
 
 /**
- * Supprime une image de Supabase Storage
+ * Delete an image from Supabase Storage
  */
 export async function deleteImageFromSupabase(
   storagePath: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('🗑️ Suppression:', storagePath);
+    console.log('🗑️ Deleting image:', storagePath);
 
     const { error } = await supabase.storage
       .from('trip-images')
       .remove([storagePath]);
 
     if (error) {
-      console.error('❌ Erreur suppression:', error);
+      console.error('❌ Delete error:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('✅ Suppression réussie');
+    console.log('✅ Delete successful');
     return { success: true };
 
   } catch (error) {
-    console.error('❌ Erreur inattendue:', error);
+    console.error('❌ Unexpected error:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
 }
 
 /**
- * Nettoie toutes les images de la session en cours
- * À appeler quand on ferme le booklet ou démarre une nouvelle session
+ * Clean up all images of a specific trip for the current user
+ * Useful when deleting or resetting a trip
  */
-export async function cleanupSessionImages(): Promise<{ success: boolean; deletedCount: number; error?: string }> {
+export async function cleanupTripImages(
+  tripId: string
+): Promise<{ success: boolean; deletedCount: number; error?: string }> {
   try {
-    const sessionId = sessionStorage.getItem('upload_session_id');
-    if (!sessionId) {
-      return { success: true, deletedCount: 0 };
-    }
+    const userId = await requireAuth();
+    const prefix = `${userId}/${tripId}`;
 
-    console.log('🧹 Nettoyage de la session:', sessionId);
+    console.log('🧹 Cleaning images for trip:', prefix);
 
-    // Lister tous les fichiers de la session
     const { data: files, error: listError } = await supabase.storage
       .from('trip-images')
-      .list(sessionId, {
-        limit: 1000,
-        offset: 0,
-      });
+      .list(prefix, { limit: 1000, offset: 0 });
 
     if (listError) {
-      console.error('❌ Erreur listage:', listError);
+      console.error('❌ Listing error:', listError);
       return { success: false, deletedCount: 0, error: listError.message };
     }
 
     if (!files || files.length === 0) {
-      console.log('✅ Aucune image à nettoyer');
+      console.log('✅ No images to delete');
       return { success: true, deletedCount: 0 };
     }
 
-    // Supprimer tous les fichiers
-    const pathsToDelete = files.map(file => `${sessionId}/${file.name}`);
-    
+    const pathsToDelete = files.map(file => `${prefix}/${file.name}`);
+
     const { error: deleteError } = await supabase.storage
       .from('trip-images')
       .remove(pathsToDelete);
 
     if (deleteError) {
-      console.error('❌ Erreur suppression batch:', deleteError);
+      console.error('❌ Batch delete error:', deleteError);
       return { success: false, deletedCount: 0, error: deleteError.message };
     }
 
-    console.log(`✅ ${pathsToDelete.length} fichiers supprimés`);
-    
-    // Supprimer l'ID de session
-    sessionStorage.removeItem('upload_session_id');
-
+    console.log(`✅ ${pathsToDelete.length} files deleted`);
     return { success: true, deletedCount: pathsToDelete.length };
 
   } catch (error) {
-    console.error('❌ Erreur inattendue:', error);
+    console.error('❌ Unexpected error:', error);
     return { 
       success: false, 
       deletedCount: 0,
-      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
 }
 
 /**
- * Liste toutes les images de la session pour un voyage
+ * List all images of a specific trip for the current user
  */
-export async function listSessionImages(tripId: string): Promise<{ success: boolean; data?: SupabaseImage[]; error?: string }> {
+export async function listSessionImages(
+  tripId: string
+): Promise<{ success: boolean; data?: SupabaseImage[]; error?: string }> {
   try {
-    const sessionId = getOrCreateSessionId();
-    const prefix = `${sessionId}/${tripId}`;
+    const userId = await requireAuth();
+    const prefix = `${userId}/${tripId}`;
 
     const { data: files, error } = await supabase.storage
       .from('trip-images')
       .list(prefix);
 
     if (error) {
+      console.error('❌ Listing error:', error);
       return { success: false, error: error.message };
     }
 
@@ -252,9 +239,10 @@ export async function listSessionImages(tripId: string): Promise<{ success: bool
     return { success: true, data: images };
 
   } catch (error) {
+    console.error('❌ Unexpected error while listing images:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
 }

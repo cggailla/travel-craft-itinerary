@@ -138,7 +138,11 @@ export function StepTemplate({
         }
       `}</style>
       
-      <div className="itinerary-step mb-8 pb-6 border-b border-gray-200">
+      <div 
+        className="itinerary-step mb-8 pb-6 border-b border-gray-200"
+        data-pdf-step
+        data-pdf-step-id={step.stepId}
+      >
         {/* En-tête + premier contenu = groupe insécable */}
         <div className="step-header-group keep-together mb-6">
           {/* En-tête horodaté avec fond gris */}
@@ -146,11 +150,11 @@ export function StepTemplate({
             <div className="w-full bg-gray-100 p-4 rounded-lg border border-gray-200 flex items-center gap-4">
               {/* Dates horodatées */}
               <div className="flex items-center gap-2 text-gray-700 font-semibold whitespace-nowrap">
-                <span>{format(step.startDate, 'dd/MM')}</span>
+                <span data-pdf-step-start-date={step.startDate.toISOString()}>{format(step.startDate, 'dd/MM')}</span>
                 {!isSingleDay && (
                   <>
                     <span>→</span>
-                    <span>{format(endDate, 'dd/MM')}</span>
+                    <span data-pdf-step-end-date={endDate.toISOString()}>{format(endDate, 'dd/MM')}</span>
                   </>
                 )}
                 <span className="text-gray-400">:</span>
@@ -162,6 +166,7 @@ export function StepTemplate({
                 onChange={setEditableStepTitle}
                 className="text-xl font-bold text-gray-900 uppercase flex-1"
                 as="h2"
+                data-pdf-step-title
               />
             </div>
           </div>
@@ -174,6 +179,7 @@ export function StepTemplate({
                 className="text-sm text-gray-700 leading-relaxed italic pl-4 border-l-2 border-gray-300"
                 multiline
                 as="p"
+                data-pdf-step-overview
               />
               <button onClick={() => setHiddenOverview(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
                 ×
@@ -182,7 +188,7 @@ export function StepTemplate({
         </div>
 
         {/* Segments */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-pdf-section data-pdf-section-title="Segments">
           {step.sections.map((section, sectionIndex) => {
           if (!section.segments || section.segments.length === 0) return null;
           const visibleSegments = section.segments.filter(segment => !deletedSegments.has(segment.id));
@@ -208,7 +214,14 @@ export function StepTemplate({
                 duration: segment.duration || ''
               };
               
-              return <div key={segment.id} className="relative group">
+              return <div 
+                key={segment.id} 
+                className="relative group"
+                data-pdf-segment
+                data-pdf-segment-id={segment.id}
+                data-pdf-segment-role={segment.segment_type}
+                data-pdf-segment-excluded={deletedSegments.has(segment.id) ? "true" : "false"}
+              >
                       <div className="flex gap-4">
                         {/* Type de segment */}
                         <p className="text-sm font-semibold text-gray-800 capitalize w-24 flex-shrink-0">
@@ -222,6 +235,7 @@ export function StepTemplate({
                             onChange={(val) => updateSegmentField(segment.id, 'title', val)}
                             className="text-sm text-gray-900 font-medium"
                             as="p"
+                            data-pdf-segment-title
                           />
                           
                           {/* Description */}
@@ -231,6 +245,7 @@ export function StepTemplate({
                               className="text-sm text-gray-700 mt-1 leading-relaxed"
                               multiline
                               as="p"
+                              data-pdf-segment-description
                             />}
                           
                           {/* Détails */}
@@ -245,6 +260,7 @@ export function StepTemplate({
                                   onChange={(val) => updateSegmentField(segment.id, 'provider', val)}
                                   className="inline"
                                   as="span"
+                                  data-pdf-segment-provider
                                 />
                                 {segment.reference_number && ` - ${segment.reference_number}`}
                               </p>}
@@ -255,6 +271,7 @@ export function StepTemplate({
                                   onChange={(val) => updateSegmentField(segment.id, 'address', val)}
                                   className="inline"
                                   as="span"
+                                  data-pdf-segment-address
                                 />
                               </p>}
                             
@@ -264,6 +281,7 @@ export function StepTemplate({
                                   onChange={(val) => updateSegmentField(segment.id, 'phone', val)}
                                   className="inline"
                                   as="span"
+                                  data-pdf-segment-phone
                                 />
                               </p>}
                             
@@ -277,10 +295,12 @@ export function StepTemplate({
                                   onChange={(val) => updateSegmentField(segment.id, 'duration', val)}
                                   className="inline"
                                   as="span"
+                                  data-pdf-segment-duration
                                 />
                               </p>}
                             
-                            {endTime && startTime !== endTime && <p className="text-xs text-gray-600">• Arrivée : {endTime}</p>}
+                            {endTime && startTime !== endTime && <p className="text-xs text-gray-600" data-pdf-segment-end-time={endTime}>• Arrivée : {endTime}</p>}
+                            {startTime && <p className="text-xs text-gray-600 hidden" data-pdf-segment-start-time={startTime}>• Départ : {startTime}</p>}
                           </div>
                         </div>
                       </div>
@@ -310,6 +330,7 @@ export function StepTemplate({
                   className="text-xs text-gray-700 leading-relaxed"
                   multiline
                   as="li"
+                  data-pdf-step-tip
                 />)}
             </ul>
             <button onClick={() => setHiddenTips(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
@@ -326,6 +347,7 @@ export function StepTemplate({
               className="text-xs text-gray-700 leading-relaxed"
               multiline
               as="p"
+              data-pdf-step-local-context
             />
             <button onClick={() => setHiddenLocalContext(true)} className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 print:hidden" aria-label="Supprimer">
               ×
@@ -349,6 +371,7 @@ export function StepTemplate({
                   src={image.public_url}
                   alt={image.file_name}
                   className="w-full h-auto object-contain"
+                  data-pdf-step-image
                 />
               </div>
             ))}

@@ -10,17 +10,26 @@ import { ImageUploader } from "./ImageUploader";
 import { useState, useEffect } from "react";
 import logoAdgentes from "@/assets/logo-adgentes.png";
 import { listSessionImages, SupabaseImage } from "@/services/supabaseImageService";
+import {
+  getBookletDOMSnapshot,
+  debugLogBookletDOM,
+  openBookletSnapshotWindow,
+  getBookletDOMFullSnapshot,
+  getBookletDOMRawExport,
+} from "@/services/domExtractorService";
 
 interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
+  autoGenerate?: boolean;
 }
 
 export function BookletTemplate({
   data,
   options,
   tripId,
+  autoGenerate,
 }: BookletTemplateProps) {
   const [editableTitle, setEditableTitle] = useState(data.tripTitle);
   const [coverImage1, setCoverImage1] = useState<SupabaseImage | undefined>();
@@ -63,7 +72,14 @@ export function BookletTemplate({
   const templateStyles = { classic: "font-serif", modern: "font-sans", minimal: "font-mono" as const };
 
   return (
-    <div id="booklet-content" className={`${templateStyles[options.template]} text-gray-900`}>
+    <div 
+      id="booklet-content" 
+      className={`${templateStyles[options.template]} text-gray-900`}
+      data-pdf-title={editableTitle}
+      data-pdf-start-date={data.startDate?.toISOString()}
+      data-pdf-end-date={data.endDate?.toISOString()}
+      data-pdf-destination={data.destinations?.[0]}
+    >
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -226,10 +242,10 @@ export function BookletTemplate({
             contentEditable
             suppressContentEditableWarning
             onBlur={(e) => setEditableTitle(e.currentTarget.textContent || data.tripTitle)}
+            data-pdf-cover-destination
           >
             {editableTitle}
           </h1>
-          <div className="w-24"></div>
         </div>
 
         {/* Images de couverture - Zone d'upload (masquée à l'impression) */}
@@ -260,6 +276,7 @@ export function BookletTemplate({
                 src={coverImage1.public_url}
                 alt="Couverture 1"
                 className="w-full h-auto object-contain"
+                data-pdf-cover-image="1"
               />
             </div>
           )}
@@ -269,6 +286,7 @@ export function BookletTemplate({
                 src={coverImage2.public_url}
                 alt="Couverture 2"
                 className="w-full h-auto object-contain"
+                data-pdf-cover-image="2"
               />
             </div>
           )}
@@ -278,14 +296,22 @@ export function BookletTemplate({
         <div className="p-4 bg-gray-50 text-center text-sm text-gray-700">
           {data.startDate && (
             <p className="mb-1">
-              {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
+              <span data-pdf-cover-start-date>
+                {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
+              </span>
               {data.endDate && data.endDate !== data.startDate && (
-                <> - {format(data.endDate, "dd/MM/yyyy", { locale: fr })}</>
+                <>
+                  {" - "}
+                  <span data-pdf-cover-end-date>
+                    {format(data.endDate, "dd/MM/yyyy", { locale: fr })}
+                  </span>
+                </>
               )}
             </p>
           )}
           <p>{data.totalDays} jour{data.totalDays > 1 ? "s" : ""}</p>
         </div>
+
       </div>
 
       {/* Itinéraire */}
@@ -298,16 +324,17 @@ export function BookletTemplate({
           data={data}
           options={options}
           tripId={tripId}
+          autoGenerate={autoGenerate}
         />
       </div>
 
       {/* Section de remerciement */}
-      <div className="section-break mb-12">
+      <div className="section-break mb-12" data-pdf-thank-you>
         <ThankYouSection />
       </div>
 
       {/* Informations générales */}
-      <div className="section-break mb-12">
+      <div className="section-break mb-12" data-pdf-general-info>
         <h2 className="text-lg font-bold mb-4 text-gray-900 uppercase">
           Informations complémentaires
         </h2>
