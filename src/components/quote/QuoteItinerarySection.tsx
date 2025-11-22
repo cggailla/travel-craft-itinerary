@@ -75,7 +75,7 @@ export function QuoteItinerarySection({
                   currentImage={stepImages[stepIndex]}
                   onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
                   onImageDeleted={() => onStepImageDeleted(stepIndex)}
-                  height="h-[500px]"
+                  height="h-full"
                 />
                 
                 {!stepImages[stepIndex] && (
