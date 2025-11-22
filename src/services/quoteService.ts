@@ -10,10 +10,9 @@ export interface QuoteData {
   duration: number;
   steps: QuoteStep[];
   generalInfo?: any;
-  price?: {
-    total?: number;
-    currency?: string;
-  };
+  price?: number;
+  participants?: string;
+  numberOfPeople?: number;
 }
 
 export interface QuoteStep {
@@ -124,6 +123,9 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
     duration,
     steps: stepsWithSegments,
     generalInfo,
+    price: trip.price || undefined,
+    participants: trip.participants || undefined,
+    numberOfPeople: trip.number_of_people || undefined,
   };
 }
 
