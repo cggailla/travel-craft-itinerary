@@ -10,6 +10,7 @@ interface QuoteStep {
   description: string;
   segments: Array<{
     id: string;
+    type: string;
     title: string;
     provider?: string;
   }>;
@@ -56,100 +57,146 @@ export function QuoteItinerarySection({
         <div key={stepIndex} className={pdfMode ? "quote-slide" : "mb-8"}>
           {pdfMode && <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>}
           
-          <div className={pdfMode ? "" : "step-card p-6 bg-muted/20 rounded-lg border border-border"}>
+          <div className={pdfMode ? "h-full flex flex-col" : "step-card p-6 bg-card rounded-lg border border-border"}>
             {/* Titre de section en mode PDF */}
             {pdfMode && stepIndex === 0 && (
               <h2 className="text-2xl font-bold mb-6">Votre programme détaillé</h2>
             )}
             
-            {/* Image de l'étape */}
-            {!pdfMode && (
-              <div className="mb-4 no-print">
-                <ImageUploader
-                  tripId={tripId}
-                  stepId={step.id}
-                  imageType="quote-step"
-                  position={stepIndex + 1}
-                  currentImage={stepImages[stepIndex]}
-                  onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
-                  onImageDeleted={() => onStepImageDeleted(stepIndex)}
-                />
-              </div>
-            )}
+            {/* Layout 2 colonnes: Image à gauche, Contenu à droite */}
+            <div className={pdfMode ? "flex gap-8 flex-1" : "grid grid-cols-1 md:grid-cols-[40%_1fr] gap-6"}>
+              {/* Colonne gauche: Image */}
+              <div className="flex-shrink-0">
+                {/* Upload zone en mode non-PDF */}
+                {!pdfMode && (
+                  <div className="mb-2">
+                    <ImageUploader
+                      tripId={tripId}
+                      stepId={step.id}
+                      imageType="quote-step"
+                      position={stepIndex + 1}
+                      currentImage={stepImages[stepIndex]}
+                      onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
+                      onImageDeleted={() => onStepImageDeleted(stepIndex)}
+                    />
+                  </div>
+                )}
 
-            {stepImages[stepIndex] && (
-              <div className={pdfMode ? "mb-6" : "mb-4 rounded-lg overflow-hidden"}>
-                <img 
-                  src={stepImages[stepIndex]!.public_url} 
-                  alt={`Step ${stepIndex + 1}`} 
-                  className={pdfMode ? "quote-slide-image" : "w-full h-48 object-cover"}
-                />
+                {/* Affichage de l'image */}
+                {stepImages[stepIndex] ? (
+                  <div className={pdfMode ? "h-full" : ""}>
+                    <img 
+                      src={stepImages[stepIndex]!.public_url} 
+                      alt={step.title} 
+                      className={pdfMode ? "w-full h-full object-cover rounded-3xl" : "w-full h-64 md:h-96 object-cover rounded-3xl"}
+                    />
+                  </div>
+                ) : (
+                  <div className={pdfMode ? "h-full bg-muted rounded-3xl flex items-center justify-center" : "w-full h-64 md:h-96 bg-muted rounded-3xl flex items-center justify-center"}>
+                    <p className="text-muted-foreground text-sm">Image de l'étape</p>
+                  </div>
+                )}
               </div>
-            )}
 
-            <div className={pdfMode ? "flex items-start gap-6 mb-6" : "flex items-start gap-4 mb-4"}>
-              <div className={pdfMode ? "flex-shrink-0 w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl" : "flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold"}>
-                J{stepIndex + 1}
-              </div>
-              <div className="flex-1">
-                <h3 className={pdfMode ? "text-2xl font-bold mb-2" : "text-xl font-semibold mb-2"}>
+              {/* Colonne droite: Contenu */}
+              <div className="flex flex-col">
+                {/* Badge jour */}
+                <div className="inline-flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">
+                    J{stepIndex + 1}
+                  </div>
+                </div>
+
+                {/* Titre */}
+                <h3 className={pdfMode ? "text-2xl font-bold mb-4" : "text-xl md:text-2xl font-bold mb-4"}>
                   <EditableText
                     value={step.title}
                     onChange={(newValue) => onStepTitleChange(stepIndex, newValue)}
-                    className={pdfMode ? "text-2xl font-bold" : "text-xl font-semibold"}
+                    className={pdfMode ? "text-2xl font-bold" : "text-xl md:text-2xl font-bold"}
                     placeholder={`Jour ${stepIndex + 1}`}
                   />
                 </h3>
-                <div className={pdfMode ? "text-base text-muted-foreground mb-3" : "text-sm text-muted-foreground mb-2"}>
-                  <EditableDate 
-                    value={step.date ? new Date(step.date) : new Date()} 
-                    onChange={(newValue) => onStepDateChange(stepIndex, newValue)}
+
+                {/* Infos: Date et Hébergement */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <EditableDate 
+                      value={step.date ? new Date(step.date) : new Date()} 
+                      onChange={(newValue) => onStepDateChange(stepIndex, newValue)}
+                    />
+                  </div>
+                  
+                  {/* Afficher l'hébergement s'il existe */}
+                  {step.segments.some(seg => seg.type === 'hotel' || seg.type === 'accommodation') && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="font-medium">
+                        Logement {step.segments.find(seg => seg.type === 'hotel' || seg.type === 'accommodation')?.title || 'Non spécifié'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div className={pdfMode ? "mb-6 flex-1" : "mb-6"}>
+                  <EditableText
+                    value={step.description}
+                    onChange={(newValue) => onStepDescriptionChange(stepIndex, newValue)}
+                    multiline
+                    className={pdfMode ? "text-foreground leading-relaxed text-sm" : "text-foreground leading-relaxed"}
+                    placeholder="Description de la journée..."
                   />
                 </div>
-              </div>
-            </div>
 
-            <div className={pdfMode ? "mb-6" : "mb-4"}>
-              <EditableText
-                value={step.description}
-                onChange={(newValue) => onStepDescriptionChange(stepIndex, newValue)}
-                multiline
-                className={pdfMode ? "text-foreground leading-relaxed" : "text-muted-foreground leading-relaxed"}
-                placeholder="Description de la journée..."
-              />
-            </div>
-
-            {step.segments.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <h4 className={pdfMode ? "font-bold text-base uppercase tracking-wide" : "font-semibold text-sm uppercase tracking-wide text-muted-foreground"}>
-                  Prestations
-                </h4>
-                {step.segments.map((segment, segmentIndex) => (
-                  <div key={segmentIndex} className="pl-4 border-l-2 border-primary/30">
-                    <div className={pdfMode ? "font-semibold text-base" : "font-medium"}>
-                      <EditableText
-                        value={segment.title}
-                        onChange={(newValue) =>
-                          onSegmentTitleChange(stepIndex, segmentIndex, newValue)
-                        }
-                        placeholder="Prestation"
-                      />
+                {/* Expériences prévues (segments non-hébergement) */}
+                {step.segments.filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation').length > 0 && (
+                  <div className="mt-auto">
+                    <h4 className="font-bold text-base mb-3">Expériences prévues</h4>
+                    <div className="space-y-2">
+                      {step.segments
+                        .filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation')
+                        .map((segment, segmentIndex) => (
+                          <div key={segmentIndex} className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                              <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">
+                                <EditableText
+                                  value={segment.title}
+                                  onChange={(newValue) =>
+                                    onSegmentTitleChange(stepIndex, segmentIndex, newValue)
+                                  }
+                                  placeholder="Expérience"
+                                />
+                              </div>
+                              {segment.provider && (
+                                <div className="text-sm text-muted-foreground">
+                                  <EditableText
+                                    value={segment.provider}
+                                    onChange={(newValue) =>
+                                      onSegmentProviderChange(stepIndex, segmentIndex, newValue)
+                                    }
+                                    placeholder="Prestataire"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                    {segment.provider && (
-                      <div className={pdfMode ? "text-sm text-muted-foreground mt-1" : "text-sm text-muted-foreground"}>
-                        <EditableText
-                          value={segment.provider}
-                          onChange={(newValue) =>
-                            onSegmentProviderChange(stepIndex, segmentIndex, newValue)
-                          }
-                          placeholder="Prestataire"
-                        />
-                      </div>
-                    )}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       ))}
