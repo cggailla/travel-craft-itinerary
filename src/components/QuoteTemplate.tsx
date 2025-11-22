@@ -1,107 +1,159 @@
 import { useState, useEffect } from "react";
-import { QuoteData } from "@/services/quoteService";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { MapPin, Calendar, Star, CheckCircle2, MessageCircle, Phone, Mail, Globe } from "lucide-react";
 import { EditableText } from "./EditableText";
-import { EditableContent } from "./EditableContent";
 import { EditableDate } from "./EditableDate";
+import { EditableContent } from "./EditableContent";
 import { ImageUploader } from "./ImageUploader";
-import { listSessionImages, SupabaseImage } from "@/services/supabaseImageService";
+import { listSessionImages, type SupabaseImage } from "@/services/supabaseImageService";
+import { Check, Star } from "lucide-react";
+import { QuoteData } from "@/services/quoteService";
 
 interface QuoteTemplateProps {
   data: QuoteData;
 }
 
 export function QuoteTemplate({ data }: QuoteTemplateProps) {
-  // États pour l'en-tête
-  const [editableTitle, setEditableTitle] = useState(data.title);
-  const [editableDestination, setEditableDestination] = useState(data.destination);
-  const [editableStartDate, setEditableStartDate] = useState<Date>(
-    data.startDate ? new Date(data.startDate) : new Date()
+  // États généraux
+  const [mainTitle, setMainTitle] = useState(data.title || "Votre voyage");
+  const [destination, setDestination] = useState(data.destination || "");
+  const [startDate, setStartDate] = useState<Date>(data.startDate ? new Date(data.startDate) : new Date());
+  const [endDate, setEndDate] = useState<Date>(data.endDate ? new Date(data.endDate) : new Date());
+  const [participants, setParticipants] = useState(data.participants || "");
+  const [description, setDescription] = useState("Embarquez pour un voyage inoubliable...");
+  const [price, setPrice] = useState(data.price?.toString() || "");
+  const [pricePerPerson, setPricePerPerson] = useState("");
+  const [numberOfPeople, setNumberOfPeople] = useState(data.numberOfPeople?.toString() || "");
+  const tripDuration = data.duration || 0;
+
+  // États pour les sections
+  const [highlights, setHighlights] = useState([
+    "Point fort 1",
+    "Point fort 2", 
+    "Point fort 3",
+    "Point fort 4",
+    "Point fort 5"
+  ]);
+
+  const [whyBookPoints, setWhyBookPoints] = useState([
+    "Fondée en 1998 : plus de 25 ans d'expérience dans le voyage sur mesure",
+    "Une équipe de spécialistes passionnés, chacun connaissant intimement ses destinations",
+    "Un accompagnement complet avant, pendant et après votre voyage",
+    "Des partenaires de confiance rigoureusement sélectionnés",
+    "Une agence suisse reconnue, avec un service sérieux et transparent",
+    "Une assistance 24h/24 pour votre tranquillité"
+  ]);
+
+  const [advisorMessage, setAdvisorMessage] = useState(
+    "J'ai créé cet itinéraire en regroupant au maximum tout ce que vous aimez. J'espère que ce voyage vous plaira, n'hésitez pas à me contacter si vous avez des commentaires ou si vous souhaitez faire des ajustements, je suis là pour ça. Bonne découverte !"
   );
-  const [editableEndDate, setEditableEndDate] = useState<Date>(
-    data.endDate ? new Date(data.endDate) : new Date()
+
+  const [includedItems, setIncludedItems] = useState([
+    "Tous les transferts privés",
+    "Les entrées des sites mentionnés dans le programme",
+    "Hébergement en chambre double",
+    "La demi-pension (petits-déjeuners et dîners)",
+    "Les visites et excursions accompagnées par un guide francophone",
+    "L'assistance du personnel de nos correspondants locaux"
+  ]);
+
+  const [excludedItems, setExcludedItems] = useState([
+    "Les vols internationaux",
+    "Les boissons et les dépenses personnelles",
+    "Les pourboires (hôtels, restaurants, chauffeurs, guides)",
+    "Le visa d'entrée (environ 45 CHF, sujet à modification)"
+  ]);
+
+  const [entryFormalities, setEntryFormalities] = useState(
+    "Un passeport valable au moins 6 mois après la date de retour est requis. Un visa d'entrée est obligatoire et peut être obtenu à l'arrivée (coût d'environ 45 CHF, sujet à modification)."
   );
-  
-  // États pour les steps (titres, descriptions et dates éditables)
-  const [stepsData, setStepsData] = useState(
+
+  const [healthRequirements, setHealthRequirements] = useState(
+    "Aucun vaccin n'est obligatoire. Nous recommandons d'être à jour dans vos vaccinations habituelles."
+  );
+
+  const [cancellationPolicy, setCancellationPolicy] = useState(
+    "Les conditions d'annulation spécifiques à ce voyage vous seront communiquées lors de la réservation. Des frais peuvent s'appliquer en fonction de la date d'annulation."
+  );
+
+  const [testimonials, setTestimonials] = useState([
+    {
+      quote: "Un voyage absolument merveilleux ! L'organisation était parfaite et nous avons pu découvrir des endroits extraordinaires.",
+      author: "Marie & Pierre - Voyage en Italie"
+    },
+    {
+      quote: "Service impeccable, équipe très professionnelle et à l'écoute. Nous recommandons vivement Ad Gentes !",
+      author: "Sophie - Voyage au Japon"
+    },
+    {
+      quote: "Une expérience unique du début à la fin. L'accompagnement personnalisé a fait toute la différence.",
+      author: "Thomas - Voyage en Thaïlande"
+    }
+  ]);
+
+  const [faqs, setFaqs] = useState([
+    {
+      question: "Pourquoi réserver avec une agence plutôt qu'en ligne ?",
+      answer: "Réserver avec nous, c'est bénéficier de conseils personnalisés, d'un suivi avant, pendant et après le voyage, ainsi que de la sécurité d'une agence suisse expérimentée."
+    },
+    {
+      question: "Que se passe-t-il si un problème survient pendant mon voyage ?",
+      answer: "Vous n'êtes jamais seul : nous offrons une assistance 24h/24 et nous intervenons directement auprès de nos partenaires locaux pour trouver une solution rapide."
+    },
+    {
+      question: "Les prix proposés sont-ils tout compris ?",
+      answer: "Nos devis incluent toutes les prestations mentionnées dans le programme détaillé. Nous vous informons clairement des éventuels frais non inclus (repas libres, pourboires, dépenses personnelles). Pas de mauvaises surprises."
+    },
+    {
+      question: "Puis-je modifier ou annuler mon voyage après confirmation ?",
+      answer: "Oui, des modifications ou annulations sont possibles selon les conditions des prestataires (compagnies aériennes, hôtels, etc.). Nous vous accompagnerons dans ces démarches pour limiter au maximum les frais."
+    }
+  ]);
+
+  const [legalMentions, setLegalMentions] = useState(
+    "Ad Gentes est une agence de voyages basée en Suisse. Toutes nos prestations sont soumises aux conditions générales de vente disponibles sur demande. Garantie financière conforme à la législation suisse."
+  );
+
+  const [contactName, setContactName] = useState("Votre conseiller");
+  const [contactEmail, setContactEmail] = useState("contact@ad-gentes.ch");
+  const [contactPhone, setContactPhone] = useState("+41 22 908 61 83");
+
+  // États pour les steps
+  const [steps, setSteps] = useState(
     data.steps.map(step => ({
       ...step,
-      editableTitle: step.title,
-      editableDescription: step.description || "",
-      editableDate: step.date ? new Date(step.date) : new Date(),
+      title: step.title || "",
+      date: step.date || "",
+      description: step.description || "",
       segments: step.segments.map(seg => ({
         ...seg,
-        editableTitle: seg.title,
-        editableDescription: seg.description || "",
-        editableProvider: seg.provider || ""
+        title: seg.title || "",
+        description: seg.description || "",
+        provider: seg.provider || ""
       }))
     }))
   );
-  
-  // États pour "Pourquoi réserver"
-  const [whyBookTitle, setWhyBookTitle] = useState("Pourquoi réserver avec AD Gentes ?");
-  const [expertiseTitle, setExpertiseTitle] = useState("Expertise locale");
-  const [expertiseDesc, setExpertiseDesc] = useState("Plus de 20 ans d'expérience dans l'organisation de voyages sur mesure");
-  const [accompTitle, setAccompTitle] = useState("Accompagnement personnalisé");
-  const [accompDesc, setAccompDesc] = useState("Un conseiller dédié pour vous accompagner avant, pendant et après votre voyage");
-  const [flexTitle, setFlexTitle] = useState("Flexibilité garantie");
-  const [flexDesc, setFlexDesc] = useState("Possibilité de modifier votre programme selon vos envies");
-  
-  // États pour les témoignages
-  const [testimonialsTitle, setTestimonialsTitle] = useState("Ce que disent nos clients");
-  const [testimonial1Quote, setTestimonial1Quote] = useState("Un voyage absolument merveilleux ! L'organisation était parfaite et nous avons pu découvrir des endroits extraordinaires.");
-  const [testimonial1Author, setTestimonial1Author] = useState("Marie & Pierre - Voyage en Italie");
-  const [testimonial2Quote, setTestimonial2Quote] = useState("Service impeccable, équipe très professionnelle et à l'écoute. Nous recommandons vivement AD Gentes !");
-  const [testimonial2Author, setTestimonial2Author] = useState("Sophie - Voyage au Japon");
-  
-  // États pour la FAQ
-  const [faqTitle, setFaqTitle] = useState("Questions fréquentes");
-  const [faq1Question, setFaq1Question] = useState("Puis-je modifier mon programme ?");
-  const [faq1Answer, setFaq1Answer] = useState("Oui, nous pouvons adapter le programme selon vos préférences. N'hésitez pas à nous contacter pour toute modification.");
-  const [faq2Question, setFaq2Question] = useState("Quelles sont les conditions d'annulation ?");
-  const [faq2Answer, setFaq2Answer] = useState("Les conditions d'annulation dépendent des prestataires. Nous vous fournirons tous les détails lors de la réservation.");
-  const [faq3Question, setFaq3Question] = useState("Êtes-vous joignable pendant le voyage ?");
-  const [faq3Answer, setFaq3Answer] = useState("Oui, une assistance 24h/24 et 7j/7 est disponible pendant toute la durée de votre voyage.");
-  
-  // États pour le contact
-  const [contactTitle, setContactTitle] = useState("Prêt à partir ?");
-  const [contactSubtitle, setContactSubtitle] = useState("Contactez-nous pour finaliser votre réservation ou pour toute question");
-  const [contactPhone, setContactPhone] = useState("+33 1 23 45 67 89");
-  const [contactEmail, setContactEmail] = useState("contact@adgentes.fr");
-  const [contactWebsite, setContactWebsite] = useState("www.adgentes.fr");
 
-  // États pour les images
+  // Images
   const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
-  const [stepImages, setStepImages] = useState<Record<string, SupabaseImage | undefined>>({});
+  const [stepImages, setStepImages] = useState<(SupabaseImage | undefined)[]>([]);
 
-  // Charger les images depuis Supabase
   useEffect(() => {
     const loadImages = async () => {
       const result = await listSessionImages(data.tripId);
       if (result.success && result.data) {
-        // Image de couverture du devis (commence par "quote_cover")
-        const quoteCover = result.data.find(img => 
-          img.file_name.startsWith('quote_cover')
-        );
+        const quoteCover = result.data.find(img => img.file_name.startsWith('quote_cover'));
         if (quoteCover) setQuoteCoverImage(quoteCover);
 
-        // Images des étapes du devis (commence par "quote_step_")
-        const imagesByStep: Record<string, SupabaseImage | undefined> = {};
-        data.steps.forEach(step => {
-          const stepImage = result.data!.find(img =>
-            img.file_name.startsWith(`quote_step_${step.id}`)
-          );
-          if (stepImage) imagesByStep[step.id] = stepImage;
-        });
-        setStepImages(imagesByStep);
+        const images: (SupabaseImage | undefined)[] = [];
+        for (let i = 0; i < steps.length; i++) {
+          const stepImage = result.data.find(img => img.file_name.startsWith(`quote_step_${i}`));
+          images.push(stepImage);
+        }
+        setStepImages(images);
       }
     };
     loadImages();
-  }, [data.tripId, data.steps]);
+  }, [data.tripId, steps.length]);
 
-  // Callbacks pour l'image de couverture
   const handleQuoteCoverUploaded = (image: SupabaseImage) => {
     setQuoteCoverImage(image);
   };
@@ -110,132 +162,63 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
     setQuoteCoverImage(undefined);
   };
 
-  // Callbacks pour les images des étapes
-  const handleStepImageUploaded = (stepId: string) => async (image: SupabaseImage) => {
-    setStepImages(prev => ({ ...prev, [stepId]: image }));
+  const handleStepImageUploaded = (index: number, image: SupabaseImage) => {
+    setStepImages(prev => {
+      const newImages = [...prev];
+      newImages[index] = image;
+      return newImages;
+    });
   };
 
-  const handleStepImageDeleted = (stepId: string) => () => {
-    setStepImages(prev => ({ ...prev, [stepId]: undefined }));
+  const handleStepImageDeleted = (index: number) => {
+    setStepImages(prev => {
+      const newImages = [...prev];
+      newImages[index] = undefined;
+      return newImages;
+    });
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "";
-    return format(new Date(dateString), "d MMMM yyyy", { locale: fr });
+  const updateStepTitle = (index: number, newTitle: string) => {
+    setSteps(prev => prev.map((step, i) => i === index ? { ...step, title: newTitle } : step));
   };
 
-  // Handlers pour mettre à jour les steps
-  const updateStepTitle = (stepIndex: number, newTitle: string) => {
-    setStepsData(prev => prev.map((step, idx) => 
-      idx === stepIndex ? { ...step, editableTitle: newTitle } : step
-    ));
+  const updateStepDescription = (index: number, newDesc: string) => {
+    setSteps(prev => prev.map((step, i) => i === index ? { ...step, description: newDesc } : step));
   };
 
-  const updateStepDescription = (stepIndex: number, newDesc: string) => {
-    setStepsData(prev => prev.map((step, idx) => 
-      idx === stepIndex ? { ...step, editableDescription: newDesc } : step
-    ));
+  const updateStepDate = (index: number, newDate: Date) => {
+    setSteps(prev => prev.map((step, i) => i === index ? { ...step, date: newDate.toISOString() } : step));
   };
 
-  const updateStepDate = (stepIndex: number, newDate: Date) => {
-    setStepsData(prev => prev.map((step, idx) => 
-      idx === stepIndex ? { ...step, editableDate: newDate } : step
-    ));
-  };
-
-  const updateSegmentTitle = (stepIndex: number, segmentIndex: number, newTitle: string) => {
-    setStepsData(prev => prev.map((step, sIdx) => 
-      sIdx === stepIndex 
-        ? {
-            ...step,
-            segments: step.segments.map((seg, segIdx) =>
-              segIdx === segmentIndex ? { ...seg, editableTitle: newTitle } : seg
-            )
-          }
+  const updateSegmentTitle = (stepIndex: number, segIndex: number, newTitle: string) => {
+    setSteps(prev => prev.map((step, i) => 
+      i === stepIndex 
+        ? { ...step, segments: step.segments.map((seg, j) => j === segIndex ? { ...seg, title: newTitle } : seg) }
         : step
     ));
   };
 
-  const updateSegmentDescription = (stepIndex: number, segmentIndex: number, newDesc: string) => {
-    setStepsData(prev => prev.map((step, sIdx) => 
-      sIdx === stepIndex 
-        ? {
-            ...step,
-            segments: step.segments.map((seg, segIdx) =>
-              segIdx === segmentIndex ? { ...seg, editableDescription: newDesc } : seg
-            )
-          }
+  const updateSegmentProvider = (stepIndex: number, segIndex: number, newProvider: string) => {
+    setSteps(prev => prev.map((step, i) => 
+      i === stepIndex 
+        ? { ...step, segments: step.segments.map((seg, j) => j === segIndex ? { ...seg, provider: newProvider } : seg) }
         : step
     ));
   };
 
-  const updateSegmentProvider = (stepIndex: number, segmentIndex: number, newProvider: string) => {
-    setStepsData(prev => prev.map((step, sIdx) => 
-      sIdx === stepIndex 
-        ? {
-            ...step,
-            segments: step.segments.map((seg, segIdx) =>
-              segIdx === segmentIndex ? { ...seg, editableProvider: newProvider } : seg
-            )
-          }
-        : step
-    ));
-  };
+  // Calculer le numéro de version automatique (VYYYYMMDD)
+  const versionNumber = `V${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
 
   return (
-    <div id="quote-content" className="w-full max-w-4xl mx-auto bg-background" data-pdf-trip-id={data.tripId}>
-      {/* En-tête avec logo et titre */}
-      <div className="relative h-64 bg-gradient-to-br from-primary/20 via-primary/10 to-background border-b">
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-          <img 
-            src="/src/assets/logo-adgentes.png" 
-            alt="AD Gentes" 
-            className="h-16 mb-6 object-contain"
-            data-pdf-logo
-          />
-          <EditableText
-            value={editableTitle}
-            onChange={setEditableTitle}
-            as="h1"
-            className="text-4xl font-bold text-center mb-2"
-            data-pdf-quote-title
-          />
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <EditableText
-                value={editableDestination}
-                onChange={setEditableDestination}
-                inline
-                data-pdf-quote-destination
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <span data-pdf-quote-duration>{data.duration} jours</span>
-            </div>
-          </div>
-          {editableStartDate && editableEndDate && (
-            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1" data-pdf-quote-dates>
-              Du <EditableDate 
-                value={editableStartDate}
-                onChange={setEditableStartDate}
-                className="text-sm text-muted-foreground"
-                data-pdf-quote-start-date
-              /> au <EditableDate 
-                value={editableEndDate}
-                onChange={setEditableEndDate}
-                className="text-sm text-muted-foreground"
-                data-pdf-quote-end-date
-              />
-            </p>
-          )}
-        </div>
+    <div className="quote-container max-w-5xl mx-auto bg-background p-8">
+      {/* VERSION NUMBER - Top Right */}
+      <div className="text-right text-sm text-muted-foreground mb-4 no-print">
+        <span className="font-mono">{versionNumber}</span>
       </div>
 
-      {/* Image de couverture du devis */}
-      <div className="px-8 pt-8">
-        <div className="no-print">
+      {/* PAGE DE GARDE */}
+      <section className="cover-page mb-16 text-center" data-pdf-section="cover">
+        <div className="mb-6 no-print">
           <ImageUploader
             tripId={data.tripId}
             imageType="quote"
@@ -245,378 +228,495 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
             onImageDeleted={handleQuoteCoverDeleted}
           />
         </div>
-        <div className="print-only">
-          {quoteCoverImage && (
-            <img
-              src={quoteCoverImage.public_url}
-              alt="Couverture du devis"
-              className="w-full h-auto object-contain"
-              data-pdf-quote-cover-image
-            />
-          )}
-        </div>
-      </div>
 
-      {/* Programme du voyage */}
-      <div className="p-8" data-pdf-program-section>
-        <h2 className="text-2xl font-bold mb-6">Votre programme</h2>
-        <div className="space-y-6">
-          {stepsData.map((step, stepIndex) => (
-            <div key={step.id} className="border rounded-lg p-6 bg-card" data-pdf-step data-pdf-step-id={step.id}>
+        {quoteCoverImage && (
+          <div className="mb-8 rounded-lg overflow-hidden print-only">
+            <img 
+              src={quoteCoverImage.public_url} 
+              alt="Cover" 
+              className="w-full h-[400px] object-cover"
+            />
+          </div>
+        )}
+
+        <h1 className="text-5xl font-bold mb-6" data-pdf-title>
+          <EditableText
+            value={mainTitle}
+            onChange={setMainTitle}
+            className="text-5xl font-bold"
+          />
+        </h1>
+
+        <div className="text-2xl text-muted-foreground mb-4 uppercase tracking-wide" data-pdf-client>
+          <EditableText
+            value={participants}
+            onChange={setParticipants}
+            className="text-2xl"
+            placeholder="NOM DES PARTICIPANTS"
+          />
+        </div>
+
+        <div className="text-xl text-muted-foreground" data-pdf-dates>
+          du <EditableDate value={startDate} onChange={setStartDate} /> au{" "}
+          <EditableDate value={endDate} onChange={setEndDate} />
+        </div>
+      </section>
+
+      {/* RÉSUMÉ DU VOYAGE */}
+      <section className="summary-section mb-16 p-8 bg-muted/30 rounded-lg" data-pdf-section="summary">
+        <h2 className="text-3xl font-bold mb-4">
+          <EditableText
+            value={mainTitle}
+            onChange={setMainTitle}
+            className="text-3xl font-bold"
+          />
+        </h2>
+
+        <div className="mb-6">
+          <EditableText
+            value={description}
+            onChange={setDescription}
+            multiline
+            className="text-lg leading-relaxed text-muted-foreground"
+            placeholder="Description du voyage..."
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="text-2xl font-semibold">
+            {tripDuration} nuits
+          </div>
+          <div className="text-2xl font-bold text-primary">
+            <EditableText
+              value={price}
+              onChange={setPrice}
+              className="text-2xl font-bold"
+              placeholder="Prix"
+            /> CHF
+          </div>
+        </div>
+
+        <h3 className="text-xl font-semibold mb-4">Les points forts de ce voyage</h3>
+        <ul className="space-y-2 mb-8">
+          {highlights.map((highlight, index) => (
+            <li key={index} className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+              <EditableText
+                value={highlight}
+                onChange={(newValue) => {
+                  const newHighlights = [...highlights];
+                  newHighlights[index] = newValue;
+                  setHighlights(newHighlights);
+                }}
+                className="flex-1"
+              />
+            </li>
+          ))}
+        </ul>
+
+        <div className="p-6 bg-background rounded-lg border border-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div className="font-semibold mb-1">Destination</div>
+              <EditableText value={destination} onChange={setDestination} placeholder="Destination" />
+            </div>
+            <div>
+              <div className="font-semibold mb-1">Dates</div>
+              <div>
+                <EditableDate value={startDate} onChange={setStartDate} /> au{" "}
+                <EditableDate value={endDate} onChange={setEndDate} />
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-1">Durée</div>
+              <div>{tripDuration} nuits</div>
+            </div>
+            <div>
+              <div className="font-semibold mb-1">Voyageurs</div>
+              <EditableText 
+                value={numberOfPeople} 
+                onChange={setNumberOfPeople}
+                placeholder="4 pers."
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* POURQUOI RÉSERVER AVEC AD GENTES */}
+      <section className="why-book-section mb-16 p-8 bg-primary/5 rounded-lg" data-pdf-section="why-book">
+        <h2 className="text-3xl font-bold mb-6">Pourquoi réserver avec Ad Gentes ?</h2>
+        <ul className="space-y-3">
+          {whyBookPoints.map((point, index) => (
+            <li key={index} className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+              <EditableText
+                value={point}
+                onChange={(newValue) => {
+                  const newPoints = [...whyBookPoints];
+                  newPoints[index] = newValue;
+                  setWhyBookPoints(newPoints);
+                }}
+                className="flex-1"
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* BLOC TARIFAIRE */}
+      <section className="pricing-section mb-16 p-8 bg-muted/30 rounded-lg" data-pdf-section="pricing">
+        <h2 className="text-3xl font-bold mb-6">Notre proposition</h2>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4">
+            <EditableText value={mainTitle} onChange={setMainTitle} />
+          </h3>
+          <div className="grid grid-cols-2 gap-4 text-2xl font-bold">
+            <div>
+              <EditableText value={pricePerPerson} onChange={setPricePerPerson} placeholder="2 595" /> CHF/pers.
+            </div>
+            <div className="text-primary">
+              <EditableText value={price} onChange={setPrice} placeholder="10 380" /> CHF au total
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 bg-background/50 rounded-lg border-l-4 border-primary">
+          <p className="text-sm text-muted-foreground mb-2 font-semibold">Le mot de votre conseiller</p>
+          <EditableText
+            value={advisorMessage}
+            onChange={setAdvisorMessage}
+            multiline
+            className="text-muted-foreground italic"
+            placeholder="Message personnalisé de votre conseiller..."
+          />
+        </div>
+      </section>
+
+      {/* PROGRAMME JOUR PAR JOUR */}
+      <section className="itinerary-section mb-16" data-pdf-section="itinerary">
+        <h2 className="text-3xl font-bold mb-8">Votre programme détaillé</h2>
+        
+        <div className="space-y-8">
+          {steps.map((step, stepIndex) => (
+            <div key={stepIndex} className="step-card p-6 bg-muted/20 rounded-lg border border-border">
+              {/* Image de l'étape */}
+              <div className="mb-4 no-print">
+                <ImageUploader
+                  tripId={data.tripId}
+                  stepId={steps[stepIndex].id}
+                  imageType="quote-step"
+                  position={stepIndex + 1}
+                  currentImage={stepImages[stepIndex]}
+                  onImageUploaded={(image) => handleStepImageUploaded(stepIndex, image)}
+                  onImageDeleted={() => handleStepImageDeleted(stepIndex)}
+                />
+              </div>
+
+              {stepImages[stepIndex] && (
+                <div className="mb-4 rounded-lg overflow-hidden print-only">
+                  <img 
+                    src={stepImages[stepIndex]!.public_url} 
+                    alt={`Step ${stepIndex + 1}`} 
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
+
               <div className="flex items-start gap-4 mb-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">{stepIndex + 1}</span>
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                  J{stepIndex + 1}
                 </div>
                 <div className="flex-1">
-                  <EditableText
-                    value={step.editableTitle}
-                    onChange={(newTitle) => updateStepTitle(stepIndex, newTitle)}
-                    as="h3"
-                    className="text-xl font-semibold mb-1"
-                    data-pdf-step-title
-                  />
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    {step.editableDate && (
-                      <EditableDate
-                        value={step.editableDate}
-                        onChange={(newDate) => updateStepDate(stepIndex, newDate)}
-                        className="text-sm text-muted-foreground"
-                        data-pdf-step-date
-                      />
-                    )}
-                    {step.location && (
-                      <span className="flex items-center gap-1" data-pdf-step-location>
-                        <MapPin className="h-3 w-3" />
-                        {step.location}
-                      </span>
-                    )}
+                  <h3 className="text-xl font-semibold mb-2">
+                    <EditableText
+                      value={step.title}
+                      onChange={(newValue) => updateStepTitle(stepIndex, newValue)}
+                      className="text-xl font-semibold"
+                      placeholder={`Jour ${stepIndex + 1}`}
+                    />
+                  </h3>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    <EditableDate 
+                      value={step.date ? new Date(step.date) : new Date()} 
+                      onChange={(newValue) => updateStepDate(stepIndex, newValue)}
+                    />
                   </div>
                 </div>
               </div>
-              
-              {step.editableDescription && (
+
+              <div className="mb-4">
                 <EditableText
-                  value={step.editableDescription}
-                  onChange={(newDesc) => updateStepDescription(stepIndex, newDesc)}
+                  value={step.description}
+                  onChange={(newValue) => updateStepDescription(stepIndex, newValue)}
                   multiline
-                  as="p"
-                  className="text-muted-foreground mb-4"
-                  data-pdf-step-description
+                  className="text-muted-foreground leading-relaxed"
+                  placeholder="Description de la journée..."
                 />
-              )}
+              </div>
 
               {step.segments.length > 0 && (
-                <div className="space-y-2 mt-4" data-pdf-step-segments>
+                <div className="mt-4 space-y-2">
+                  <h4 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                    Prestations
+                  </h4>
                   {step.segments.map((segment, segmentIndex) => (
-                    <div key={segment.id} className="flex items-start gap-3 text-sm pl-16" data-pdf-segment data-pdf-segment-id={segment.id}>
-                      <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
+                    <div key={segmentIndex} className="pl-4 border-l-2 border-primary/30">
+                      <div className="font-medium">
                         <EditableText
-                          value={segment.editableTitle}
-                          onChange={(newTitle) => updateSegmentTitle(stepIndex, segmentIndex, newTitle)}
-                          inline
-                          className="font-medium"
-                          data-pdf-segment-title
+                          value={segment.title}
+                          onChange={(newValue) =>
+                            updateSegmentTitle(stepIndex, segmentIndex, newValue)
+                          }
+                          placeholder="Prestation"
                         />
-                        {segment.editableProvider && (
-                          <span className="text-muted-foreground ml-2">
-                            (<EditableText
-                              value={segment.editableProvider}
-                              onChange={(newProvider) => updateSegmentProvider(stepIndex, segmentIndex, newProvider)}
-                              inline
-                              className="text-muted-foreground"
-                              data-pdf-segment-provider
-                            />)
-                          </span>
-                        )}
-                        {segment.editableDescription && (
-                          <EditableText
-                            value={segment.editableDescription}
-                            onChange={(newDesc) => updateSegmentDescription(stepIndex, segmentIndex, newDesc)}
-                            multiline
-                            as="p"
-                            className="text-muted-foreground mt-1"
-                            data-pdf-segment-description
-                          />
-                        )}
                       </div>
+                      {segment.provider && (
+                        <div className="text-sm text-muted-foreground">
+                          <EditableText
+                            value={segment.provider}
+                            onChange={(newValue) =>
+                              updateSegmentProvider(stepIndex, segmentIndex, newValue)
+                            }
+                            placeholder="Prestataire"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      </section>
 
-              {/* Image de l'étape */}
-              <div className="mt-4">
-                <div className="no-print">
-                  <ImageUploader
-                    tripId={data.tripId}
-                    stepId={step.id}
-                    imageType="quote-step"
-                    position={1}
-                    currentImage={stepImages[step.id]}
-                    onImageUploaded={handleStepImageUploaded(step.id)}
-                    onImageDeleted={handleStepImageDeleted(step.id)}
+      {/* INCLUS / NON INCLUS */}
+      <section className="included-section mb-16" data-pdf-section="included">
+        <h2 className="text-3xl font-bold mb-6">Ce qui est inclus</h2>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="included-box p-6 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+            <h3 className="text-xl font-semibold mb-4 text-green-700 dark:text-green-400">
+              ✓ Inclus dans le prix
+            </h3>
+            <ul className="space-y-2 text-sm">
+              {includedItems.map((item, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <Check className="w-4 h-4 text-green-600 dark:text-green-500 mt-0.5 flex-shrink-0" />
+                  <EditableText
+                    value={item}
+                    onChange={(newValue) => {
+                      const newItems = [...includedItems];
+                      newItems[index] = newValue;
+                      setIncludedItems(newItems);
+                    }}
+                    className="flex-1"
                   />
-                </div>
-                <div className="print-only">
-                  {stepImages[step.id] && (
-                    <img
-                      src={stepImages[step.id]!.public_url}
-                      alt={`Image ${step.editableTitle}`}
-                      className="w-full h-auto object-contain"
-                      data-pdf-step-image={step.id}
-                    />
-                  )}
-                </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="excluded-box p-6 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <h3 className="text-xl font-semibold mb-4 text-orange-700 dark:text-orange-400">
+              ✗ Non inclus
+            </h3>
+            <ul className="space-y-2 text-sm">
+              {excludedItems.map((item, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-orange-600 dark:text-orange-500 mt-0.5 flex-shrink-0">✗</span>
+                  <EditableText
+                    value={item}
+                    onChange={(newValue) => {
+                      const newItems = [...excludedItems];
+                      newItems[index] = newValue;
+                      setExcludedItems(newItems);
+                    }}
+                    className="flex-1"
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* SANTÉ & FORMALITÉS */}
+      <section className="health-formalities-section mb-16 p-8 bg-muted/30 rounded-lg" data-pdf-section="health">
+        <h2 className="text-3xl font-bold mb-6">Informations importantes</h2>
+        
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold mb-3">Formalités d'entrée</h3>
+            <EditableText
+              value={entryFormalities}
+              onChange={setEntryFormalities}
+              multiline
+              className="text-muted-foreground"
+              placeholder="Informations sur les formalités d'entrée (passeport, visa, etc.)..."
+            />
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-3">Santé</h3>
+            <EditableText
+              value={healthRequirements}
+              onChange={setHealthRequirements}
+              multiline
+              className="text-muted-foreground"
+              placeholder="Informations sur les vaccins, précautions sanitaires..."
+            />
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-3">Conditions d'annulation</h3>
+            <EditableText
+              value={cancellationPolicy}
+              onChange={setCancellationPolicy}
+              multiline
+              className="text-muted-foreground"
+              placeholder="Conditions d'annulation spécifiques..."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* AVIS CLIENTS */}
+      <section className="reviews-section mb-16 p-8 bg-primary/5 rounded-lg" data-pdf-section="reviews">
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-1 mb-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star key={star} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+            ))}
+          </div>
+          <div className="text-2xl font-bold">4.9/5</div>
+          <div className="text-sm text-muted-foreground">Basé sur les avis clients</div>
+        </div>
+
+        <div className="space-y-6">
+          {testimonials.map((testimonial, index) => (
+            <div key={index} className="p-6 bg-background rounded-lg border border-border">
+              <div className="flex items-center gap-1 mb-3">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <blockquote className="mb-3 italic text-muted-foreground">
+                "<EditableText
+                  value={testimonial.quote}
+                  onChange={(newValue) => {
+                    const newTestimonials = [...testimonials];
+                    newTestimonials[index].quote = newValue;
+                    setTestimonials(newTestimonials);
+                  }}
+                  className="italic"
+                />"
+              </blockquote>
+              <div className="text-sm font-semibold">
+                <EditableText
+                  value={testimonial.author}
+                  onChange={(newValue) => {
+                    const newTestimonials = [...testimonials];
+                    newTestimonials[index].author = newValue;
+                    setTestimonials(newTestimonials);
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Pourquoi réserver avec AD Gentes */}
-      <div className="bg-muted/30 p-8 border-y" data-pdf-why-section>
-        <EditableText
-          value={whyBookTitle}
-          onChange={setWhyBookTitle}
-          as="h2"
-          className="text-2xl font-bold mb-6"
-          data-pdf-why-title
-        />
-        <EditableContent className="grid md:grid-cols-3 gap-6">
-          <div className="space-y-2" data-pdf-why-expertise>
-            <CheckCircle2 className="h-8 w-8 text-primary mb-2" />
-            <EditableText
-              value={expertiseTitle}
-              onChange={setExpertiseTitle}
-              as="h3"
-              className="font-semibold"
-              data-pdf-why-expertise-title
-            />
-            <EditableText
-              value={expertiseDesc}
-              onChange={setExpertiseDesc}
-              multiline
-              as="p"
-              className="text-sm text-muted-foreground"
-              data-pdf-why-expertise-desc
-            />
-          </div>
-          <div className="space-y-2" data-pdf-why-accomp>
-            <CheckCircle2 className="h-8 w-8 text-primary mb-2" />
-            <EditableText
-              value={accompTitle}
-              onChange={setAccompTitle}
-              as="h3"
-              className="font-semibold"
-              data-pdf-why-accomp-title
-            />
-            <EditableText
-              value={accompDesc}
-              onChange={setAccompDesc}
-              multiline
-              as="p"
-              className="text-sm text-muted-foreground"
-              data-pdf-why-accomp-desc
-            />
-          </div>
-          <div className="space-y-2" data-pdf-why-flex>
-            <CheckCircle2 className="h-8 w-8 text-primary mb-2" />
-            <EditableText
-              value={flexTitle}
-              onChange={setFlexTitle}
-              as="h3"
-              className="font-semibold"
-              data-pdf-why-flex-title
-            />
-            <EditableText
-              value={flexDesc}
-              onChange={setFlexDesc}
-              multiline
-              as="p"
-              className="text-sm text-muted-foreground"
-              data-pdf-why-flex-desc
-            />
-          </div>
-        </EditableContent>
-      </div>
+      {/* FAQ */}
+      <section className="faq-section mb-16" data-pdf-section="faq">
+        <h2 className="text-3xl font-bold mb-4">Questions fréquentes</h2>
+        <p className="text-muted-foreground mb-8">
+          Tout ce que vous devez savoir sur votre séjour. Vous ne trouvez pas la réponse à votre question ? Contactez notre équipe.
+        </p>
 
-      {/* Avis clients */}
-      <div className="p-8" data-pdf-testimonials-section>
-        <EditableText
-          value={testimonialsTitle}
-          onChange={setTestimonialsTitle}
-          as="h2"
-          className="text-2xl font-bold mb-6"
-          data-pdf-testimonials-title
-        />
-        <EditableContent className="grid md:grid-cols-2 gap-6">
-          <div className="border rounded-lg p-6 bg-card" data-pdf-testimonial1>
-            <div className="flex gap-1 mb-3">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className="h-4 w-4 fill-primary text-primary" />
-              ))}
+        <div className="space-y-6">
+          {faqs.map((faq, index) => (
+            <div key={index} className="p-6 bg-muted/20 rounded-lg border border-border">
+              <h3 className="text-lg font-semibold mb-3">
+                <EditableText
+                  value={faq.question}
+                  onChange={(newValue) => {
+                    const newFaqs = [...faqs];
+                    newFaqs[index].question = newValue;
+                    setFaqs(newFaqs);
+                  }}
+                  className="text-lg font-semibold"
+                />
+              </h3>
+              <div className="text-muted-foreground">
+                <EditableText
+                  value={faq.answer}
+                  onChange={(newValue) => {
+                    const newFaqs = [...faqs];
+                    newFaqs[index].answer = newValue;
+                    setFaqs(newFaqs);
+                  }}
+                  multiline
+                  className="text-muted-foreground"
+                />
+              </div>
             </div>
-            <EditableText
-              value={testimonial1Quote}
-              onChange={setTestimonial1Quote}
-              multiline
-              as="p"
-              className="text-muted-foreground mb-3"
-              data-pdf-testimonial1-quote
-            />
-            <EditableText
-              value={testimonial1Author}
-              onChange={setTestimonial1Author}
-              as="p"
-              className="text-sm font-medium"
-              data-pdf-testimonial1-author
-            />
-          </div>
-          <div className="border rounded-lg p-6 bg-card" data-pdf-testimonial2>
-            <div className="flex gap-1 mb-3">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className="h-4 w-4 fill-primary text-primary" />
-              ))}
-            </div>
-            <EditableText
-              value={testimonial2Quote}
-              onChange={setTestimonial2Quote}
-              multiline
-              as="p"
-              className="text-muted-foreground mb-3"
-              data-pdf-testimonial2-quote
-            />
-            <EditableText
-              value={testimonial2Author}
-              onChange={setTestimonial2Author}
-              as="p"
-              className="text-sm font-medium"
-              data-pdf-testimonial2-author
-            />
-          </div>
-        </EditableContent>
-      </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Questions fréquentes */}
-      <div className="bg-muted/30 p-8 border-t" data-pdf-faq-section>
+      {/* MENTIONS LÉGALES */}
+      <section className="legal-section mb-16 p-8 bg-muted/30 rounded-lg text-sm" data-pdf-section="legal">
+        <h2 className="text-2xl font-bold mb-4">Mentions légales</h2>
         <EditableText
-          value={faqTitle}
-          onChange={setFaqTitle}
-          as="h2"
-          className="text-2xl font-bold mb-6"
-          data-pdf-faq-title
+          value={legalMentions}
+          onChange={setLegalMentions}
+          multiline
+          className="text-muted-foreground text-sm leading-relaxed"
+          placeholder="Mentions légales, conditions générales de vente..."
         />
-        <EditableContent className="space-y-4">
-          <div data-pdf-faq1>
-            <EditableText
-              value={faq1Question}
-              onChange={setFaq1Question}
-              as="h3"
-              className="font-semibold mb-2 flex items-center gap-2"
-              data-pdf-faq1-q
-            >
-              <MessageCircle className="h-5 w-5 text-primary" />
-              {faq1Question}
-            </EditableText>
-            <EditableText
-              value={faq1Answer}
-              onChange={setFaq1Answer}
-              multiline
-              as="p"
-              className="text-muted-foreground text-sm pl-7"
-              data-pdf-faq1-a
-            />
-          </div>
-          <div data-pdf-faq2>
-            <EditableText
-              value={faq2Question}
-              onChange={setFaq2Question}
-              as="h3"
-              className="font-semibold mb-2 flex items-center gap-2"
-              data-pdf-faq2-q
-            >
-              <MessageCircle className="h-5 w-5 text-primary" />
-              {faq2Question}
-            </EditableText>
-            <EditableText
-              value={faq2Answer}
-              onChange={setFaq2Answer}
-              multiline
-              as="p"
-              className="text-muted-foreground text-sm pl-7"
-              data-pdf-faq2-a
-            />
-          </div>
-          <div data-pdf-faq3>
-            <EditableText
-              value={faq3Question}
-              onChange={setFaq3Question}
-              as="h3"
-              className="font-semibold mb-2 flex items-center gap-2"
-              data-pdf-faq3-q
-            >
-              <MessageCircle className="h-5 w-5 text-primary" />
-              {faq3Question}
-            </EditableText>
-            <EditableText
-              value={faq3Answer}
-              onChange={setFaq3Answer}
-              multiline
-              as="p"
-              className="text-muted-foreground text-sm pl-7"
-              data-pdf-faq3-a
-            />
-          </div>
-        </EditableContent>
-      </div>
+      </section>
 
-      {/* Contact */}
-      <div className="p-8 text-center border-t" data-pdf-contact-section>
-        <EditableText
-          value={contactTitle}
-          onChange={setContactTitle}
-          as="h2"
-          className="text-2xl font-bold mb-4"
-          data-pdf-contact-title
-        />
-        <EditableText
-          value={contactSubtitle}
-          onChange={setContactSubtitle}
-          as="p"
-          className="text-muted-foreground mb-6"
-          data-pdf-contact-subtitle
-        />
-        <EditableContent className="space-y-2 text-sm text-muted-foreground">
-          <p className="flex items-center justify-center gap-2">
-            <Phone className="h-4 w-4" />
+      {/* CONTACT FINAL */}
+      <section className="contact-section text-center p-8 bg-primary/5 rounded-lg" data-pdf-section="contact">
+        <h2 className="text-2xl font-bold mb-4">Vous avez une question ?</h2>
+        <p className="text-muted-foreground mb-6">
+          Je reste personnellement à votre disposition pour affiner le programme selon vos souhaits !
+        </p>
+
+        <div className="space-y-2">
+          <div className="font-semibold text-lg">
             <EditableText
-              value={contactPhone}
-              onChange={setContactPhone}
-              inline
-              data-pdf-contact-phone
+              value={contactName}
+              onChange={setContactName}
+              placeholder="Nom du conseiller"
             />
-          </p>
-          <p className="flex items-center justify-center gap-2">
-            <Mail className="h-4 w-4" />
+          </div>
+          <div className="text-primary">
             <EditableText
               value={contactEmail}
               onChange={setContactEmail}
-              inline
-              data-pdf-contact-email
+              placeholder="email@ad-gentes.ch"
             />
-          </p>
-          <p className="flex items-center justify-center gap-2">
-            <Globe className="h-4 w-4" />
+          </div>
+          <div className="text-muted-foreground">
             <EditableText
-              value={contactWebsite}
-              onChange={setContactWebsite}
-              inline
-              data-pdf-contact-website
+              value={contactPhone}
+              onChange={setContactPhone}
+              placeholder="+41 22 908 61 83"
             />
-          </p>
-        </EditableContent>
-      </div>
+          </div>
+        </div>
+
+        {/* Logo Ad Gentes */}
+        <div className="mt-8">
+          <img 
+            src="/src/assets/logo-adgentes.png" 
+            alt="Ad Gentes" 
+            className="h-12 mx-auto opacity-70"
+          />
+        </div>
+      </section>
     </div>
   );
 }
