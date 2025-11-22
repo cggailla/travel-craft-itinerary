@@ -35,6 +35,10 @@ export interface TravelSegmentResponse {
 
 /**
  * 🔐 NIVEAU 2 : Create a new trip (avec vérification auth)
+ * 
+ * ⚠️ ATTENTION: Cette fonction ne supporte QUE title et destination_zone
+ * Pour créer un voyage avec price, participants, number_of_people,
+ * utilisez createTrip() depuis @/services/tripService
  */
 export async function createTrip(tripData?: { 
   title?: string; 
