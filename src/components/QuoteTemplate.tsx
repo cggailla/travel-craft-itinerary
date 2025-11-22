@@ -26,7 +26,20 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   const [startDate, setStartDate] = useState<Date>(data.startDate ? new Date(data.startDate) : new Date());
   const [endDate, setEndDate] = useState<Date>(data.endDate ? new Date(data.endDate) : new Date());
   const [price, setPrice] = useState(data.price?.toString() || "");
-  const [pricePerPerson, setPricePerPerson] = useState("");
+  
+  // États pour la section tarifaire
+  const [pricingDescription, setPricingDescription] = useState(
+    "Embarquez pour un voyage à travers les âges, des pyramides majestueuses du Caire aux temples légendaires d'Abou Simbel. Naviguez sur les eaux mythiques du Nil et laissez-vous envoûter par les trésors millénaires des pharaons."
+  );
+  const [destination, setDestination] = useState(data.destination || "Égypte");
+  const [numberOfTravelers, setNumberOfTravelers] = useState(data.numberOfPeople?.toString() + " pers." || "4 pers.");
+  const [pricingHighlights, setPricingHighlights] = useState([
+    "Pyramides de Gizeh et Grand Sphinx.",
+    "Grand Musée Égyptien, écrin des trésors pharaoniques.",
+    "Croisière 5* sur le Nil et temples de Karnak, Louxor, Edfou, Kom Ombo.",
+    "Vallée des Rois et temple d'Hatchepsout à Louxor.",
+    "Assouan majestueuse : Abou Simbel et temple de Philae."
+  ]);
 
   // États pour les sections
   const [advisorMessage, setAdvisorMessage] = useState(
@@ -226,6 +239,7 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
 
   // Images
   const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
+  const [pricingImage, setPricingImage] = useState<SupabaseImage | undefined>();
   const [stepImages, setStepImages] = useState<(SupabaseImage | undefined)[]>([]);
 
   useEffect(() => {
@@ -234,6 +248,9 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
       if (result.success && result.data) {
         const quoteCover = result.data.find(img => img.file_name.startsWith('quote_cover'));
         if (quoteCover) setQuoteCoverImage(quoteCover);
+
+        const pricingImg = result.data.find(img => img.file_name.startsWith('quote-pricing'));
+        if (pricingImg) setPricingImage(pricingImg);
 
         const images: (SupabaseImage | undefined)[] = [];
         for (let i = 0; i < steps.length; i++) {
@@ -252,6 +269,14 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
 
   const handleQuoteCoverDeleted = () => {
     setQuoteCoverImage(undefined);
+  };
+
+  const handlePricingImageUploaded = (image: SupabaseImage) => {
+    setPricingImage(image);
+  };
+
+  const handlePricingImageDeleted = () => {
+    setPricingImage(undefined);
   };
 
   const handleStepImageUploaded = (index: number, image: SupabaseImage) => {
@@ -326,14 +351,26 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
 
       {/* 2. BLOC TARIFAIRE */}
       <QuotePricingSection
+        tripId={data.tripId}
         title={mainTitle}
         onTitleChange={setMainTitle}
-        pricePerPerson={pricePerPerson}
-        onPricePerPersonChange={setPricePerPerson}
+        description={pricingDescription}
+        onDescriptionChange={setPricingDescription}
+        destination={destination}
+        onDestinationChange={setDestination}
+        startDate={startDate}
+        endDate={endDate}
+        numberOfTravelers={numberOfTravelers}
+        onNumberOfTravelersChange={setNumberOfTravelers}
         totalPrice={price}
         onTotalPriceChange={setPrice}
-        advisorMessage={advisorMessage}
-        onAdvisorMessageChange={setAdvisorMessage}
+        highlights={pricingHighlights}
+        onHighlightsChange={setPricingHighlights}
+        contactEmail={contactEmail}
+        onContactEmailChange={setContactEmail}
+        pricingImage={pricingImage}
+        onImageUploaded={handlePricingImageUploaded}
+        onImageDeleted={handlePricingImageDeleted}
       />
 
       {/* 3. INCLUS / NON INCLUS */}
