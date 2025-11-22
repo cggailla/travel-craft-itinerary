@@ -142,7 +142,7 @@ export function CreateTripDialog({ open, onOpenChange, onConfirm }: CreateTripDi
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-primary/10">
