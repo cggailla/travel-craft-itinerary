@@ -58,10 +58,60 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
     "Les conditions d'annulation spécifiques à ce voyage vous seront communiquées lors de la réservation. Des frais peuvent s'appliquer en fonction de la date d'annulation."
   );
 
-  const [accommodations, setAccommodations] = useState([
-    { name: "Hôtel exemple 1", type: "Hôtel 5*", nights: "3 nuits", location: "Ville 1" },
-    { name: "Hôtel exemple 2", type: "Hôtel 4*", nights: "2 nuits", location: "Ville 2" }
-  ]);
+  // Extraire automatiquement les hébergements depuis les segments de type 'hotel' ou 'accommodation'
+  const [accommodations, setAccommodations] = useState(() => {
+    const hotelSegments: Array<{
+      name: string;
+      type: string;
+      nights: string;
+      location: string;
+      description: string;
+      startDate: Date;
+    }> = [];
+
+    data.steps.forEach(step => {
+      step.segments
+        .filter(seg => seg.type === 'hotel' || seg.type === 'accommodation')
+        .forEach(seg => {
+          // Calculer le nombre de nuits si les dates sont disponibles
+          let nights = "1 nuit";
+          let startDate = new Date();
+          
+          if (step.date) {
+            startDate = new Date(step.date);
+          }
+
+          // Utiliser les données enrichies si disponibles
+          const enrichedData = (seg as any).enriched;
+          const starRating = (seg as any).star_rating;
+          
+          hotelSegments.push({
+            name: seg.title,
+            type: starRating ? `Hôtel ${starRating}*` : "Hôtel",
+            nights: nights,
+            location: step.location || "",
+            description: seg.description || "",
+            startDate: startDate
+          });
+        });
+    });
+
+    // Trier par date de début
+    hotelSegments.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+    // Retirer le champ startDate après le tri (pas nécessaire dans l'interface)
+    const sortedAccommodations = hotelSegments.map(({ startDate, ...rest }) => rest);
+
+    // Si aucun hébergement trouvé, retourner des exemples
+    if (sortedAccommodations.length === 0) {
+      return [
+        { name: "Hôtel exemple 1", type: "Hôtel 5*", nights: "3 nuits", location: "Ville 1", description: "" },
+        { name: "Hôtel exemple 2", type: "Hôtel 4*", nights: "2 nuits", location: "Ville 2", description: "" }
+      ];
+    }
+
+    return sortedAccommodations;
+  });
 
   const [legalMentions, setLegalMentions] = useState(
     "Ad Gentes est une agence de voyages basée en Suisse. Toutes nos prestations sont soumises aux conditions générales de vente disponibles sur demande. Garantie financière conforme à la législation suisse."

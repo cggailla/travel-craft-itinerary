@@ -6,6 +6,7 @@ interface Accommodation {
   type: string;
   nights: string;
   location: string;
+  description: string;
 }
 
 interface QuoteAccommodationSectionProps {
@@ -41,7 +42,7 @@ export function QuoteAccommodationSection({
                     placeholder="Nom de l'hébergement"
                   />
                 </h3>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm mb-3">
                   <div>
                     <span className="text-muted-foreground">Type : </span>
                     <EditableText
@@ -79,6 +80,20 @@ export function QuoteAccommodationSection({
                     />
                   </div>
                 </div>
+                {accommodation.description && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    <EditableText
+                      value={accommodation.description}
+                      onChange={(newValue) => {
+                        const newAccommodations = [...accommodations];
+                        newAccommodations[index].description = newValue;
+                        onAccommodationsChange(newAccommodations);
+                      }}
+                      multiline
+                      placeholder="Description de l'hébergement..."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
