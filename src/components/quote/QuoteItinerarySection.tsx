@@ -26,6 +26,7 @@ interface QuoteItinerarySectionProps {
   stepImages: (SupabaseImage | undefined)[];
   onStepImageUploaded: (index: number, image: SupabaseImage) => void;
   onStepImageDeleted: (index: number) => void;
+  pdfMode?: boolean;
 }
 
 export function QuoteItinerarySection({
@@ -39,47 +40,50 @@ export function QuoteItinerarySection({
   stepImages,
   onStepImageUploaded,
   onStepImageDeleted,
+  pdfMode = false,
 }: QuoteItinerarySectionProps) {
   return (
-    <section className="itinerary-section mb-16" data-pdf-section="itinerary">
+    <section className="itinerary-section" data-pdf-section="itinerary">
       <h2 className="text-3xl font-bold mb-8">Votre programme détaillé</h2>
       
-      <div className="space-y-8">
+      <div className={pdfMode ? "space-y-4" : "space-y-8"}>
         {steps.map((step, stepIndex) => (
-          <div key={stepIndex} className="step-card p-6 bg-muted/20 rounded-lg border border-border">
+          <div key={stepIndex} className={pdfMode ? "step-card p-4 bg-muted/20 rounded-lg border border-border" : "step-card p-6 bg-muted/20 rounded-lg border border-border"}>
             {/* Image de l'étape */}
-            <div className="mb-4 no-print">
-              <ImageUploader
-                tripId={tripId}
-                stepId={step.id}
-                imageType="quote-step"
-                position={stepIndex + 1}
-                currentImage={stepImages[stepIndex]}
-                onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
-                onImageDeleted={() => onStepImageDeleted(stepIndex)}
-              />
-            </div>
+            {!pdfMode && (
+              <div className="mb-4 no-print">
+                <ImageUploader
+                  tripId={tripId}
+                  stepId={step.id}
+                  imageType="quote-step"
+                  position={stepIndex + 1}
+                  currentImage={stepImages[stepIndex]}
+                  onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
+                  onImageDeleted={() => onStepImageDeleted(stepIndex)}
+                />
+              </div>
+            )}
 
             {stepImages[stepIndex] && (
-              <div className="mb-4 rounded-lg overflow-hidden print-only">
+              <div className="mb-4 rounded-lg overflow-hidden">
                 <img 
                   src={stepImages[stepIndex]!.public_url} 
                   alt={`Step ${stepIndex + 1}`} 
-                  className="w-full h-48 object-cover"
+                  className={pdfMode ? "quote-slide-image-small" : "w-full h-48 object-cover"}
                 />
               </div>
             )}
 
             <div className="flex items-start gap-4 mb-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+              <div className={pdfMode ? "flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm" : "flex-shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold"}>
                 J{stepIndex + 1}
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-2">
+                <h3 className={pdfMode ? "text-lg font-semibold mb-1" : "text-xl font-semibold mb-2"}>
                   <EditableText
                     value={step.title}
                     onChange={(newValue) => onStepTitleChange(stepIndex, newValue)}
-                    className="text-xl font-semibold"
+                    className={pdfMode ? "text-lg font-semibold" : "text-xl font-semibold"}
                     placeholder={`Jour ${stepIndex + 1}`}
                   />
                 </h3>
@@ -97,7 +101,7 @@ export function QuoteItinerarySection({
                 value={step.description}
                 onChange={(newValue) => onStepDescriptionChange(stepIndex, newValue)}
                 multiline
-                className="text-muted-foreground leading-relaxed"
+                className={pdfMode ? "text-muted-foreground leading-relaxed text-sm" : "text-muted-foreground leading-relaxed"}
                 placeholder="Description de la journée..."
               />
             </div>
@@ -109,7 +113,7 @@ export function QuoteItinerarySection({
                 </h4>
                 {step.segments.map((segment, segmentIndex) => (
                   <div key={segmentIndex} className="pl-4 border-l-2 border-primary/30">
-                    <div className="font-medium">
+                    <div className={pdfMode ? "font-medium text-sm" : "font-medium"}>
                       <EditableText
                         value={segment.title}
                         onChange={(newValue) =>
