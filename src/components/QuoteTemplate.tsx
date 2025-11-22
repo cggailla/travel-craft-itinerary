@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { QuoteData } from "@/services/quoteService";
 import { listSessionImages, type SupabaseImage } from "@/services/supabaseImageService";
+import { differenceInDays } from "date-fns";
 
 // Import des composants de sections
 import { QuoteCoverPage } from "./quote/QuoteCoverPage";
@@ -73,17 +74,22 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
       step.segments
         .filter(seg => seg.type === 'hotel' || seg.type === 'accommodation')
         .forEach(seg => {
-          // Calculer le nombre de nuits si les dates sont disponibles
-          let nights = "1 nuit";
-          let startDate = new Date();
+          // Récupérer les dates du segment
+          const segmentData = seg as any;
+          const startDate = segmentData.start_date ? new Date(segmentData.start_date) : (step.date ? new Date(step.date) : new Date());
+          const endDate = segmentData.end_date ? new Date(segmentData.end_date) : null;
           
-          if (step.date) {
-            startDate = new Date(step.date);
+          // Calculer le nombre de nuits
+          let nights = "1 nuit";
+          if (endDate && startDate) {
+            const numberOfNights = differenceInDays(endDate, startDate);
+            if (numberOfNights > 0) {
+              nights = numberOfNights === 1 ? "1 nuit" : `${numberOfNights} nuits`;
+            }
           }
 
           // Utiliser les données enrichies si disponibles
-          const enrichedData = (seg as any).enriched;
-          const starRating = (seg as any).star_rating;
+          const starRating = segmentData.star_rating;
           
           hotelSegments.push({
             name: seg.title,
