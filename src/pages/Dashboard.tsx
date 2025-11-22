@@ -7,8 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { CreateTripDialog } from '@/components/CreateTripDialog';
 import { DeleteTripDialog } from '@/components/DeleteTripDialog';
-import { getUserTrips, deleteTrip } from '@/services/tripService';
-import { createTrip } from '@/services/documentService';
+import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List } from 'lucide-react';
@@ -107,17 +106,26 @@ export default function Dashboard() {
   const handleCreateNewTrip = async (data: {
     title: string;
     destination_zone: string;
+    price?: number;
+    participants?: string;
+    number_of_people?: number;
   }) => {
     setIsCreatingTrip(true);
     try {
-      const result = await createTrip(data);
-      if (result.success && result.trip_id) {
+      const result = await createTrip({
+        title: data.title,
+        destination_zone: data.destination_zone,
+        price: data.price,
+        participants: data.participants,
+        number_of_people: data.number_of_people
+      });
+      if (result.success && result.trip) {
         toast({
           title: "Voyage créé",
           description: `"${data.title}" - Redirection vers l'upload de documents...`
         });
         setShowCreateDialog(false);
-        navigate(`/trip/create?tripId=${result.trip_id}`);
+        navigate(`/trip/create?tripId=${result.trip.id}`);
       } else {
         throw new Error(result.error || 'Failed to create trip');
       }
