@@ -43,32 +43,21 @@ export function QuoteCoverPage({
   return (
     <section className="cover-page mb-24 min-h-[600px]" data-pdf-section="cover">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-        {/* LEFT SIDE - Image */}
-        <div className="relative">
-          <div className="mb-6 no-print">
-            <ImageUploader
-              tripId={tripId}
-              imageType="quote"
-              position={1}
-              currentImage={coverImage}
-              onImageUploaded={onImageUploaded}
-              onImageDeleted={onImageDeleted}
-            />
-          </div>
-
-          {coverImage && (
-            <div className="rounded-3xl overflow-hidden shadow-2xl">
-              <img 
-                src={coverImage.public_url} 
-                alt="Cover" 
-                className="w-full h-[500px] object-cover"
-              />
-            </div>
-          )}
-
+        {/* LEFT SIDE - Image with Upload */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30">
+          <ImageUploader
+            tripId={tripId}
+            imageType="quote"
+            position={1}
+            currentImage={coverImage}
+            onImageUploaded={onImageUploaded}
+            onImageDeleted={onImageDeleted}
+            height="h-[500px]"
+          />
+          
           {!coverImage && (
-            <div className="rounded-3xl overflow-hidden bg-muted/30 h-[500px] flex items-center justify-center">
-              <p className="text-muted-foreground">Photo de couverture</p>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <p className="text-muted-foreground text-lg">Photo de couverture</p>
             </div>
           )}
         </div>
