@@ -32,49 +32,86 @@ export function QuoteCoverPage({
   onImageUploaded,
   onImageDeleted,
 }: QuoteCoverPageProps) {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
   return (
-    <section className="cover-page mb-16 text-center" data-pdf-section="cover">
-      <div className="mb-6 no-print">
-        <ImageUploader
-          tripId={tripId}
-          imageType="quote"
-          position={1}
-          currentImage={coverImage}
-          onImageUploaded={onImageUploaded}
-          onImageDeleted={onImageDeleted}
-        />
-      </div>
+    <section className="cover-page mb-24 min-h-[600px]" data-pdf-section="cover">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        {/* LEFT SIDE - Image */}
+        <div className="relative">
+          <div className="mb-6 no-print">
+            <ImageUploader
+              tripId={tripId}
+              imageType="quote"
+              position={1}
+              currentImage={coverImage}
+              onImageUploaded={onImageUploaded}
+              onImageDeleted={onImageDeleted}
+            />
+          </div>
 
-      {coverImage && (
-        <div className="mb-8 rounded-lg overflow-hidden print-only">
-          <img 
-            src={coverImage.public_url} 
-            alt="Cover" 
-            className="w-full h-[400px] object-cover"
-          />
+          {coverImage && (
+            <div className="rounded-3xl overflow-hidden shadow-2xl">
+              <img 
+                src={coverImage.public_url} 
+                alt="Cover" 
+                className="w-full h-[500px] object-cover"
+              />
+            </div>
+          )}
+
+          {!coverImage && (
+            <div className="rounded-3xl overflow-hidden bg-muted/30 h-[500px] flex items-center justify-center">
+              <p className="text-muted-foreground">Photo de couverture</p>
+            </div>
+          )}
         </div>
-      )}
 
-      <h1 className="text-5xl font-bold mb-6" data-pdf-title>
-        <EditableText
-          value={title}
-          onChange={onTitleChange}
-          className="text-5xl font-bold"
-        />
-      </h1>
+        {/* RIGHT SIDE - Content */}
+        <div className="flex flex-col justify-center space-y-8">
+          {/* Logo */}
+          <div className="flex justify-end">
+            <img 
+              src="/src/assets/logo-adgentes.png" 
+              alt="Ad Gentes" 
+              className="h-16 opacity-80"
+            />
+          </div>
 
-      <div className="text-2xl text-muted-foreground mb-4 uppercase tracking-wide" data-pdf-client>
-        <EditableText
-          value={participants}
-          onChange={onParticipantsChange}
-          className="text-2xl"
-          placeholder="NOM DES PARTICIPANTS"
-        />
-      </div>
+          {/* Title */}
+          <div>
+            <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-8" data-pdf-title>
+              <EditableText
+                value={title}
+                onChange={onTitleChange}
+                className="text-5xl md:text-6xl font-bold leading-tight"
+                placeholder="Votre voyage"
+              />
+            </h1>
 
-      <div className="text-xl text-muted-foreground" data-pdf-dates>
-        du <EditableDate value={startDate} onChange={onStartDateChange} /> au{" "}
-        <EditableDate value={endDate} onChange={onEndDateChange} />
+            {/* Participant Name */}
+            <div className="text-lg font-semibold tracking-wide uppercase mb-2" data-pdf-client>
+              <EditableText
+                value={participants}
+                onChange={onParticipantsChange}
+                className="text-lg font-semibold tracking-wide uppercase"
+                placeholder="NOM DES PARTICIPANTS"
+              />
+            </div>
+
+            {/* Dates */}
+            <div className="text-base text-muted-foreground" data-pdf-dates>
+              du <EditableDate value={startDate} onChange={onStartDateChange} /> au{" "}
+              <EditableDate value={endDate} onChange={onEndDateChange} />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
