@@ -58,15 +58,11 @@ export function QuoteItinerarySection({
           {pdfMode && <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>}
           
           <div className={pdfMode ? "h-full flex flex-col" : "step-card p-6 bg-card rounded-lg border border-border"}>
-            {/* Titre de section en mode PDF */}
-            {pdfMode && stepIndex === 0 && (
-              <h2 className="text-2xl font-bold mb-6">Votre programme détaillé</h2>
-            )}
             
             {/* Layout 2 colonnes 50/50: Image à gauche, Contenu à droite */}
-            <div className={pdfMode ? "flex gap-8 flex-1" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
+            <div className={pdfMode ? "grid grid-cols-2 gap-8 flex-1" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
               {/* Colonne gauche: Image - 50% */}
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30 min-h-[500px]">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30">
                 <ImageUploader
                   tripId={tripId}
                   stepId={step.id}
@@ -75,7 +71,7 @@ export function QuoteItinerarySection({
                   currentImage={stepImages[stepIndex]}
                   onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
                   onImageDeleted={() => onStepImageDeleted(stepIndex)}
-                  height="h-full"
+                  height="h-[500px]"
                 />
                 
                 {!stepImages[stepIndex] && (
