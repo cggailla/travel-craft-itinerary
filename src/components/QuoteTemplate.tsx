@@ -17,9 +17,10 @@ import { QuoteLegalSection } from "./quote/QuoteLegalSection";
 
 interface QuoteTemplateProps {
   data: QuoteData;
+  pdfMode?: boolean;
 }
 
-export function QuoteTemplate({ data }: QuoteTemplateProps) {
+export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   // États généraux
   const [mainTitle, setMainTitle] = useState(data.title || "Votre voyage");
   const [participants, setParticipants] = useState(data.participants || "");
@@ -319,121 +320,154 @@ export function QuoteTemplate({ data }: QuoteTemplateProps) {
   return (
     <div className="quote-container max-w-5xl mx-auto bg-background p-8">
       {/* VERSION NUMBER - Top Right */}
-      <div className="text-right text-sm text-muted-foreground mb-4 no-print">
-        <span className="font-mono">{versionNumber}</span>
-      </div>
+      {!pdfMode && (
+        <div className="text-right text-sm text-muted-foreground mb-4 no-print">
+          <span className="font-mono">{versionNumber}</span>
+        </div>
+      )}
 
       {/* 1. PAGE DE GARDE */}
-      <QuoteCoverPage
-        tripId={data.tripId}
-        title={mainTitle}
-        onTitleChange={setMainTitle}
-        participants={participants}
-        onParticipantsChange={setParticipants}
-        startDate={startDate}
-        onStartDateChange={setStartDate}
-        endDate={endDate}
-        onEndDateChange={setEndDate}
-        coverImage={quoteCoverImage}
-        onImageUploaded={handleQuoteCoverUploaded}
-        onImageDeleted={handleQuoteCoverDeleted}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">1</div>}
+        <QuoteCoverPage
+          tripId={data.tripId}
+          title={mainTitle}
+          onTitleChange={setMainTitle}
+          participants={participants}
+          onParticipantsChange={setParticipants}
+          startDate={startDate}
+          onStartDateChange={setStartDate}
+          endDate={endDate}
+          onEndDateChange={setEndDate}
+          coverImage={quoteCoverImage}
+          onImageUploaded={handleQuoteCoverUploaded}
+          onImageDeleted={handleQuoteCoverDeleted}
+        />
+      </div>
 
       {/* 2. BLOC TARIFAIRE */}
-      <QuotePricingSection
-        tripId={data.tripId}
-        title={mainTitle}
-        onTitleChange={setMainTitle}
-        destination={destination}
-        onDestinationChange={setDestination}
-        startDate={startDate}
-        endDate={endDate}
-        numberOfTravelers={numberOfTravelers}
-        onNumberOfTravelersChange={setNumberOfTravelers}
-        totalPrice={price}
-        onTotalPriceChange={setPrice}
-        pricingImage={pricingImage}
-        onImageUploaded={handlePricingImageUploaded}
-        onImageDeleted={handlePricingImageDeleted}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">2</div>}
+        <QuotePricingSection
+          tripId={data.tripId}
+          title={mainTitle}
+          onTitleChange={setMainTitle}
+          destination={destination}
+          onDestinationChange={setDestination}
+          startDate={startDate}
+          endDate={endDate}
+          numberOfTravelers={numberOfTravelers}
+          onNumberOfTravelersChange={setNumberOfTravelers}
+          totalPrice={price}
+          onTotalPriceChange={setPrice}
+          pricingImage={pricingImage}
+          onImageUploaded={handlePricingImageUploaded}
+          onImageDeleted={handlePricingImageDeleted}
+        />
+      </div>
 
       {/* 3. INCLUS / NON INCLUS */}
-      <QuoteIncludedSection
-        includedItems={includedItems}
-        onIncludedItemsChange={setIncludedItems}
-        excludedItems={excludedItems}
-        onExcludedItemsChange={setExcludedItems}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">3</div>}
+        <QuoteIncludedSection
+          includedItems={includedItems}
+          onIncludedItemsChange={setIncludedItems}
+          excludedItems={excludedItems}
+          onExcludedItemsChange={setExcludedItems}
+        />
+      </div>
 
       {/* 4. SANTÉ & FORMALITÉS */}
-      <QuoteHealthFormalities
-        entryFormalities={entryFormalities}
-        onEntryFormalitiesChange={setEntryFormalities}
-        healthRequirements={healthRequirements}
-        onHealthRequirementsChange={setHealthRequirements}
-        cancellationPolicy={cancellationPolicy}
-        onCancellationPolicyChange={setCancellationPolicy}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">4</div>}
+        <QuoteHealthFormalities
+          entryFormalities={entryFormalities}
+          onEntryFormalitiesChange={setEntryFormalities}
+          healthRequirements={healthRequirements}
+          onHealthRequirementsChange={setHealthRequirements}
+          cancellationPolicy={cancellationPolicy}
+          onCancellationPolicyChange={setCancellationPolicy}
+        />
+      </div>
 
       {/* 5. PROGRAMME JOUR PAR JOUR */}
-      <QuoteItinerarySection
-        tripId={data.tripId}
-        steps={steps}
-        onStepTitleChange={updateStepTitle}
-        onStepDescriptionChange={updateStepDescription}
-        onStepDateChange={updateStepDate}
-        onSegmentTitleChange={updateSegmentTitle}
-        onSegmentProviderChange={updateSegmentProvider}
-        stepImages={stepImages}
-        onStepImageUploaded={handleStepImageUploaded}
-        onStepImageDeleted={handleStepImageDeleted}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">5</div>}
+        <QuoteItinerarySection
+          tripId={data.tripId}
+          steps={steps}
+          onStepTitleChange={updateStepTitle}
+          onStepDescriptionChange={updateStepDescription}
+          onStepDateChange={updateStepDate}
+          onSegmentTitleChange={updateSegmentTitle}
+          onSegmentProviderChange={updateSegmentProvider}
+          stepImages={stepImages}
+          onStepImageUploaded={handleStepImageUploaded}
+          onStepImageDeleted={handleStepImageDeleted}
+          pdfMode={pdfMode}
+        />
+      </div>
 
       {/* 6. HÉBERGEMENTS */}
-      <QuoteAccommodationSection
-        accommodations={accommodations}
-        onAccommodationsChange={setAccommodations}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">6</div>}
+        <QuoteAccommodationSection
+          accommodations={accommodations}
+          onAccommodationsChange={setAccommodations}
+        />
+      </div>
 
       {/* 7. POURQUOI NOUS CHOISIR */}
-      <QuoteWhyChooseUs
-        title={whyChooseUsTitle}
-        onTitleChange={setWhyChooseUsTitle}
-        items={whyChooseUsItems}
-        onItemsChange={setWhyChooseUsItems}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">7</div>}
+        <QuoteWhyChooseUs
+          title={whyChooseUsTitle}
+          onTitleChange={setWhyChooseUsTitle}
+          items={whyChooseUsItems}
+          onItemsChange={setWhyChooseUsItems}
+        />
+      </div>
 
       {/* 8. AVIS CLIENTS */}
-      <QuoteReviews
-        title={reviewsTitle}
-        onTitleChange={setReviewsTitle}
-        overallRating={overallRating}
-        onOverallRatingChange={setOverallRating}
-        totalReviews={totalReviews}
-        onTotalReviewsChange={setTotalReviews}
-        reviews={reviews}
-        onReviewsChange={setReviews}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">8</div>}
+        <QuoteReviews
+          title={reviewsTitle}
+          onTitleChange={setReviewsTitle}
+          overallRating={overallRating}
+          onOverallRatingChange={setOverallRating}
+          totalReviews={totalReviews}
+          onTotalReviewsChange={setTotalReviews}
+          reviews={reviews}
+          onReviewsChange={setReviews}
+        />
+      </div>
 
       {/* 9. FAQ */}
-      <QuoteFAQ
-        title={faqTitle}
-        onTitleChange={setFaqTitle}
-        faqItems={faqItems}
-        onFaqItemsChange={setFaqItems}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">9</div>}
+        <QuoteFAQ
+          title={faqTitle}
+          onTitleChange={setFaqTitle}
+          faqItems={faqItems}
+          onFaqItemsChange={setFaqItems}
+        />
+      </div>
 
       {/* 10. MENTIONS LÉGALES & CONTACT */}
-      <QuoteLegalSection
-        legalMentions={legalMentions}
-        onLegalMentionsChange={setLegalMentions}
-        contactName={contactName}
-        onContactNameChange={setContactName}
-        contactEmail={contactEmail}
-        onContactEmailChange={setContactEmail}
-        contactPhone={contactPhone}
-        onContactPhoneChange={setContactPhone}
-      />
+      <div className={pdfMode ? "quote-slide" : "mb-12"}>
+        {pdfMode && <div className="quote-slide-number">10</div>}
+        <QuoteLegalSection
+          legalMentions={legalMentions}
+          onLegalMentionsChange={setLegalMentions}
+          contactName={contactName}
+          onContactNameChange={setContactName}
+          contactEmail={contactEmail}
+          onContactEmailChange={setContactEmail}
+          contactPhone={contactPhone}
+          onContactPhoneChange={setContactPhone}
+        />
+      </div>
     </div>
   );
 }
