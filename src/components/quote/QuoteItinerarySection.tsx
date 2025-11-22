@@ -66,34 +66,21 @@ export function QuoteItinerarySection({
             {/* Layout 2 colonnes 50/50: Image à gauche, Contenu à droite */}
             <div className={pdfMode ? "flex gap-8 flex-1" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
               {/* Colonne gauche: Image - 50% */}
-              <div className="flex flex-col">
-                {/* Upload zone en mode non-PDF */}
-                {!pdfMode && (
-                  <div className="mb-4">
-                    <ImageUploader
-                      tripId={tripId}
-                      stepId={step.id}
-                      imageType="quote-step"
-                      position={stepIndex + 1}
-                      currentImage={stepImages[stepIndex]}
-                      onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
-                      onImageDeleted={() => onStepImageDeleted(stepIndex)}
-                    />
-                  </div>
-                )}
-
-                {/* Affichage de l'image */}
-                {stepImages[stepIndex] ? (
-                  <div className="h-full min-h-[500px]">
-                    <img 
-                      src={stepImages[stepIndex]!.public_url} 
-                      alt={step.title} 
-                      className="w-full h-full object-cover rounded-3xl"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-full min-h-[500px] bg-muted rounded-3xl flex items-center justify-center border-2 border-dashed border-border">
-                    <p className="text-muted-foreground">Image de l'étape</p>
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30 min-h-[500px]">
+                <ImageUploader
+                  tripId={tripId}
+                  stepId={step.id}
+                  imageType="quote-step"
+                  position={stepIndex + 1}
+                  currentImage={stepImages[stepIndex]}
+                  onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
+                  onImageDeleted={() => onStepImageDeleted(stepIndex)}
+                  height="h-[500px]"
+                />
+                
+                {!stepImages[stepIndex] && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <p className="text-muted-foreground text-lg">Image de l'étape</p>
                   </div>
                 )}
               </div>
