@@ -390,27 +390,25 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         />
       </div>
 
-      {/* 5. PROGRAMME JOUR PAR JOUR */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">5</div>}
-        <QuoteItinerarySection
-          tripId={data.tripId}
-          steps={steps}
-          onStepTitleChange={updateStepTitle}
-          onStepDescriptionChange={updateStepDescription}
-          onStepDateChange={updateStepDate}
-          onSegmentTitleChange={updateSegmentTitle}
-          onSegmentProviderChange={updateSegmentProvider}
-          stepImages={stepImages}
-          onStepImageUploaded={handleStepImageUploaded}
-          onStepImageDeleted={handleStepImageDeleted}
-          pdfMode={pdfMode}
-        />
-      </div>
+      {/* 5. PROGRAMME JOUR PAR JOUR - Chaque étape = 1 slide */}
+      <QuoteItinerarySection
+        tripId={data.tripId}
+        steps={steps}
+        onStepTitleChange={updateStepTitle}
+        onStepDescriptionChange={updateStepDescription}
+        onStepDateChange={updateStepDate}
+        onSegmentTitleChange={updateSegmentTitle}
+        onSegmentProviderChange={updateSegmentProvider}
+        stepImages={stepImages}
+        onStepImageUploaded={handleStepImageUploaded}
+        onStepImageDeleted={handleStepImageDeleted}
+        pdfMode={pdfMode}
+        slideStartNumber={5}
+      />
 
       {/* 6. HÉBERGEMENTS */}
       <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">6</div>}
+        {pdfMode && <div className="quote-slide-number">{5 + steps.length}</div>}
         <QuoteAccommodationSection
           accommodations={accommodations}
           onAccommodationsChange={setAccommodations}
@@ -419,7 +417,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
 
       {/* 7. POURQUOI NOUS CHOISIR */}
       <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">7</div>}
+        {pdfMode && <div className="quote-slide-number">{6 + steps.length}</div>}
         <QuoteWhyChooseUs
           title={whyChooseUsTitle}
           onTitleChange={setWhyChooseUsTitle}
@@ -430,7 +428,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
 
       {/* 8. AVIS CLIENTS */}
       <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">8</div>}
+        {pdfMode && <div className="quote-slide-number">{7 + steps.length}</div>}
         <QuoteReviews
           title={reviewsTitle}
           onTitleChange={setReviewsTitle}
@@ -445,7 +443,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
 
       {/* 9. FAQ */}
       <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">9</div>}
+        {pdfMode && <div className="quote-slide-number">{8 + steps.length}</div>}
         <QuoteFAQ
           title={faqTitle}
           onTitleChange={setFaqTitle}
@@ -456,7 +454,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
 
       {/* 10. MENTIONS LÉGALES & CONTACT */}
       <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">10</div>}
+        {pdfMode && <div className="quote-slide-number">{9 + steps.length}</div>}
         <QuoteLegalSection
           legalMentions={legalMentions}
           onLegalMentionsChange={setLegalMentions}
