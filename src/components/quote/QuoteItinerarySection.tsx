@@ -8,6 +8,7 @@ interface QuoteStep {
   title: string;
   date: string;
   description: string;
+  quoteDescription?: string;
   segments: Array<{
     id: string;
     type: string;
@@ -130,7 +131,16 @@ export function QuoteItinerarySection({
                   )}
                 </div>
 
-                {/* Description */}
+                {/* Description commerciale (AI) */}
+                {step.quoteDescription && (
+                  <div className="mb-6 p-4 bg-primary/5 rounded-lg border-l-4 border-primary">
+                    <p className="text-foreground/90 italic leading-relaxed">
+                      {step.quoteDescription}
+                    </p>
+                  </div>
+                )}
+
+                {/* Description éditable */}
                 <div className="mb-8">
                   <EditableText
                     value={step.description}
