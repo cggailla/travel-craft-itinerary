@@ -4,7 +4,7 @@ import { getQuoteData, updateQuotePdfUrl, QuoteData } from "@/services/quoteServ
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { FileText, Download, Loader2, Eye, EyeOff } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import "@/styles/quote-pdf.css";
 
@@ -17,7 +17,6 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [pdfPreviewMode, setPdfPreviewMode] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -149,52 +148,29 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
             <h1 className="text-3xl font-bold mb-2">Devis de voyage</h1>
             <p className="text-muted-foreground">{quoteData.title}</p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => setPdfPreviewMode(!pdfPreviewMode)}
-              variant="outline"
-              size="lg"
-              className="gap-2"
-            >
-              {pdfPreviewMode ? (
-                <>
-                  <EyeOff className="h-4 w-4" />
-                  Mode normal
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4" />
-                  Aperçu PDF
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleGeneratePdf}
-              disabled={isGenerating}
-              size="lg"
-              className="gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Génération...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Télécharger le PDF
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleGeneratePdf}
+            disabled={isGenerating}
+            size="lg"
+            className="gap-2"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Génération...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Télécharger le PDF
+              </>
+            )}
+          </Button>
         </div>
 
-        <div 
-          ref={templateRef}
-          className={pdfPreviewMode ? "quote-pdf-preview" : ""}
-        >
-          <Card className={pdfPreviewMode ? "border-0 shadow-none" : "overflow-hidden"}>
-            <QuoteTemplate data={quoteData} pdfMode={pdfPreviewMode} />
+        <div ref={templateRef}>
+          <Card className="overflow-hidden">
+            <QuoteTemplate data={quoteData} pdfMode={false} />
           </Card>
         </div>
       </div>
