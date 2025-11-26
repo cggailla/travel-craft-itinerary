@@ -4,8 +4,9 @@ import { getQuoteData, updateQuotePdfUrl, QuoteData } from "@/services/quoteServ
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generateAllQuoteDescriptions } from "@/services/quoteAIService";
 import "@/styles/quote-pdf.css";
 
 interface QuoteGeneratorProps {
@@ -17,6 +18,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingDescriptions, setIsGeneratingDescriptions] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -54,6 +56,48 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     }
   };
 
+  const handleGenerateDescriptions = async () => {
+    if (!tripId) return;
+
+    setIsGeneratingDescriptions(true);
+    try {
+      const results = await generateAllQuoteDescriptions(
+        tripId,
+        (stepId, status, error) => {
+          if (status === 'completed') {
+            console.log(`Description generated for step ${stepId}`);
+          } else if (status === 'error') {
+            console.error(`Error generating description for step ${stepId}:`, error);
+          }
+        }
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      if (successCount > 0) {
+        toast({
+          title: "Descriptions générées",
+          description: `${successCount} description(s) créée(s)${failCount > 0 ? `, ${failCount} échec(s)` : ''}`,
+        });
+        
+        // Reload quote data to show new descriptions
+        await loadQuoteData();
+      } else {
+        throw new Error("Aucune description n'a pu être générée");
+      }
+    } catch (error) {
+      console.error('Error generating descriptions:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de générer les descriptions",
+      });
+    } finally {
+      setIsGeneratingDescriptions(false);
+    }
+  };
+
   const handleGeneratePdf = async () => {
     if (!quoteData || !templateRef.current) return;
 
@@ -85,7 +129,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
             </style>
           </head>
           <body>
-            ${htmlContent}
+            \${htmlContent}
           </body>
         </html>
       `;
@@ -148,24 +192,45 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
             <h1 className="text-3xl font-bold mb-2">Devis de voyage</h1>
             <p className="text-muted-foreground">{quoteData.title}</p>
           </div>
-          <Button
-            onClick={handleGeneratePdf}
-            disabled={isGenerating}
-            size="lg"
-            className="gap-2"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Génération...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Télécharger le PDF
-              </>
-            )}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={handleGenerateDescriptions}
+              disabled={isGeneratingDescriptions}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              {isGeneratingDescriptions ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Générer les descriptions
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleGeneratePdf}
+              disabled={isGenerating}
+              size="lg"
+              className="gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Télécharger le PDF
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div ref={templateRef}>
