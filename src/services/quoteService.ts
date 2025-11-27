@@ -21,7 +21,6 @@ export interface QuoteStep {
   date: string;
   location: string;
   description?: string;
-  quoteDescription?: string;
   segments: QuoteSegment[];
 }
 
@@ -51,10 +50,10 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
   if (tripError) throw tripError;
   if (!trip) throw new Error("Trip not found");
 
-  // 2. Récupérer les étapes avec leur ai_content
+  // 2. Récupérer les étapes
   const { data: steps, error: stepsError } = await supabase
     .from("travel_steps")
-    .select("*, ai_content")
+    .select("*")
     .eq("trip_id", tripId)
     .order("start_date", { ascending: true });
 
@@ -85,7 +84,7 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
           price: ss.travel_segments.activity_price || ss.travel_segments.ticket_price,
         }));
 
-      const aiContent = step.ai_content as { description?: string; quoteDescription?: string } | null;
+      const aiContent = step.ai_content as { description?: string } | null;
       
       return {
         id: step.id,
@@ -93,7 +92,6 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
         date: step.start_date,
         location: step.primary_location || "",
         description: aiContent?.description,
-        quoteDescription: aiContent?.quoteDescription,
         segments,
       };
     })

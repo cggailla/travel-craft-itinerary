@@ -27,35 +27,8 @@ verify_jwt = true
 [functions.generate-step-ai-content]
 verify_jwt = true
 
-[functions.generate-quote-step-description]
-verify_jwt = true
-
 [functions.generate-trip-general-info]
 verify_jwt = true
 
 [functions.generate-static-booklet]
-verify_jwt = true
-
-[functions.generate-step-content]
-verify_jwt = true
-
-[functions.generate-day-content]
-verify_jwt = true
-
-[functions.generate-booklet-pdf]
-verify_jwt = true
-
-[functions.generate-pdf-chrome]
-verify_jwt = true
-
-[functions.generate-quote-pdf]
-verify_jwt = true
-
-[functions.generate-quote-pdf-landscape]
-verify_jwt = true
-
-[functions.search-location-images]
-verify_jwt = true
-
-[functions.group-travel-segments]
 verify_jwt = true
