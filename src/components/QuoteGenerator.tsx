@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { QuoteTemplate } from "./QuoteTemplate";
-import { getQuoteData, updateQuotePdfUrl, QuoteData } from "@/services/quoteService";
-import { supabase } from "@/integrations/supabase/client";
+import { getQuoteData, QuoteData } from "@/services/quoteService";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Download, Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import "@/styles/quote-pdf.css";
 
@@ -13,29 +12,39 @@ interface QuoteGeneratorProps {
   autoGenerate?: boolean;
 }
 
+/**
+ * Extrait le HTML brut du devis pour export
+ */
+function getQuoteDOMRawExport(element: HTMLElement): string {
+  const clone = element.cloneNode(true) as HTMLElement;
+  
+  // Supprimer les éléments interactifs
+  const selectorsToRemove = [
+    'button',
+    'input',
+    'textarea',
+    '.no-print',
+    '[contenteditable]',
+    '.upload-zone:not(:has(img))', // Garder les zones avec images
+  ];
+  
+  selectorsToRemove.forEach(selector => {
+    clone.querySelectorAll(selector).forEach(el => el.remove());
+  });
+  
+  return clone.innerHTML;
+}
+
 export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadQuoteData();
   }, [tripId]);
-
-  // Auto-génération si demandée via le paramètre URL
-  useEffect(() => {
-    if (autoGenerate && quoteData && !isGenerating) {
-      console.log('🚀 Auto-génération du devis déclenchée');
-      handleGeneratePdf();
-      
-      // Nettoyer l'URL pour éviter de re-déclencher au refresh
-      const url = new URL(window.location.href);
-      url.searchParams.delete('autoGenerate');
-      window.history.replaceState({}, '', url);
-    }
-  }, [autoGenerate, quoteData]);
 
   const loadQuoteData = async () => {
     try {
@@ -54,69 +63,55 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     }
   };
 
-  const handleGeneratePdf = async () => {
-    if (!quoteData || !templateRef.current) return;
+  const handleExportHtml = () => {
+    if (!templateRef.current) return;
 
     try {
-      setIsGenerating(true);
+      setIsExporting(true);
       
-      // Get the HTML content from the template
-      const htmlContent = templateRef.current.innerHTML;
+      const html = getQuoteDOMRawExport(templateRef.current);
       
-      // Wrap HTML with necessary styles and structure for PDF
-      const fullHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              @page { size: A4 landscape; margin: 0; }
-              body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-              .quote-slide { 
-                width: 297mm; 
-                height: 210mm; 
-                page-break-after: always;
-                padding: 20mm;
-                box-sizing: border-box;
-              }
-              .quote-slide:last-child { page-break-after: auto; }
-              img { max-width: 100%; height: auto; }
-              button, .no-print { display: none !important; }
-            </style>
-          </head>
-          <body>
-            ${htmlContent}
-          </body>
-        </html>
-      `;
+      // Créer un document HTML complet
+      const fullHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Devis - ${quoteData?.title || 'Voyage'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  ${html}
+</body>
+</html>`;
       
-      // Call landscape PDF edge function
-      const { data, error } = await supabase.functions.invoke("generate-quote-pdf-landscape", {
-        body: { tripId, htmlContent: fullHtml },
+      // Télécharger le fichier HTML
+      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `devis-${tripId}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export réussi",
+        description: "Le fichier HTML a été téléchargé",
       });
-
-      if (error) throw error;
-
-      if (data?.pdfUrl) {
-        await updateQuotePdfUrl(tripId, data.pdfUrl);
-        
-        // Open PDF in new tab
-        window.open(data.pdfUrl, "_blank");
-        
-        toast({
-          title: "Succès",
-          description: "Le devis PDF a été généré avec succès",
-        });
-      }
     } catch (error) {
-      console.error("Error generating quote PDF:", error);
+      console.error("Error exporting HTML:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de générer le devis PDF",
+        description: "Impossible d'exporter le HTML",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsExporting(false);
     }
   };
 
@@ -149,20 +144,20 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
             <p className="text-muted-foreground">{quoteData.title}</p>
           </div>
           <Button
-            onClick={handleGeneratePdf}
-            disabled={isGenerating}
+            onClick={handleExportHtml}
+            disabled={isExporting}
             size="lg"
             className="gap-2"
           >
-            {isGenerating ? (
+            {isExporting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Génération...
+                Export...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4" />
-                Télécharger le PDF
+                <FileText className="h-4 w-4" />
+                Exporter HTML
               </>
             )}
           </Button>
