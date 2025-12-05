@@ -4,14 +4,19 @@
 .quote-slide {
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 3rem; /* Increased margin for better separation */
   padding: 3rem;
   background: white;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
   position: relative;
   overflow: hidden;
+  
+  /* Enforce A4 Landscape Ratio */
+  aspect-ratio: 297 / 210;
+  height: auto; /* Let aspect-ratio drive height */
+  display: flex;
+  flex-direction: column;
 }
 
 /* Slide number indicator */
@@ -22,14 +27,17 @@
   font-size: 0.875rem;
   color: hsl(var(--muted-foreground));
   font-weight: 500;
+  z-index: 10;
 }
 
 /* PDF Preview Mode */
 .quote-pdf-preview .quote-slide {
-  aspect-ratio: 297 / 210; /* A4 Landscape ratio */
-  height: auto;
+  /* aspect-ratio is now base */
   page-break-after: always;
   break-after: page;
+  margin: 0; /* No margin in PDF generation flow usually, handled by html2pdf */
+  box-shadow: none; /* No shadow in PDF */
+  border-radius: 0; /* No radius in PDF */
 }
 
 /* Print-specific styles */

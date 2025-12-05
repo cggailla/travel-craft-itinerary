@@ -134,6 +134,21 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   const [contactEmail, setContactEmail] = useState("contact@ad-gentes.ch");
   const [contactPhone, setContactPhone] = useState("+41 22 908 61 83");
 
+  // Extraire les points forts (activités principales)
+  const [highlights, setHighlights] = useState(() => {
+    const activities: string[] = [];
+    data.steps.forEach(step => {
+      step.segments.forEach(seg => {
+        // Exclure hôtels et transports pour ne garder que les activités/visites
+        if (seg.type !== 'hotel' && seg.type !== 'accommodation' && seg.type !== 'transport' && seg.type !== 'flight') {
+          activities.push(seg.title);
+        }
+      });
+    });
+    // Limiter à 5 points forts et supprimer les doublons
+    return Array.from(new Set(activities)).slice(0, 5);
+  });
+
   // États pour "Pourquoi nous choisir"
   const [whyChooseUsTitle, setWhyChooseUsTitle] = useState("Pourquoi choisir Ad Gentes ?");
   const [whyChooseUsItems, setWhyChooseUsItems] = useState([
@@ -343,8 +358,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       )}
 
       {/* 1. PAGE DE GARDE */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">1</div>}
+      <div className="quote-slide !bg-[#FDFBF7]">
+        <div className="quote-slide-number">1</div>
         <QuoteCoverPage
           tripId={data.tripId}
           title={mainTitle}
@@ -362,8 +377,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 2. BLOC TARIFAIRE */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">2</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">2</div>
         <QuotePricingSection
           tripId={data.tripId}
           title={mainTitle}
@@ -379,12 +394,14 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           pricingImage={pricingImage}
           onImageUploaded={handlePricingImageUploaded}
           onImageDeleted={handlePricingImageDeleted}
+          highlights={highlights}
+          onHighlightsChange={setHighlights}
         />
       </div>
 
       {/* 3. INCLUS / NON INCLUS */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">3</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">3</div>
         <QuoteIncludedSection
           includedItems={includedItems}
           onIncludedItemsChange={setIncludedItems}
@@ -394,8 +411,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 4. SANTÉ & FORMALITÉS */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">4</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">4</div>
         <QuoteHealthFormalities
           entryFormalities={entryFormalities}
           onEntryFormalitiesChange={setEntryFormalities}
@@ -423,8 +440,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       />
 
       {/* 6. HÉBERGEMENTS */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">{5 + steps.length}</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">{5 + steps.length}</div>
         <QuoteAccommodationSection
           accommodations={accommodations}
           onAccommodationsChange={setAccommodations}
@@ -432,8 +449,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 7. POURQUOI NOUS CHOISIR */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">{6 + steps.length}</div>}
+      <div className="quote-slide !bg-gradient-to-br !from-primary/5 !to-primary/10">
+        <div className="quote-slide-number">{6 + steps.length}</div>
         <QuoteWhyChooseUs
           title={whyChooseUsTitle}
           onTitleChange={setWhyChooseUsTitle}
@@ -443,8 +460,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 8. AVIS CLIENTS */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">{7 + steps.length}</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">{7 + steps.length}</div>
         <QuoteReviews
           title={reviewsTitle}
           onTitleChange={setReviewsTitle}
@@ -458,8 +475,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 9. FAQ */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">{8 + steps.length}</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">{8 + steps.length}</div>
         <QuoteFAQ
           title={faqTitle}
           onTitleChange={setFaqTitle}
@@ -469,8 +486,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       </div>
 
       {/* 10. MENTIONS LÉGALES & CONTACT */}
-      <div className={pdfMode ? "quote-slide" : "mb-12"}>
-        {pdfMode && <div className="quote-slide-number">{9 + steps.length}</div>}
+      <div className="quote-slide">
+        <div className="quote-slide-number">{9 + steps.length}</div>
         <QuoteLegalSection
           legalMentions={legalMentions}
           onLegalMentionsChange={setLegalMentions}

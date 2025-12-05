@@ -45,45 +45,45 @@ export function QuoteWhyChooseUs({
   };
 
   return (
-    <section className="why-choose-us-section mb-16 p-8 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20" data-pdf-section="why-choose-us">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">
+    <section className="why-choose-us-section h-full flex flex-col justify-center" data-pdf-section="why-choose-us">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold mb-2">
           <EditableText
             value={title}
             onChange={onTitleChange}
             placeholder="Pourquoi choisir Ad Gentes ?"
-            className="text-3xl font-bold"
+            className="text-2xl font-bold"
           />
         </h2>
-        <div className="w-24 h-1 bg-primary mx-auto rounded-full"></div>
+        <div className="w-20 h-1 bg-primary mx-auto rounded-full"></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item, index) => {
           const IconComponent = getIconComponent(item.icon);
           return (
             <div
               key={index}
-              className="flex flex-col items-center text-center p-6 bg-background rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              className="flex flex-col items-center text-center p-4 bg-background rounded-lg shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <IconComponent className="h-8 w-8 text-primary" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                <IconComponent className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">
+              <h3 className="font-semibold text-base mb-1">
                 <EditableText
                   value={item.title}
                   onChange={(val) => updateItemTitle(index, val)}
                   placeholder="Titre de l'avantage"
-                  className="font-semibold text-lg"
+                  className="font-semibold text-base"
                 />
               </h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-xs leading-relaxed">
                 <EditableText
                   value={item.description}
                   onChange={(val) => updateItemDescription(index, val)}
                   multiline
                   placeholder="Description de l'avantage"
-                  className="text-muted-foreground text-sm"
+                  className="text-muted-foreground text-xs"
                 />
               </p>
             </div>

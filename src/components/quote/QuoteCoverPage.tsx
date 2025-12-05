@@ -41,10 +41,10 @@ export function QuoteCoverPage({
   };
 
   return (
-    <section className="cover-page mb-24 min-h-[600px]" data-pdf-section="cover">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+    <section className="cover-page h-full" data-pdf-section="cover">
+      <div className="flex gap-12 items-center h-full">
         {/* LEFT SIDE - Image with Upload */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30">
+        <div className="relative w-1/2 h-full rounded-3xl overflow-hidden">
           <ImageUploader
             tripId={tripId}
             imageType="quote"
@@ -52,30 +52,25 @@ export function QuoteCoverPage({
             currentImage={coverImage}
             onImageUploaded={onImageUploaded}
             onImageDeleted={onImageDeleted}
-            height="h-[500px]"
+            height="h-full"
+            className="h-full w-full object-cover"
           />
-          
-          {!coverImage && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <p className="text-muted-foreground text-lg">Photo de couverture</p>
-            </div>
-          )}
         </div>
 
         {/* RIGHT SIDE - Content */}
-        <div className="flex flex-col justify-center space-y-8">
+        <div className="w-1/2 flex flex-col justify-center space-y-8 pr-8">
           {/* Logo */}
-          <div className="flex justify-end">
+          <div className="flex justify-start mb-8">
             <img 
               src="/src/assets/logo-adgentes.png" 
               alt="Ad Gentes" 
-              className="h-16 opacity-80"
+              className="h-20 opacity-90"
             />
           </div>
 
           {/* Title */}
           <div>
-            <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-8" data-pdf-title>
+            <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6 text-primary" data-pdf-title>
               <EditableText
                 value={title}
                 onChange={onTitleChange}
@@ -85,17 +80,17 @@ export function QuoteCoverPage({
             </h1>
 
             {/* Participant Name */}
-            <div className="text-lg font-semibold tracking-wide uppercase mb-2" data-pdf-client>
+            <div className="text-xl font-medium tracking-wide mb-4 text-foreground/80" data-pdf-client>
               <EditableText
                 value={participants}
                 onChange={onParticipantsChange}
-                className="text-lg font-semibold tracking-wide uppercase"
-                placeholder="NOM DES PARTICIPANTS"
+                className="text-xl font-medium tracking-wide"
+                placeholder="Pour qui ?"
               />
             </div>
 
             {/* Dates */}
-            <div className="text-base text-muted-foreground" data-pdf-dates>
+            <div className="text-lg text-muted-foreground" data-pdf-dates>
               du <EditableDate value={startDate} onChange={onStartDateChange} /> au{" "}
               <EditableDate value={endDate} onChange={onEndDateChange} />
             </div>

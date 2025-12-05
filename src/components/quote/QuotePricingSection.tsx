@@ -1,6 +1,8 @@
 import { EditableText } from "../EditableText";
 import { ImageUploader } from "../ImageUploader";
 import { SupabaseImage } from "@/services/supabaseImageService";
+import { Check, User } from "lucide-react";
+import { useState } from "react";
 
 interface QuotePricingSectionProps {
   tripId: string;
@@ -17,6 +19,8 @@ interface QuotePricingSectionProps {
   pricingImage?: SupabaseImage;
   onImageUploaded: (image: SupabaseImage) => void;
   onImageDeleted: () => void;
+  highlights?: string[];
+  onHighlightsChange?: (highlights: string[]) => void;
 }
 
 export function QuotePricingSection({
@@ -34,11 +38,15 @@ export function QuotePricingSection({
   pricingImage,
   onImageUploaded,
   onImageDeleted,
+  highlights = [],
+  onHighlightsChange,
 }: QuotePricingSectionProps) {
+  const [description, setDescription] = useState("Embarquez pour un voyage à travers les âges, des pyramides majestueuses du Caire aux temples légendaires d'Abou Simbel. Naviguez sur les eaux mythiques du Nil et laissez-vous envoûter par les trésors millénaires des pharaons.");
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('fr-FR', { 
       day: '2-digit', 
-      month: 'short' 
+      month: 'short'
     });
   };
 
@@ -50,11 +58,40 @@ export function QuotePricingSection({
 
   const nights = calculateNights();
 
+  const updateHighlight = (index: number, value: string) => {
+    if (!onHighlightsChange) return;
+    const newHighlights = [...highlights];
+    newHighlights[index] = value;
+    onHighlightsChange(newHighlights);
+  };
+
   return (
-    <section className="pricing-section mb-24 min-h-[500px]" data-pdf-section="pricing">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-        {/* LEFT SIDE - Image with Upload */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30">
+    <section className="pricing-section h-full flex gap-8" data-pdf-section="pricing">
+      {/* LEFT COLUMN (Main Content) - 65% */}
+      <div className="w-[65%] flex flex-col h-full">
+        {/* Title */}
+        <h2 className="text-4xl font-bold text-primary mb-6">
+          <EditableText
+            value={title}
+            onChange={onTitleChange}
+            className="text-4xl font-bold text-primary"
+            placeholder="Votre voyage"
+          />
+        </h2>
+
+        {/* Description */}
+        <div className="mb-8 text-muted-foreground leading-relaxed">
+          <EditableText
+            value={description}
+            onChange={setDescription}
+            multiline
+            className="text-muted-foreground leading-relaxed"
+            placeholder="Description du voyage..."
+          />
+        </div>
+
+        {/* Image */}
+        <div className="flex-1 relative rounded-2xl overflow-hidden mb-6 min-h-[300px]">
           <ImageUploader
             tripId={tripId}
             imageType="quote-pricing"
@@ -62,88 +99,84 @@ export function QuotePricingSection({
             currentImage={pricingImage}
             onImageUploaded={onImageUploaded}
             onImageDeleted={onImageDeleted}
-            height="h-[500px]"
+            height="h-full"
+            className="h-full w-full object-cover"
           />
-          
-          {!pricingImage && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <p className="text-muted-foreground text-lg">Photo du voyage</p>
-            </div>
-          )}
         </div>
 
-        {/* RIGHT SIDE - Content */}
-        <div className="flex flex-col justify-center space-y-8">
-          {/* Title */}
-          <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-            <EditableText
-              value={title}
-              onChange={onTitleChange}
-              className="text-4xl md:text-5xl font-bold leading-tight"
-              placeholder="Votre voyage en Égypte"
-            />
-          </h2>
-
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-6 p-6 bg-primary/10 rounded-xl">
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground mb-1">Destination</p>
-              <p className="font-semibold text-lg">
-                <EditableText
-                  value={destination}
-                  onChange={onDestinationChange}
-                  placeholder="Égypte"
-                  className="font-semibold text-lg"
-                />
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground mb-1">Dates</p>
-              <p className="font-semibold text-lg">
-                {formatDate(startDate)} au {formatDate(endDate)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground mb-1">Durée</p>
-              <p className="font-semibold text-lg">{nights} nuits</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground mb-1">Voyageurs</p>
-              <p className="font-semibold text-lg">
-                <EditableText
-                  value={numberOfTravelers}
-                  onChange={onNumberOfTravelersChange}
-                  placeholder="4 pers."
-                  className="font-semibold text-lg"
-                />
-              </p>
-            </div>
-          </div>
-
-          {/* Price */}
-          <div className="space-y-2">
-            <p className="text-xl font-semibold text-muted-foreground">
-              {nights} nuits
+        {/* Summary Bar */}
+        <div className="bg-primary/10 rounded-xl p-6 grid grid-cols-4 gap-4">
+          <div>
+            <p className="font-bold text-foreground mb-1">Destination</p>
+            <p className="text-muted-foreground text-sm">
+              <EditableText value={destination} onChange={onDestinationChange} />
             </p>
-            <div className="text-5xl font-bold text-primary">
-              <EditableText
-                value={totalPrice}
-                onChange={onTotalPriceChange}
-                placeholder="10 380"
-                className="text-5xl font-bold text-primary inline-block"
-              />
-              <span className="text-3xl"> CHF</span>
-            </div>
           </div>
-
-          {/* Contact Button */}
-          <button className="w-full py-4 px-6 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-3 shadow-lg">
-            <span className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xl">
-              👤
-            </span>
-            <span>Contacter mon conseiller</span>
-          </button>
+          <div>
+            <p className="font-bold text-foreground mb-1">Dates</p>
+            <p className="text-muted-foreground text-sm">
+              {formatDate(startDate)} au {formatDate(endDate)}
+            </p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground mb-1">Durée</p>
+            <p className="text-muted-foreground text-sm">{nights} nuits</p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground mb-1">Voyageurs</p>
+            <p className="text-muted-foreground text-sm">
+              <EditableText value={numberOfTravelers} onChange={onNumberOfTravelersChange} />
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* RIGHT COLUMN (Sidebar) - 35% */}
+      <div className="w-[35%] flex flex-col gap-6">
+        {/* Price Box */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex justify-between items-center">
+          <span className="text-muted-foreground font-medium">{nights} nuits</span>
+          <div className="text-2xl font-bold text-primary">
+            <EditableText
+              value={totalPrice}
+              onChange={onTotalPriceChange}
+              className="text-2xl font-bold text-primary inline-block text-right"
+            />
+            <span className="ml-1">CHF</span>
+          </div>
+        </div>
+
+        {/* Highlights */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex-1">
+          <h3 className="font-bold text-lg mb-6 text-foreground">Les points forts de ce voyage</h3>
+          <div className="space-y-4">
+            {highlights.map((highlight, index) => (
+              <div key={index} className="flex gap-3 items-start">
+                <div className="mt-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3 text-primary" />
+                </div>
+                <div className="text-sm text-foreground/80 leading-snug">
+                  <EditableText
+                    value={highlight}
+                    onChange={(val) => updateHighlight(index, val)}
+                    multiline
+                  />
+                </div>
+              </div>
+            ))}
+            {highlights.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">Aucun point fort détecté.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Contact Button */}
+        <button className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 shadow-md">
+          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+            <User className="w-4 h-4" />
+          </div>
+          <span>Contacter mon conseiller</span>
+        </button>
       </div>
     </section>
   );
