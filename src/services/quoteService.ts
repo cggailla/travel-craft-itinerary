@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/utils/authHelpers";
-import { generateAndParseTripSummary } from "./aiContentService";
+import { generateAndParseTripSummary, generateTripGeneralInfo } from "./aiContentService";
 
 export interface QuoteData {
   tripId: string;
@@ -112,7 +112,7 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
     .from("trip_general_info")
     .select("*")
     .eq("trip_id", tripId)
-    .single();
+    .maybeSingle();
 
   // 5. Calculer la durée
   const startDate = steps?.[0]?.start_date;
@@ -267,8 +267,24 @@ export const generateAllQuoteSteps = async (
       if (onProgress) onProgress('summary', 'completed');
     }
 
+    // 1c. Vérifier et générer les infos générales (Santé, Formalités) si manquantes
+    const { data: generalInfo } = await supabase
+      .from('trip_general_info')
+      .select('*')
+      .eq('trip_id', tripId)
+      .maybeSingle();
+
+    const needsGeneralInfo = !generalInfo || (!generalInfo.entry_requirements && !generalInfo.health_requirements);
+
+    if (needsGeneralInfo) {
+      console.log("⚠️ General info missing or empty. Generating...");
+      if (onProgress) onProgress('general-info', 'generating');
+      await generateTripGeneralInfo(tripId);
+      if (onProgress) onProgress('general-info', 'completed');
+    }
+
   } catch (e) {
-    console.warn("Could not fetch or generate trip summary:", e);
+    console.warn("Could not fetch or generate trip summary/info:", e);
     // On continue sans résumé si ça échoue
   }
 

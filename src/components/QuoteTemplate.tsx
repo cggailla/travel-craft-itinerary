@@ -54,13 +54,25 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
     "Les assurances voyage"
   ]);
 
-  const [entryFormalities, setEntryFormalities] = useState(
-    "Un passeport valable au moins 6 mois après la date de retour est requis. Un visa d'entrée peut être obligatoire selon votre nationalité."
-  );
+  const [entryFormalities, setEntryFormalities] = useState("");
+  const [healthRequirements, setHealthRequirements] = useState("");
 
-  const [healthRequirements, setHealthRequirements] = useState(
-    "Aucun vaccin n'est obligatoire. Nous recommandons d'être à jour dans vos vaccinations habituelles. Consultez votre médecin avant le départ."
-  );
+  useEffect(() => {
+    if (data.generalInfo?.entry_requirements) {
+      const reqs = data.generalInfo.entry_requirements;
+      setEntryFormalities(`Passeport: ${reqs.passport}\nVisa: ${reqs.visa}\nValidité: ${reqs.validity}`);
+    } else {
+      setEntryFormalities("");
+    }
+
+    if (data.generalInfo?.health_requirements) {
+      const health = data.generalInfo.health_requirements;
+      const vaccines = Array.isArray(health.vaccines) ? health.vaccines.join(", ") : health.vaccines;
+      setHealthRequirements(`Vaccins: ${vaccines}\nConseils: ${health.insurance_advice}\nEau: ${health.water_safety}`);
+    } else {
+      setHealthRequirements("");
+    }
+  }, [data.generalInfo]);
 
   const [cancellationPolicy, setCancellationPolicy] = useState(
     "Les conditions d'annulation spécifiques à ce voyage vous seront communiquées lors de la réservation. Des frais peuvent s'appliquer en fonction de la date d'annulation."

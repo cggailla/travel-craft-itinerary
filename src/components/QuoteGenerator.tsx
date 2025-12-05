@@ -66,9 +66,13 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     );
 
     const isSummaryMissing = !quoteData.quoteDescription || !quoteData.quoteHighlights;
+    
+    // Check if general info needs generation (missing object OR missing fields)
+    const isGeneralInfoMissing = !quoteData.generalInfo || 
+      (!quoteData.generalInfo.entry_requirements && !quoteData.generalInfo.health_requirements);
 
-    if (stepsMissingContent.length > 0 || isSummaryMissing) {
-      console.log(`Found missing content (Steps: ${stepsMissingContent.length}, Summary: ${isSummaryMissing}). Auto-generating...`);
+    if (stepsMissingContent.length > 0 || isSummaryMissing || isGeneralInfoMissing) {
+      console.log(`Found missing content (Steps: ${stepsMissingContent.length}, Summary: ${isSummaryMissing}, GeneralInfo: ${isGeneralInfoMissing}). Auto-generating...`);
       setHasAttemptedAutoGeneration(true); // Marquer comme tenté pour éviter la boucle infinie
       handleGenerateContent(stepsMissingContent);
     }
@@ -100,13 +104,24 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     // Check if summary needs generation
     const isSummaryMissing = !quoteData.quoteDescription || !quoteData.quoteHighlights;
     
-    if (stepsCount === 0 && !isSummaryMissing) return;
+    // Check if general info needs generation (missing object OR missing fields)
+    const isGeneralInfoMissing = !quoteData.generalInfo || 
+      (!quoteData.generalInfo.entry_requirements && !quoteData.generalInfo.health_requirements);
+    
+    // Si tout est présent, on ne fait rien
+    if (stepsCount === 0 && !isSummaryMissing && !isGeneralInfoMissing) return;
 
+    // Si on a déjà tenté une génération automatique et qu'il manque toujours des infos,
+    // on ne relance pas pour éviter une boucle infinie, SAUF si c'est une nouvelle demande explicite
+    // (mais ici c'est l'auto-check).
+    
+    // Cependant, si isGeneralInfoMissing est vrai, on veut forcer la génération même si stepsCount est 0.
+    
     try {
       setIsGenerating(true);
       setGenerationError(null);
       
-      const totalTasks = stepsCount + (isSummaryMissing ? 1 : 0);
+      const totalTasks = stepsCount + (isSummaryMissing ? 1 : 0) + (isGeneralInfoMissing ? 1 : 0);
       setGenerationProgress({ current: 0, total: totalTasks, status: 'Démarrage...' });
       
       let completedCount = 0;
@@ -120,6 +135,8 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
           if (status === 'generating') {
              if (stepId === 'summary') {
                 setGenerationProgress(prev => prev ? { ...prev, status: "Rédaction de l'introduction et des points forts..." } : null);
+             } else if (stepId === 'general-info') {
+                setGenerationProgress(prev => prev ? { ...prev, status: "Recherche des formalités et infos santé..." } : null);
              } else {
                 const currentStepNum = completedCount + 1;
                 setGenerationProgress(prev => prev ? { 
