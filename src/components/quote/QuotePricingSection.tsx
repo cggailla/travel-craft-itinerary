@@ -1,7 +1,7 @@
 import { EditableText } from "../EditableText";
 import { ImageUploader } from "../ImageUploader";
 import { SupabaseImage } from "@/services/supabaseImageService";
-import { Check, User } from "lucide-react";
+import { Check, MapPin, Calendar, Clock, Users } from "lucide-react";
 import { useState } from "react";
 
 interface QuotePricingSectionProps {
@@ -21,6 +21,8 @@ interface QuotePricingSectionProps {
   onImageDeleted: () => void;
   highlights?: string[];
   onHighlightsChange?: (highlights: string[]) => void;
+  description?: string;
+  onDescriptionChange?: (value: string) => void;
 }
 
 export function QuotePricingSection({
@@ -40,9 +42,10 @@ export function QuotePricingSection({
   onImageDeleted,
   highlights = [],
   onHighlightsChange,
+  description = "Embarquez pour un voyage à travers les âges, des pyramides majestueuses du Caire aux temples légendaires d'Abou Simbel. Naviguez sur les eaux mythiques du Nil et laissez-vous envoûter par les trésors millénaires des pharaons.",
+  onDescriptionChange,
 }: QuotePricingSectionProps) {
-  const [description, setDescription] = useState("Embarquez pour un voyage à travers les âges, des pyramides majestueuses du Caire aux temples légendaires d'Abou Simbel. Naviguez sur les eaux mythiques du Nil et laissez-vous envoûter par les trésors millénaires des pharaons.");
-
+  
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('fr-FR', { 
       day: '2-digit', 
@@ -57,6 +60,10 @@ export function QuotePricingSection({
   };
 
   const nights = calculateNights();
+
+  // Local state for editable fields that are derived from props but need to be editable text
+  const [dateText, setDateText] = useState(`${formatDate(startDate)} au ${formatDate(endDate)}`);
+  const [durationText, setDurationText] = useState(`${nights} nuits`);
 
   const updateHighlight = (index: number, value: string) => {
     if (!onHighlightsChange) return;
@@ -83,7 +90,7 @@ export function QuotePricingSection({
         <div className="mb-8 text-muted-foreground leading-relaxed">
           <EditableText
             value={description}
-            onChange={setDescription}
+            onChange={onDescriptionChange || (() => {})}
             multiline
             className="text-muted-foreground leading-relaxed"
             placeholder="Description du voyage..."
@@ -104,35 +111,68 @@ export function QuotePricingSection({
           />
         </div>
 
-        {/* Summary Bar */}
-        <div className="bg-primary/10 rounded-xl p-6 grid grid-cols-4 gap-4">
-          <div>
-            <p className="font-bold text-foreground mb-1">Destination</p>
-            <p className="text-muted-foreground text-sm">
-              <EditableText value={destination} onChange={onDestinationChange} />
-            </p>
+        {/* Summary Bar - Redesigned */}
+        <div className="bg-primary/10 rounded-xl p-4 grid grid-cols-4 gap-4 divide-x divide-primary/10">
+          <div className="flex flex-col items-center text-center px-2">
+            <div className="mb-2 p-2 bg-white/60 rounded-full text-primary">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Destination</span>
+            <div className="font-semibold text-foreground text-sm w-full">
+              <EditableText 
+                value={destination} 
+                onChange={onDestinationChange} 
+                className="text-center w-full block"
+              />
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-foreground mb-1">Dates</p>
-            <p className="text-muted-foreground text-sm">
-              {formatDate(startDate)} au {formatDate(endDate)}
-            </p>
+          
+          <div className="flex flex-col items-center text-center px-2">
+            <div className="mb-2 p-2 bg-white/60 rounded-full text-primary">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Dates</span>
+            <div className="font-semibold text-foreground text-sm w-full">
+              <EditableText 
+                value={dateText} 
+                onChange={setDateText} 
+                className="text-center w-full block"
+              />
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-foreground mb-1">Durée</p>
-            <p className="text-muted-foreground text-sm">{nights} nuits</p>
+          
+          <div className="flex flex-col items-center text-center px-2">
+            <div className="mb-2 p-2 bg-white/60 rounded-full text-primary">
+              <Clock className="w-4 h-4" />
+            </div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Durée</span>
+            <div className="font-semibold text-foreground text-sm w-full">
+              <EditableText 
+                value={durationText} 
+                onChange={setDurationText} 
+                className="text-center w-full block"
+              />
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-foreground mb-1">Voyageurs</p>
-            <p className="text-muted-foreground text-sm">
-              <EditableText value={numberOfTravelers} onChange={onNumberOfTravelersChange} />
-            </p>
+          
+          <div className="flex flex-col items-center text-center px-2">
+            <div className="mb-2 p-2 bg-white/60 rounded-full text-primary">
+              <Users className="w-4 h-4" />
+            </div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Voyageurs</span>
+            <div className="font-semibold text-foreground text-sm w-full">
+              <EditableText 
+                value={numberOfTravelers} 
+                onChange={onNumberOfTravelersChange} 
+                className="text-center w-full block"
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* RIGHT COLUMN (Sidebar) - 35% */}
-      <div className="w-[35%] flex flex-col gap-6">
+      <div className="w-[35%] flex flex-col gap-6 justify-center">
         {/* Price Box */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex justify-between items-center">
           <span className="text-muted-foreground font-medium">{nights} nuits</span>
@@ -147,7 +187,7 @@ export function QuotePricingSection({
         </div>
 
         {/* Highlights */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex-1">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-border">
           <h3 className="font-bold text-lg mb-6 text-foreground">Les points forts de ce voyage</h3>
           <div className="space-y-4">
             {highlights.map((highlight, index) => (
@@ -169,14 +209,6 @@ export function QuotePricingSection({
             )}
           </div>
         </div>
-
-        {/* Contact Button */}
-        <button className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 shadow-md">
-          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-            <User className="w-4 h-4" />
-          </div>
-          <span>Contacter mon conseiller</span>
-        </button>
       </div>
     </section>
   );

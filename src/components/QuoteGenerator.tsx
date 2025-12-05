@@ -65,8 +65,10 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
       step => step.segments.length > 0 && !step.quoteDescription
     );
 
-    if (stepsMissingContent.length > 0) {
-      console.log(`Found ${stepsMissingContent.length} steps missing quote content. Auto-generating...`);
+    const isSummaryMissing = !quoteData.quoteDescription || !quoteData.quoteHighlights;
+
+    if (stepsMissingContent.length > 0 || isSummaryMissing) {
+      console.log(`Found missing content (Steps: ${stepsMissingContent.length}, Summary: ${isSummaryMissing}). Auto-generating...`);
       setHasAttemptedAutoGeneration(true); // Marquer comme tenté pour éviter la boucle infinie
       handleGenerateContent(stepsMissingContent);
     }
@@ -93,14 +95,19 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     if (!quoteData) return;
     
     const stepsToProcess = specificSteps || quoteData.steps;
-    const totalSteps = stepsToProcess.filter(s => s.segments.length > 0).length;
+    const stepsCount = stepsToProcess.filter(s => s.segments.length > 0).length;
     
-    if (totalSteps === 0) return;
+    // Check if summary needs generation
+    const isSummaryMissing = !quoteData.quoteDescription || !quoteData.quoteHighlights;
+    
+    if (stepsCount === 0 && !isSummaryMissing) return;
 
     try {
       setIsGenerating(true);
       setGenerationError(null);
-      setGenerationProgress({ current: 0, total: totalSteps, status: 'Démarrage...' });
+      
+      const totalTasks = stepsCount + (isSummaryMissing ? 1 : 0);
+      setGenerationProgress({ current: 0, total: totalTasks, status: 'Démarrage...' });
       
       let completedCount = 0;
       let errorCount = 0;
@@ -110,13 +117,22 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
         stepsToProcess, 
         quoteData.destination,
         (stepId, status, result) => {
-          if (status === 'completed') {
+          if (status === 'generating') {
+             if (stepId === 'summary') {
+                setGenerationProgress(prev => prev ? { ...prev, status: "Rédaction de l'introduction et des points forts..." } : null);
+             } else {
+                const currentStepNum = completedCount + 1;
+                setGenerationProgress(prev => prev ? { 
+                    ...prev, 
+                    status: `Rédaction de l'étape ${currentStepNum}/${totalTasks}...` 
+                } : null);
+             }
+          } else if (status === 'completed') {
             completedCount++;
-            setGenerationProgress({
-              current: completedCount,
-              total: totalSteps,
-              status: `Rédaction de l'étape ${completedCount}/${totalSteps}...`
-            });
+            setGenerationProgress(prev => prev ? {
+              ...prev,
+              current: completedCount
+            } : null);
           } else if (status === 'error') {
             errorCount++;
             console.error(`Failed to generate for step ${stepId}`, result);
@@ -127,7 +143,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
       await loadQuoteData();
       
       if (errorCount > 0) {
-        setGenerationError(`La génération a échoué pour ${errorCount} étape(s). Vérifiez que les fonctions Edge sont déployées.`);
+        setGenerationError(`La génération a échoué pour ${errorCount} élément(s). Vérifiez que les fonctions Edge sont déployées.`);
         toast({
           title: "Génération incomplète",
           description: `${errorCount} erreurs rencontrées lors de la génération.`,

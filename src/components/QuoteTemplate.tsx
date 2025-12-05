@@ -134,8 +134,15 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   const [contactEmail, setContactEmail] = useState("contact@ad-gentes.ch");
   const [contactPhone, setContactPhone] = useState("+41 22 908 61 83");
 
+  const [quoteDescription, setQuoteDescription] = useState(
+    data.quoteDescription || "Embarquez pour un voyage à travers les âges, des pyramides majestueuses du Caire aux temples légendaires d'Abou Simbel. Naviguez sur les eaux mythiques du Nil et laissez-vous envoûter par les trésors millénaires des pharaons."
+  );
+
   // Extraire les points forts (activités principales)
   const [highlights, setHighlights] = useState(() => {
+    if (data.quoteHighlights && data.quoteHighlights.length > 0) {
+      return data.quoteHighlights;
+    }
     const activities: string[] = [];
     data.steps.forEach(step => {
       step.segments.forEach(seg => {
@@ -258,6 +265,16 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       }))
     })));
   }, [data.steps]);
+
+  // Mettre à jour la description et les points forts si les données changent (ex: après génération IA)
+  useEffect(() => {
+    if (data.quoteDescription) {
+      setQuoteDescription(data.quoteDescription);
+    }
+    if (data.quoteHighlights && data.quoteHighlights.length > 0) {
+      setHighlights(data.quoteHighlights);
+    }
+  }, [data.quoteDescription, data.quoteHighlights]);
 
   // Images
   const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
@@ -396,6 +413,8 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           onImageDeleted={handlePricingImageDeleted}
           highlights={highlights}
           onHighlightsChange={setHighlights}
+          description={quoteDescription}
+          onDescriptionChange={setQuoteDescription}
         />
       </div>
 

@@ -14,6 +14,8 @@ export interface QuoteData {
   price?: number;
   participants?: string;
   numberOfPeople?: number;
+  quoteDescription?: string;
+  quoteHighlights?: string[];
 }
 
 export interface QuoteStep {
@@ -134,6 +136,8 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
     price: trip.price || undefined,
     participants: trip.participants || undefined,
     numberOfPeople: trip.number_of_people || undefined,
+    quoteDescription: (trip as any).quote_description,
+    quoteHighlights: (trip as any).quote_highlights,
   };
 }
 
@@ -183,6 +187,37 @@ export const generateQuoteStepContent = async (stepId: string, segments: any[], 
   }
 };
 
+export const generateQuoteSummary = async (tripId: string, tripSummary: string) => {
+  try {
+    console.log(`Generating quote summary for trip ${tripId}...`);
+    
+    const { data, error } = await supabase.functions.invoke('generate-quote-summary', {
+      body: { tripId, tripSummary }
+    });
+
+    if (error) throw error;
+
+    if (data.success && data.data) {
+      // Sauvegarde dans la table trips
+      const { error: updateError } = await supabase
+        .from('trips')
+        .update({ 
+          quote_description: data.data.description,
+          quote_highlights: data.data.highlights
+        } as any)
+        .eq('id', tripId);
+
+      if (updateError) throw updateError;
+      
+      return data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error generating quote summary for trip ${tripId}:`, error);
+    return null;
+  }
+};
+
 export const generateAllQuoteSteps = async (
   tripId: string, 
   steps: any[], 
@@ -196,7 +231,7 @@ export const generateAllQuoteSteps = async (
   try {
     const { data: trip } = await supabase
       .from('trips')
-      .select('trip_summary')
+      .select('trip_summary, quote_description, quote_highlights')
       .eq('id', tripId)
       .single();
     
@@ -222,6 +257,16 @@ export const generateAllQuoteSteps = async (
         console.log("✅ Trip summary generated and loaded successfully");
       }
     }
+
+    // 1b. Vérifier et générer le contenu du devis (description + highlights) si manquant
+    if (!(trip as any)?.quote_description || !(trip as any)?.quote_highlights) {
+      console.log("⚠️ Missing quote description or highlights. Generating...");
+      // On utilise un ID spécial 'summary' pour le feedback visuel si supporté, sinon c'est transparent
+      if (onProgress) onProgress('summary', 'generating');
+      await generateQuoteSummary(tripId, tripSummary);
+      if (onProgress) onProgress('summary', 'completed');
+    }
+
   } catch (e) {
     console.warn("Could not fetch or generate trip summary:", e);
     // On continue sans résumé si ça échoue

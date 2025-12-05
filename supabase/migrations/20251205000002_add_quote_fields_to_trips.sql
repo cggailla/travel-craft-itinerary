@@ -1,0 +1,2 @@
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS quote_description TEXT;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS quote_highlights TEXT[];
