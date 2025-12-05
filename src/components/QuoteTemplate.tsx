@@ -8,6 +8,7 @@ import { QuoteCoverPage } from "./quote/QuoteCoverPage";
 import { QuotePricingSection } from "./quote/QuotePricingSection";
 import { QuoteIncludedSection } from "./quote/QuoteIncludedSection";
 import { QuoteHealthFormalities } from "./quote/QuoteHealthFormalities";
+import { QuoteItinerarySummary } from "./quote/QuoteItinerarySummary";
 import { QuoteItinerarySection } from "./quote/QuoteItinerarySection";
 import { QuoteAccommodationSection } from "./quote/QuoteAccommodationSection";
 import { QuoteWhyChooseUs } from "./quote/QuoteWhyChooseUs";
@@ -93,6 +94,11 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       step.segments
         .filter(seg => seg.type === 'hotel' || seg.type === 'accommodation')
         .forEach(seg => {
+          // Éviter les doublons (même nom d'hôtel)
+          if (hotelSegments.some(h => h.name === seg.title)) {
+            return;
+          }
+
           // Récupérer les dates du segment
           const segmentData = seg as any;
           const startDate = segmentData.start_date ? new Date(segmentData.start_date) : (step.date ? new Date(step.date) : new Date());
@@ -262,6 +268,121 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
     }))
   );
 
+  // État pour l'image du résumé
+  const [summaryImage, setSummaryImage] = useState<SupabaseImage | undefined>(undefined);
+
+  const handleSummaryImageUploaded = (image: SupabaseImage) => {
+    setSummaryImage(image);
+  };
+
+  const handleSummaryImageDeleted = () => {
+    setSummaryImage(undefined);
+  };
+
+  // Parse trip summary to extract step details (title, location, date)
+  const [summarySteps, setSummarySteps] = useState(() => {
+    const parseSteps = () => {
+      if (data.tripSummary) {
+        const summaryLines = data.tripSummary.split('\n');
+        const parsedSteps: { id: string, title: string, date: string, location: string }[] = [];
+        const stepRegex = /^Etape \d+ - (.*?) (?:\((\d{1,2}\/\d{1,2})\))?\s*\{([^}]+)\}/;
+        
+        let currentStepIndex = 0;
+        summaryLines.forEach(line => {
+          const match = line.match(stepRegex);
+          if (match) {
+            const existingStep = data.steps[currentStepIndex];
+            const id = existingStep ? existingStep.id : `summary-step-${currentStepIndex}`;
+            const date = existingStep ? existingStep.date : "";
+            parsedSteps.push({
+              id,
+              title: match[1].trim(),
+              date,
+              location: match[3].trim()
+            });
+            currentStepIndex++;
+          }
+        });
+        if (parsedSteps.length > 0) return parsedSteps;
+      }
+      
+      // Fallback: use steps data with basic cleaning
+      return data.steps.map(s => {
+        let title = s.title;
+        // Basic cleaning: remove "Etape X -" and date in parens
+        title = title.replace(/^Etape \d+ - /, '').replace(/\(\d{1,2}\/\d{1,2}\)/, '').trim();
+        
+        let location = s.location || "";
+        // Extract location if in title {Location}
+        const locMatch = title.match(/\{([^}]+)\}/);
+        if (locMatch) {
+          location = locMatch[1];
+          title = title.replace(/\{[^}]+\}/, '').trim();
+        }
+        
+        return {
+          id: s.id,
+          title,
+          date: s.date,
+          location
+        };
+      });
+    };
+    return parseSteps();
+  });
+
+  // Update summary steps if tripSummary changes
+  useEffect(() => {
+    const parseSteps = () => {
+      if (data.tripSummary) {
+        const summaryLines = data.tripSummary.split('\n');
+        const parsedSteps: { id: string, title: string, date: string, location: string }[] = [];
+        const stepRegex = /^Etape \d+ - (.*?) (?:\((\d{1,2}\/\d{1,2})\))?\s*\{([^}]+)\}/;
+        
+        let currentStepIndex = 0;
+        summaryLines.forEach(line => {
+          const match = line.match(stepRegex);
+          if (match) {
+            const existingStep = data.steps[currentStepIndex];
+            const id = existingStep ? existingStep.id : `summary-step-${currentStepIndex}`;
+            const date = existingStep ? existingStep.date : "";
+            parsedSteps.push({
+              id,
+              title: match[1].trim(),
+              date,
+              location: match[3].trim()
+            });
+            currentStepIndex++;
+          }
+        });
+        if (parsedSteps.length > 0) return parsedSteps;
+      }
+      
+      return data.steps.map(s => {
+        let title = s.title;
+        title = title.replace(/^Etape \d+ - /, '').replace(/\(\d{1,2}\/\d{1,2}\)/, '').trim();
+        let location = s.location || "";
+        const locMatch = title.match(/\{([^}]+)\}/);
+        if (locMatch) {
+          location = locMatch[1];
+          title = title.replace(/\{[^}]+\}/, '').trim();
+        }
+        return {
+          id: s.id,
+          title,
+          date: s.date,
+          location
+        };
+      });
+    };
+    
+    setSummarySteps(parseSteps());
+  }, [data.tripSummary, data.steps]);
+
+  const handleSummaryStepChange = (id: string, field: 'title' | 'location' | 'date', value: string) => {
+    setSummarySteps(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
   // Mettre à jour les steps si les données changent (ex: après génération IA)
   useEffect(() => {
     setSteps(data.steps.map(step => ({
@@ -302,6 +423,9 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
 
         const pricingImg = result.data.find(img => img.file_name.startsWith('quote-pricing'));
         if (pricingImg) setPricingImage(pricingImg);
+
+        const summaryImg = result.data.find(img => img.file_name.startsWith('quote-summary'));
+        if (summaryImg) setSummaryImage(summaryImg);
 
         const images: (SupabaseImage | undefined)[] = [];
         for (let i = 0; i < steps.length; i++) {
@@ -454,7 +578,20 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         />
       </div>
 
-      {/* 5. PROGRAMME JOUR PAR JOUR - Chaque étape = 1 slide */}
+      {/* 5. RÉSUMÉ ITINÉRAIRE */}
+      <div className="quote-slide !bg-[#FDFBF7]">
+        <div className="quote-slide-number">5</div>
+        <QuoteItinerarySummary
+          tripId={data.tripId}
+          steps={summarySteps}
+          onStepChange={handleSummaryStepChange}
+          summaryImage={summaryImage}
+          onImageUploaded={handleSummaryImageUploaded}
+          onImageDeleted={handleSummaryImageDeleted}
+        />
+      </div>
+
+      {/* 6. PROGRAMME JOUR PAR JOUR - Chaque étape = 1 slide */}
       <QuoteItinerarySection
         tripId={data.tripId}
         steps={steps}
@@ -467,21 +604,21 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         onStepImageUploaded={handleStepImageUploaded}
         onStepImageDeleted={handleStepImageDeleted}
         pdfMode={pdfMode}
-        slideStartNumber={5}
+        slideStartNumber={6}
       />
 
-      {/* 6. HÉBERGEMENTS */}
+      {/* 7. HÉBERGEMENTS */}
       <div className="quote-slide">
-        <div className="quote-slide-number">{5 + steps.length}</div>
+        <div className="quote-slide-number">{6 + steps.length}</div>
         <QuoteAccommodationSection
           accommodations={accommodations}
           onAccommodationsChange={setAccommodations}
         />
       </div>
 
-      {/* 7. POURQUOI NOUS CHOISIR */}
+      {/* 8. POURQUOI NOUS CHOISIR */}
       <div className="quote-slide !bg-gradient-to-br !from-primary/5 !to-primary/10">
-        <div className="quote-slide-number">{6 + steps.length}</div>
+        <div className="quote-slide-number">{7 + steps.length}</div>
         <QuoteWhyChooseUs
           title={whyChooseUsTitle}
           onTitleChange={setWhyChooseUsTitle}
@@ -490,9 +627,9 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         />
       </div>
 
-      {/* 8. AVIS CLIENTS */}
-      <div className="quote-slide">
-        <div className="quote-slide-number">{7 + steps.length}</div>
+      {/* 9. AVIS CLIENTS */}
+      <div className="quote-slide !bg-gray-100">
+        <div className="quote-slide-number">{8 + steps.length}</div>
         <QuoteReviews
           title={reviewsTitle}
           onTitleChange={setReviewsTitle}
@@ -505,9 +642,9 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         />
       </div>
 
-      {/* 9. FAQ */}
-      <div className="quote-slide">
-        <div className="quote-slide-number">{8 + steps.length}</div>
+      {/* 10. FAQ */}
+      <div className="quote-slide !bg-[#FDFBF7]">
+        <div className="quote-slide-number">{9 + steps.length}</div>
         <QuoteFAQ
           title={faqTitle}
           onTitleChange={setFaqTitle}
@@ -516,9 +653,9 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         />
       </div>
 
-      {/* 10. MENTIONS LÉGALES & CONTACT */}
+      {/* 11. MENTIONS LÉGALES & CONTACT */}
       <div className="quote-slide">
-        <div className="quote-slide-number">{9 + steps.length}</div>
+        <div className="quote-slide-number">{10 + steps.length}</div>
         <QuoteLegalSection
           legalMentions={legalMentions}
           onLegalMentionsChange={setLegalMentions}

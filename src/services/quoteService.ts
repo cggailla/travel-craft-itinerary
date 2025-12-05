@@ -16,6 +16,7 @@ export interface QuoteData {
   numberOfPeople?: number;
   quoteDescription?: string;
   quoteHighlights?: string[];
+  tripSummary?: string;
 }
 
 export interface QuoteStep {
@@ -138,6 +139,7 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
     numberOfPeople: trip.number_of_people || undefined,
     quoteDescription: (trip as any).quote_description,
     quoteHighlights: (trip as any).quote_highlights,
+    tripSummary: (trip as any).trip_summary,
   };
 }
 
@@ -241,9 +243,11 @@ export const generateAllQuoteSteps = async (
     } else {
       console.log("⚠️ No trip summary found. Generating one now for better context...");
       
+      if (onProgress) onProgress('trip-summary', 'generating');
       // On lance la génération du résumé via le service existant
       // generateAndParseTripSummary s'occupe déjà de sauvegarder en base
       await generateAndParseTripSummary(tripId);
+      if (onProgress) onProgress('trip-summary', 'completed');
       
       // On le relit pour être sûr
       const { data: newTrip } = await supabase

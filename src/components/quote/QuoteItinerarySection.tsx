@@ -52,10 +52,6 @@ export function QuoteItinerarySection({
           <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>
           
           <div className="h-full flex flex-col">
-            {/* Titre de section sur la première slide */}
-            {stepIndex === 0 && (
-              <h2 className="text-2xl font-bold mb-6">Votre programme détaillé</h2>
-            )}
             
             {/* Layout 2 colonnes 50/50: Image à gauche, Contenu à droite */}
             <div className="flex gap-8 flex-1 h-full">

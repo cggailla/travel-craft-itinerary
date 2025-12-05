@@ -10,7 +10,7 @@ import {
 interface ImageUploaderProps {
   tripId: string;
   stepId?: string;
-  imageType: 'cover' | 'step' | 'quote' | 'quote-step' | 'quote-pricing';
+  imageType: 'cover' | 'step' | 'quote' | 'quote-step' | 'quote-pricing' | 'quote-summary';
   position?: number;
   currentImage?: SupabaseImage;
   onImageUploaded?: (image: SupabaseImage) => void;

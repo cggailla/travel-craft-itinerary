@@ -137,6 +137,8 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
                 setGenerationProgress(prev => prev ? { ...prev, status: "Rédaction de l'introduction et des points forts..." } : null);
              } else if (stepId === 'general-info') {
                 setGenerationProgress(prev => prev ? { ...prev, status: "Recherche des formalités et infos santé..." } : null);
+             } else if (stepId === 'trip-summary') {
+                setGenerationProgress(prev => prev ? { ...prev, status: "Analyse de l'itinéraire global..." } : null);
              } else {
                 const currentStepNum = completedCount + 1;
                 setGenerationProgress(prev => prev ? { 
@@ -145,11 +147,16 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
                 } : null);
              }
           } else if (status === 'completed') {
-            completedCount++;
-            setGenerationProgress(prev => prev ? {
-              ...prev,
-              current: completedCount
-            } : null);
+            if (stepId === 'trip-summary') {
+              // Reload data immediately when trip summary is ready so the summary slide appears
+              loadQuoteData();
+            } else {
+              completedCount++;
+              setGenerationProgress(prev => prev ? {
+                ...prev,
+                current: completedCount
+              } : null);
+            }
           } else if (status === 'error') {
             errorCount++;
             console.error(`Failed to generate for step ${stepId}`, result);
