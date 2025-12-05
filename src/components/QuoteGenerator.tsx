@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { QuoteTemplate } from "./QuoteTemplate";
-import { getQuoteData, QuoteData } from "@/services/quoteService";
+import { getQuoteData, QuoteData, generateAllQuoteSteps } from "@/services/quoteService";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import "@/styles/quote-pdf.css";
 
 interface QuoteGeneratorProps {
@@ -39,12 +40,37 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number; status: string } | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [hasAttemptedAutoGeneration, setHasAttemptedAutoGeneration] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadQuoteData();
   }, [tripId]);
+
+  // Auto-check for missing content
+  useEffect(() => {
+    if (quoteData && !isGenerating && !isLoading && !hasAttemptedAutoGeneration) {
+      checkAndGenerateMissingContent();
+    }
+  }, [quoteData, isGenerating, isLoading, hasAttemptedAutoGeneration]);
+
+  const checkAndGenerateMissingContent = async () => {
+    if (!quoteData) return;
+
+    const stepsMissingContent = quoteData.steps.filter(
+      step => step.segments.length > 0 && !step.quoteDescription
+    );
+
+    if (stepsMissingContent.length > 0) {
+      console.log(`Found ${stepsMissingContent.length} steps missing quote content. Auto-generating...`);
+      setHasAttemptedAutoGeneration(true); // Marquer comme tenté pour éviter la boucle infinie
+      handleGenerateContent(stepsMissingContent);
+    }
+  };
 
   const loadQuoteData = async () => {
     try {
@@ -60,6 +86,70 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateContent = async (specificSteps?: any[]) => {
+    if (!quoteData) return;
+    
+    const stepsToProcess = specificSteps || quoteData.steps;
+    const totalSteps = stepsToProcess.filter(s => s.segments.length > 0).length;
+    
+    if (totalSteps === 0) return;
+
+    try {
+      setIsGenerating(true);
+      setGenerationError(null);
+      setGenerationProgress({ current: 0, total: totalSteps, status: 'Démarrage...' });
+      
+      let completedCount = 0;
+      let errorCount = 0;
+
+      await generateAllQuoteSteps(
+        tripId, 
+        stepsToProcess, 
+        quoteData.destination,
+        (stepId, status, result) => {
+          if (status === 'completed') {
+            completedCount++;
+            setGenerationProgress({
+              current: completedCount,
+              total: totalSteps,
+              status: `Rédaction de l'étape ${completedCount}/${totalSteps}...`
+            });
+          } else if (status === 'error') {
+            errorCount++;
+            console.error(`Failed to generate for step ${stepId}`, result);
+          }
+        }
+      );
+      
+      await loadQuoteData();
+      
+      if (errorCount > 0) {
+        setGenerationError(`La génération a échoué pour ${errorCount} étape(s). Vérifiez que les fonctions Edge sont déployées.`);
+        toast({
+          title: "Génération incomplète",
+          description: `${errorCount} erreurs rencontrées lors de la génération.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Génération terminée",
+          description: "Les textes du devis ont été mis à jour",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating content:", error);
+      setGenerationError("Une erreur critique est survenue lors de la génération.");
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(null);
     }
   };
 
@@ -143,25 +233,60 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
             <h1 className="text-3xl font-bold mb-2">Devis de voyage</h1>
             <p className="text-muted-foreground">{quoteData.title}</p>
           </div>
-          <Button
-            onClick={handleExportHtml}
-            disabled={isExporting}
-            size="lg"
-            className="gap-2"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Export...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4" />
-                Exporter HTML
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2 items-center">
+            <Button
+              onClick={handleExportHtml}
+              disabled={isExporting || isGenerating}
+              size="lg"
+              className="gap-2"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Export...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4" />
+                  Exporter HTML
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+
+        {isGenerating && generationProgress && (
+          <div className="mb-6 p-6 bg-muted/30 rounded-lg border">
+            <div className="flex items-center gap-3 mb-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="font-medium text-foreground">Rédaction de votre devis sur mesure</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{generationProgress.status}</span>
+                <span className="text-muted-foreground">
+                  {Math.round((generationProgress.current / generationProgress.total) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%` }} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {generationError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erreur de génération</AlertTitle>
+            <AlertDescription>
+              {generationError}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div ref={templateRef}>
           <Card className="overflow-hidden">

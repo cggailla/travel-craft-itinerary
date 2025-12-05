@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { requireAuth } from "@/utils/authHelpers";
+import { generateAndParseTripSummary } from "./aiContentService";
 
 export interface QuoteData {
   tripId: string;
@@ -21,6 +22,7 @@ export interface QuoteStep {
   date: string;
   location: string;
   description?: string;
+  quoteDescription?: string;
   segments: QuoteSegment[];
 }
 
@@ -32,6 +34,10 @@ export interface QuoteSegment {
   provider?: string;
   referenceNumber?: string;
   price?: string;
+}
+
+export interface QuoteStepContent {
+  description: string;
 }
 
 /**
@@ -85,6 +91,7 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
         }));
 
       const aiContent = step.ai_content as { description?: string } | null;
+      const quoteContent = step.quote_content as { description?: string } | null;
       
       return {
         id: step.id,
@@ -92,6 +99,7 @@ export async function getQuoteData(tripId: string): Promise<QuoteData> {
         date: step.start_date,
         location: step.primary_location || "",
         description: aiContent?.description,
+        quoteDescription: quoteContent?.description,
         segments,
       };
     })
@@ -145,3 +153,96 @@ export async function updateQuotePdfUrl(tripId: string, pdfUrl: string): Promise
 
   if (error) throw error;
 }
+
+export const generateQuoteStepContent = async (stepId: string, segments: any[], destination?: string, tripSummary?: string) => {
+  try {
+    console.log(`Generating quote content for step ${stepId}...`);
+    
+    const { data, error } = await supabase.functions.invoke('generate-quote-step-content', {
+      body: { segments, destination, tripSummary }
+    });
+
+    if (error) throw error;
+
+    const quoteContent: QuoteStepContent = {
+      description: data.content
+    };
+
+    // Sauvegarde dans la table travel_steps
+    const { error: updateError } = await supabase
+      .from('travel_steps')
+      .update({ quote_content: quoteContent } as any) // Cast as any car la colonne est nouvelle
+      .eq('id', stepId);
+
+    if (updateError) throw updateError;
+
+    return quoteContent;
+  } catch (error) {
+    console.error(`Error generating quote content for step ${stepId}:`, error);
+    return null;
+  }
+};
+
+export const generateAllQuoteSteps = async (
+  tripId: string, 
+  steps: any[], 
+  destination?: string,
+  onProgress?: (stepId: string, status: 'generating' | 'completed' | 'error', result?: any) => void
+) => {
+  console.log("Starting batch generation for quote steps...");
+  
+  // 1. Récupérer ou générer le résumé du voyage pour le contexte
+  let tripSummary = "";
+  try {
+    const { data: trip } = await supabase
+      .from('trips')
+      .select('trip_summary')
+      .eq('id', tripId)
+      .single();
+    
+    if (trip?.trip_summary) {
+      tripSummary = trip.trip_summary;
+      console.log("✅ Found existing trip summary for context");
+    } else {
+      console.log("⚠️ No trip summary found. Generating one now for better context...");
+      
+      // On lance la génération du résumé via le service existant
+      // generateAndParseTripSummary s'occupe déjà de sauvegarder en base
+      await generateAndParseTripSummary(tripId);
+      
+      // On le relit pour être sûr
+      const { data: newTrip } = await supabase
+        .from('trips')
+        .select('trip_summary')
+        .eq('id', tripId)
+        .single();
+        
+      if (newTrip?.trip_summary) {
+        tripSummary = newTrip.trip_summary;
+        console.log("✅ Trip summary generated and loaded successfully");
+      }
+    }
+  } catch (e) {
+    console.warn("Could not fetch or generate trip summary:", e);
+    // On continue sans résumé si ça échoue
+  }
+
+  // Filtrer les étapes qui ont des segments
+  const stepsToGenerate = steps.filter(step => step.segments && step.segments.length > 0);
+  
+  // Exécuter séquentiellement pour permettre le suivi de progression précis
+  // (ou en parallèle avec gestion d'état, mais séquentiel est plus sûr pour les limites de rate)
+  for (const step of stepsToGenerate) {
+    if (onProgress) onProgress(step.id, 'generating');
+    
+    try {
+      const result = await generateQuoteStepContent(step.id, step.segments, destination, tripSummary);
+      if (onProgress) onProgress(step.id, 'completed', result);
+    } catch (error) {
+      console.error(`Error generating for step ${step.id}:`, error);
+      if (onProgress) onProgress(step.id, 'error', error);
+    }
+  }
+
+  console.log("Batch generation completed.");
+};

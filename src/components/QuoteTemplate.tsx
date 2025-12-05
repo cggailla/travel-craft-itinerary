@@ -218,7 +218,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       ...step,
       title: step.title || "",
       date: step.date || "",
-      description: step.description || "",
+      description: step.quoteDescription || step.description || "",
       segments: step.segments.map(seg => ({
         ...seg,
         title: seg.title || "",
@@ -227,6 +227,22 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       }))
     }))
   );
+
+  // Mettre à jour les steps si les données changent (ex: après génération IA)
+  useEffect(() => {
+    setSteps(data.steps.map(step => ({
+      ...step,
+      title: step.title || "",
+      date: step.date || "",
+      description: step.quoteDescription || step.description || "",
+      segments: step.segments.map(seg => ({
+        ...seg,
+        title: seg.title || "",
+        description: seg.description || "",
+        provider: seg.provider || ""
+      }))
+    })));
+  }, [data.steps]);
 
   // Images
   const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
