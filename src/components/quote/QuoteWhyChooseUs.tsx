@@ -65,11 +65,12 @@ export function QuoteWhyChooseUs({
             <div
               key={index}
               className="flex flex-col items-center text-center p-4 bg-background rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              data-pdf-item="why-us-item"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                 <IconComponent className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-base mb-1">
+              <h3 className="font-semibold text-base mb-1" data-pdf-why-us-title>
                 <EditableText
                   value={item.title}
                   onChange={(val) => updateItemTitle(index, val)}
@@ -77,7 +78,7 @@ export function QuoteWhyChooseUs({
                   className="font-semibold text-base"
                 />
               </h3>
-              <p className="text-muted-foreground text-xs leading-relaxed">
+              <p className="text-muted-foreground text-xs leading-relaxed" data-pdf-why-us-description>
                 <EditableText
                   value={item.description}
                   onChange={(val) => updateItemDescription(index, val)}

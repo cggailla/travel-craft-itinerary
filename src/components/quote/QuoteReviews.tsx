@@ -116,9 +116,10 @@ export function QuoteReviews({
           <div
             key={index}
             className="p-6 bg-background rounded-lg shadow-sm border border-border"
+            data-pdf-item="review"
           >
             <div className="mb-3">{renderStars(review.rating)}</div>
-            <p className="text-sm text-muted-foreground italic mb-4">
+            <p className="text-sm text-muted-foreground italic mb-4" data-pdf-review-text>
               <EditableText
                 value={review.text}
                 onChange={(val) => updateReviewText(index, val)}
@@ -127,7 +128,7 @@ export function QuoteReviews({
                 className="text-sm text-muted-foreground italic"
               />
             </p>
-            <p className="text-sm font-semibold">
+            <p className="text-sm font-semibold" data-pdf-review-author>
               <EditableText
                 value={review.author}
                 onChange={(val) => updateReviewAuthor(index, val)}

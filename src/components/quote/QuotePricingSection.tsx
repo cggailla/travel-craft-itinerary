@@ -87,7 +87,7 @@ export function QuotePricingSection({
         </h2>
 
         {/* Description */}
-        <div className="mb-8 text-muted-foreground leading-relaxed">
+        <div className="mb-8 text-muted-foreground leading-relaxed" data-pdf-description>
           <EditableText
             value={description}
             onChange={onDescriptionChange || (() => {})}
@@ -176,7 +176,7 @@ export function QuotePricingSection({
         {/* Price Box */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex justify-between items-center">
           <span className="text-muted-foreground font-medium">{nights} nuits</span>
-          <div className="text-2xl font-bold text-primary">
+          <div className="text-2xl font-bold text-primary" data-pdf-price>
             <EditableText
               value={totalPrice}
               onChange={onTotalPriceChange}
@@ -191,7 +191,7 @@ export function QuotePricingSection({
           <h3 className="font-bold text-lg mb-6 text-foreground">Les points forts de ce voyage</h3>
           <div className="space-y-4">
             {highlights.map((highlight, index) => (
-              <div key={index} className="flex gap-3 items-start">
+              <div key={index} className="flex gap-3 items-start" data-pdf-item="highlight">
                 <div className="mt-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Check className="w-3 h-3 text-primary" />
                 </div>

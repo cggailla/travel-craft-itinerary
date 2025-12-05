@@ -50,6 +50,7 @@ export function QuoteFAQ({
           <div
             key={index}
             className=""
+            data-pdf-item="faq-item"
           >
             <div className="flex gap-4">
               <div className="flex-shrink-0">
@@ -58,7 +59,7 @@ export function QuoteFAQ({
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2">
+                <h3 className="font-semibold text-lg mb-2" data-pdf-faq-question>
                   <EditableText
                     value={item.question}
                     onChange={(val) => updateQuestion(index, val)}
@@ -66,7 +67,7 @@ export function QuoteFAQ({
                     className="font-semibold text-lg"
                   />
                 </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed" data-pdf-faq-answer>
                   <EditableText
                     value={item.answer}
                     onChange={(val) => updateAnswer(index, val)}

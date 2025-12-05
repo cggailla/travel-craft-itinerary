@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { QuoteTemplate } from "./QuoteTemplate";
 import { getQuoteData, QuoteData, generateAllQuoteSteps } from "@/services/quoteService";
+import { generateQuotePdf } from "@/services/pdfQuoteService";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { FileText, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { FileText, Loader2, Sparkles, AlertCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import "@/styles/quote-pdf.css";
@@ -193,51 +194,33 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     }
   };
 
-  const handleExportHtml = () => {
-    if (!templateRef.current) return;
+  const handleGeneratePdf = async () => {
+    if (!quoteData) return;
 
     try {
       setIsExporting(true);
       
-      const html = getQuoteDOMRawExport(templateRef.current);
+      const result = await generateQuotePdf(tripId);
       
-      // Créer un document HTML complet
-      const fullHtml = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Devis - ${quoteData?.title || 'Voyage'}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; }
-  </style>
-</head>
-<body>
-  ${html}
-</body>
-</html>`;
-      
-      // Télécharger le fichier HTML
-      const blob = new Blob([fullHtml], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `devis-${tripId}.html`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Export réussi",
-        description: "Le fichier HTML a été téléchargé",
-      });
-    } catch (error) {
-      console.error("Error exporting HTML:", error);
+      console.log("📊 PDF Generation Result:", result);
+
+      if (result.success && result.url) {
+        // Ouvrir le PDF dans un nouvel onglet
+        window.open(result.url, '_blank');
+        
+        toast({
+          title: "PDF généré",
+          description: "Le devis a été généré avec succès",
+        });
+      } else {
+        console.error("❌ PDF Generation Failed Logic:", result);
+        throw new Error(result.error || "Erreur inconnue lors de la génération");
+      }
+    } catch (error: any) {
+      console.error("❌ Error generating PDF (Catch):", error);
       toast({
         title: "Erreur",
-        description: "Impossible d'exporter le HTML",
+        description: error.message || "Impossible de générer le PDF",
         variant: "destructive",
       });
     } finally {
@@ -275,7 +258,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
           </div>
           <div className="flex gap-2 items-center">
             <Button
-              onClick={handleExportHtml}
+              onClick={handleGeneratePdf}
               disabled={isExporting || isGenerating}
               size="lg"
               className="gap-2"
@@ -283,12 +266,12 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Export...
+                  Génération...
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4" />
-                  Exporter HTML
+                  <Download className="h-4 w-4" />
+                  Télécharger le PDF
                 </>
               )}
             </Button>

@@ -502,7 +502,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   const versionNumber = `V${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
 
   return (
-    <div className="quote-container max-w-5xl mx-auto bg-background p-8">
+    <div id="quote-content" className="quote-container max-w-5xl mx-auto bg-background p-8" data-pdf-trip-id={data.tripId}>
       {/* VERSION NUMBER - Top Right */}
       {!pdfMode && (
         <div className="text-right text-sm text-muted-foreground mb-4 no-print">

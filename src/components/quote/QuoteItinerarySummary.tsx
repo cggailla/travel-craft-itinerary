@@ -43,10 +43,10 @@ export function QuoteItinerarySummary({
             const dateObj = step.date ? new Date(step.date) : null;
             
             return (
-              <div key={step.id} className="flex items-center gap-3 py-2 border-b border-dashed border-primary/10">
+              <div key={step.id} className="flex items-center gap-3 py-2 border-b border-dashed border-primary/10" data-pdf-item="summary-step">
                 {/* Date */}
                 <div className="w-16 text-right flex-shrink-0">
-                   <span className="text-sm font-bold text-primary block leading-tight">
+                   <span className="text-sm font-bold text-primary block leading-tight" data-pdf-step-date>
                      {dateObj ? format(dateObj, "dd MMM", { locale: fr }) : ""}
                    </span>
                 </div>
@@ -54,7 +54,7 @@ export function QuoteItinerarySummary({
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                    {/* Title */}
-                   <div className="text-sm font-bold text-foreground leading-tight truncate">
+                   <div className="text-sm font-bold text-foreground leading-tight truncate" data-pdf-step-title>
                       <EditableText 
                         value={step.title} 
                         onChange={(v) => onStepChange?.(step.id, 'title', v)}
@@ -62,7 +62,7 @@ export function QuoteItinerarySummary({
                    </div>
                    
                    {/* Location */}
-                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate" data-pdf-step-location>
                       <EditableText 
                         value={step.location} 
                         onChange={(v) => onStepChange?.(step.id, 'location', v)}

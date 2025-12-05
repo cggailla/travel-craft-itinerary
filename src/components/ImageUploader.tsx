@@ -142,6 +142,7 @@ export function ImageUploader({
           onDrop={handleDrop}
         >
           <img
+            data-pdf-image
             src={currentImage.public_url}
             alt="Image uploadée"
             className={`w-full object-cover ${height}`}
