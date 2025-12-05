@@ -164,6 +164,23 @@ serve(async (req) => {
     if (!publicUrl) throw new Error("Failed to get public URL from storage");
 
     console.log("✅ PDF available at:", publicUrl);
+
+    // Update trip with PDF URL and generation timestamp
+    const { error: updateError } = await supabase
+      .from("trips")
+      .update({
+        last_pdf_url: publicUrl,
+        last_pdf_generated_at: new Date().toISOString(),
+      })
+      .eq("id", tripId);
+
+    if (updateError) {
+      console.error("⚠️ Failed to update trip with PDF info:", updateError);
+      // Non-blocking error, continue anyway
+    } else {
+      console.log("✅ Trip updated with PDF info");
+    }
+
     // 5. Final metric
     logMetrics("Complete", startTime);
 

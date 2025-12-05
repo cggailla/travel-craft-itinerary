@@ -6,8 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoginForm } from "@/components/auth/LoginForm";
+import Dashboard from "./pages/Dashboard";
 import IndexNew from "./pages/IndexNew";
 import TravelBooklet from "./pages/TravelBooklet";
+import TravelQuote from "./pages/TravelQuote";
+import OutputChoice from "./pages/OutputChoice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,8 +28,21 @@ const App = () => (
             
             {/* Routes protégées */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<IndexNew />} />
+              {/* Dashboard - nouvelle page d'accueil */}
+              <Route path="/" element={<Dashboard />} />
+              
+              {/* Création/édition de voyage */}
+              <Route path="/trip/create" element={<IndexNew />} />
+              <Route path="/trip/:tripId" element={<IndexNew />} />
+              
+              {/* Choix entre Devis et Carnet */}
+              <Route path="/output-choice" element={<OutputChoice />} />
+              
+              {/* Génération PDF */}
               <Route path="/booklet" element={<TravelBooklet />} />
+              
+              {/* Génération Devis */}
+              <Route path="/quote" element={<TravelQuote />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

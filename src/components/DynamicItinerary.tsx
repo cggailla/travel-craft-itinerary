@@ -16,6 +16,7 @@ interface DynamicItineraryProps {
   options: BookletOptions;
   tripId: string;
   allSegments?: BookletData["segments"];
+  autoGenerate?: boolean;
 }
 
 export function DynamicItinerary({
@@ -23,6 +24,7 @@ export function DynamicItinerary({
   options,
   tripId,
   allSegments = [],
+  autoGenerate,
 }: DynamicItineraryProps) {
   const [enrichedSteps, setEnrichedSteps] = useState<EnrichedStep[]>([]);
   const [aiContents, setAiContents] = useState<Map<string, AIContentResult>>(new Map());
@@ -33,12 +35,59 @@ export function DynamicItinerary({
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [stepStatus, setStepStatus] = useState<string>('');
 
+  // Auto-génération si demandée via le paramètre URL
   useEffect(() => {
-    if (data.segments.length > 0 && tripId) {
+    if (autoGenerate && !isGenerating && enrichedSteps.length === 0 && tripId) {
+      console.log('🚀 Auto-génération déclenchée via autoGenerate');
       generateContent();
+      
+      // Nettoyer l'URL pour éviter de re-déclencher au refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('autoGenerate');
+      window.history.replaceState({}, '', url);
+    }
+  }, [autoGenerate, tripId]);
+
+  // Chargement initial des steps et leur contenu AI
+  useEffect(() => {
+    if (data.segments.length > 0 && tripId && !autoGenerate) {
+      loadExistingContentOrGenerate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.segments, tripId]);
+
+  // ✅ Fonction intelligente : charge depuis la DB ou génère si nécessaire
+  const loadExistingContentOrGenerate = async () => {
+    try {
+      setStepStatus('Chargement du contenu...');
+      const stepsResult = await getManualSteps(tripId);
+      
+      if (!stepsResult.success || !stepsResult.steps || stepsResult.steps.length === 0) {
+        console.log('⚠️ Aucune étape trouvée');
+        return;
+      }
+
+      // Vérifier combien de steps ont déjà du contenu AI
+      const stepsWithContent = stepsResult.steps.filter(step => step.ai_content);
+      const totalSteps = stepsResult.steps.length;
+      
+      console.log(`📊 ${stepsWithContent.length}/${totalSteps} steps ont du contenu AI en cache`);
+
+      if (stepsWithContent.length === totalSteps) {
+        // ✅ Tout le contenu est en cache, charger depuis la DB
+        console.log('✅ Chargement du contenu depuis la base de données (pas de génération nécessaire)');
+        await refreshEnrichedSteps();
+        setStepStatus('');
+      } else {
+        // ⚡ Certains steps manquent de contenu, régénérer
+        console.log('⚡ Génération du contenu manquant...');
+        await generateContent();
+      }
+    } catch (error) {
+      console.error('Error loading content:', error);
+      setStepStatus('');
+    }
+  };
 
   const refreshEnrichedSteps = async () => {
     try {
@@ -63,10 +112,28 @@ export function DynamicItinerary({
               role: 'services' as const,
               icon: '📋'
             }],
+            aiContent: step.ai_content as any, // ✅ Charger le contenu AI depuis la DB
             rawData: step
           };
         });
         setEnrichedSteps(updatedSteps);
+        
+        // ✅ Charger le contenu AI en cache si disponible
+        const newAiContents = new Map<string, AIContentResult>();
+        stepsResult.steps.forEach(step => {
+          if (step.ai_content) {
+            const content = step.ai_content as any;
+            newAiContents.set(step.id, {
+              stepId: step.id,
+              overview: content.overview || '',
+              tips: content.tips || [],
+              localContext: content.localContext,
+              success: true
+            });
+          }
+        });
+        setAiContents(newAiContents);
+        console.log(`✅ Loaded ${newAiContents.size} AI contents from database`);
       }
     } catch (error) {
       console.error('Error refreshing enriched steps:', error);
@@ -112,12 +179,33 @@ export function DynamicItinerary({
             role: 'services' as const,
             icon: '📋'
           }],
+          aiContent: step.ai_content as any, // ✅ Inclure le contenu existant
           rawData: step
         };
       });
 
       setEnrichedSteps(steps);
       setProgress(50);
+
+      // ✅ Charger le contenu AI existant en cache
+      const existingAiContents = new Map<string, AIContentResult>();
+      stepsResult.steps.forEach(step => {
+        if (step.ai_content) {
+          const content = step.ai_content as any;
+          existingAiContents.set(step.id, {
+            stepId: step.id,
+            overview: content.overview || '',
+            tips: content.tips || [],
+            localContext: content.localContext,
+            success: true
+          });
+        }
+      });
+      
+      if (existingAiContents.size > 0) {
+        console.log(`✅ Loaded ${existingAiContents.size} existing AI contents from database`);
+        setAiContents(existingAiContents);
+      }
 
       // Parse trip summary to extract titles and locations
       console.log('🧩 Starting trip summary parsing...');
@@ -141,19 +229,34 @@ export function DynamicItinerary({
       }
 
       setStepStatus('Génération du contenu enrichi...');
-      setAiContents(new Map());
 
-      const aiRequests = steps.map((step, index) => {
-        const parsedStepInfo = parsedStepsMap.get(index + 1); // Align with "Etape X" numbering
-        const primaryLocationFromSummary = parsedStepInfo?.location;
-        
-        console.log(`🌍 Creating AI request for step ${index + 1}:`);
-        console.log(`  - Step ID: ${step.stepId}`);
-        console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
-        console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
-        
-        return createAIContentRequest(step, primaryLocationFromSummary);
-      });
+      // ✅ Ne générer QUE les steps sans ai_content
+      const aiRequests = steps
+        .filter(step => !step.aiContent) // Filtrer ceux qui n'ont PAS de contenu
+        .map((step, index) => {
+          const originalIndex = steps.indexOf(step);
+          const parsedStepInfo = parsedStepsMap.get(originalIndex + 1);
+          const primaryLocationFromSummary = parsedStepInfo?.location;
+          
+          console.log(`🌍 Creating AI request for step ${originalIndex + 1} (MISSING CONTENT):`);
+          console.log(`  - Step ID: ${step.stepId}`);
+          console.log(`  - Original primaryLocation: ${step.primaryLocation}`);
+          console.log(`  - Location from trip summary: ${primaryLocationFromSummary}`);
+          
+          return createAIContentRequest(step, primaryLocationFromSummary);
+        });
+
+      // ✅ Si tous les steps ont du contenu, ne rien générer
+      if (aiRequests.length === 0) {
+        console.log('✅ Tout le contenu AI est déjà en cache, pas de génération nécessaire');
+        setStepStatus('Contenu chargé depuis le cache');
+        setProgress(100);
+        setIsGenerating(false);
+        return;
+      }
+      
+      console.log(`⚡ Génération de ${aiRequests.length} steps manquants sur ${steps.length} total`);
+      
       const results = await generateAllStepsAIContent(
         aiRequests, 
         tripId,

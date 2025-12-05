@@ -32,9 +32,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface BookletGeneratorProps {
   tripId: string;
+  autoGenerate?: boolean;
 }
 
-export function BookletGenerator({ tripId }: BookletGeneratorProps) {
+export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps) {
   const [bookletData, setBookletData] = useState<BookletData | null>(null);
   const [pdfBookletData, setPdfBookletData] = useState<PDFBookletData | null>(null);
   const [options] = useState<BookletOptions>(defaultBookletOptions);
@@ -261,6 +262,7 @@ export function BookletGenerator({ tripId }: BookletGeneratorProps) {
             data={bookletData}
             options={options}
             tripId={tripId}
+            autoGenerate={autoGenerate}
           />
         )}
       </div>

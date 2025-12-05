@@ -22,12 +22,14 @@ interface BookletTemplateProps {
   data: BookletData;
   options: BookletOptions;
   tripId: string;
+  autoGenerate?: boolean;
 }
 
 export function BookletTemplate({
   data,
   options,
   tripId,
+  autoGenerate,
 }: BookletTemplateProps) {
   const [editableTitle, setEditableTitle] = useState(data.tripTitle);
   const [coverImage1, setCoverImage1] = useState<SupabaseImage | undefined>();
@@ -322,6 +324,7 @@ export function BookletTemplate({
           data={data}
           options={options}
           tripId={tripId}
+          autoGenerate={autoGenerate}
         />
       </div>
 
