@@ -258,7 +258,7 @@ export default function Dashboard() {
     validated: trips.filter(t => t.currentPhase === 'validated').length
   };
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header avec effet moderne */}
         <header className="flex justify-between items-center mb-12 relative">
           <div className="space-y-2">
@@ -421,7 +421,7 @@ export default function Dashboard() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardContent>
-          </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          </Card> : viewMode === 'grid' ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
             {filteredTrips.map((trip, index) => {
           const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
           const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
