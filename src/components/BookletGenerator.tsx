@@ -81,7 +81,7 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
 
       const html = getBookletDOMRawExport(element);
 
-      const { data, error } = await supabase.functions.invoke("generate-booklet-pdf", {
+      const { data, error } = await supabase.functions.invoke("pdf-coordinator", {
         body: { html, tripId },
       });
 
@@ -124,6 +124,69 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
         description: err.message || "Impossible de générer le PDF",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingPdfEdge(false);
+    }
+  };
+
+  // New async pipeline using pdf-coordinator + pdf-job-status
+  const startChunkedPdfGeneration = async () => {
+    try {
+      setIsGeneratingPdfEdge(true);
+      toast({ title: 'Génération PDF', description: 'Le PDF est en cours de génération...' });
+
+      const element = document.getElementById('booklet-content');
+      if (!element) throw new Error('Element #booklet-content introuvable');
+      const html = getBookletDOMRawExport(element);
+
+      const { data: coordData, error: coordError } = await supabase.functions.invoke('pdf-coordinator', {
+        body: { html, tripId },
+      });
+      if (coordError) throw coordError;
+      if (!coordData?.job_id) throw new Error(coordData?.error || 'Aucun job_id retourné par la fonction');
+      const jobId: string = coordData.job_id;
+      console.log('[BookletGenerator] job created', jobId, coordData);
+
+      const startedAt = Date.now();
+      const timeoutMs = 5 * 60 * 1000;
+      const intervalMs = 2000;
+      let finalUrl: string | null = null;
+
+      while (Date.now() - startedAt < timeoutMs) {
+        const { data: statusData, error: statusError } = await supabase.functions.invoke('pdf-job-status', {
+          body: { jobId },
+        });
+        if (statusError) {
+          console.warn('[BookletGenerator] status error', statusError);
+        } else if (statusData?.success && statusData?.job) {
+          const status = statusData.job.status as string;
+          const doneUrl = statusData.job.final_pdf_url as string | null;
+          console.log(`[BookletGenerator] job ${jobId} status=${status}`);
+          if (status === 'completed' && doneUrl) { finalUrl = doneUrl; break; }
+          if (status === 'failed') { throw new Error(statusData.job.error || 'Job failed'); }
+        }
+        await new Promise((r) => setTimeout(r, intervalMs));
+      }
+
+      if (!finalUrl) throw new Error('Délai dépassé pour la génération du PDF');
+
+      const fetchUrl = finalUrl.includes('?') ? `${finalUrl}&ts=${Date.now()}` : `${finalUrl}?ts=${Date.now()}`;
+      console.log('[BookletGenerator] downloading', fetchUrl);
+      const response = await fetch(fetchUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Impossible de télécharger le fichier PDF');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `booklet-${tripId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      toast({ title: 'PDF généré', description: 'Le fichier a été téléchargé avec succès.' });
+    } catch (err: any) {
+      console.error('Erreur génération edge PDF:', err);
+      toast({ title: 'Erreur', description: err.message || 'Impossible de générer le PDF', variant: 'destructive' });
     } finally {
       setIsGeneratingPdfEdge(false);
     }
@@ -180,7 +243,7 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
           <Button
-            onClick={handleGeneratePdfEdge}
+            onClick={startChunkedPdfGeneration}
             disabled={isGeneratingPdfEdge}
             variant="default"
             className="flex items-center"

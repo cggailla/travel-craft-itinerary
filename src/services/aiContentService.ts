@@ -155,8 +155,38 @@ export function parseTripMetadata(tripSummary: string): TripMetadata | null {
  * Generate and parse trip summary in one operation
  */
 export async function generateAndParseTripSummary(tripId: string): Promise<ParsedStepInfo[]> {
-  const tripSummary = await generateTripSummary(tripId);
+  // 1. Check if summary already exists
+  const { data: existingTrip } = await supabase
+    .from('trips')
+    .select('trip_summary')
+    .eq('id', tripId)
+    .single();
+
+  let tripSummary = existingTrip?.trip_summary;
+
+  if (!tripSummary) {
+    console.log('📝 No existing trip summary found, generating new one...');
+    tripSummary = await generateTripSummary(tripId);
+    
+    // Save the generated summary
+    if (tripSummary) {
+      const { error: saveError } = await supabase
+        .from('trips')
+        .update({ trip_summary: tripSummary } as any)
+        .eq('id', tripId);
+        
+      if (saveError) {
+        console.error('❌ Failed to save trip summary:', saveError);
+      } else {
+        console.log('✅ Trip summary saved to database');
+      }
+    }
+  } else {
+    console.log('✅ Using existing trip summary from database');
+  }
   
+  if (!tripSummary) return [];
+
   // Extract and save metadata (title + destination zone)
   const metadata = parseTripMetadata(tripSummary);
   if (metadata) {

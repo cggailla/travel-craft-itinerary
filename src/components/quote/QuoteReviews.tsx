@@ -72,12 +72,21 @@ export function QuoteReviews({
         {/* Note globale */}
         <div className="flex items-center justify-center gap-3 mb-2">
           <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
+            {[1, 2, 3, 4].map((star) => (
               <Star
                 key={star}
                 className="h-6 w-6 fill-yellow-400 text-yellow-400"
               />
             ))}
+            {/* 5ème étoile partiellement remplie pour simuler 4.9 */}
+            <div className="relative">
+               {/* Étoile de fond (grise) */}
+               <Star className="h-6 w-6 text-gray-300 fill-gray-300" />
+               {/* Étoile de remplissage (jaune), coupée pour l'effet 4.9 */}
+               <div className="absolute top-0 left-0 overflow-hidden" style={{ width: '80%' }}>
+                 <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+               </div>
+            </div>
           </div>
           <span className="text-2xl font-bold">
             <EditableText
@@ -107,9 +116,10 @@ export function QuoteReviews({
           <div
             key={index}
             className="p-6 bg-background rounded-lg shadow-sm border border-border"
+            data-pdf-item="review"
           >
             <div className="mb-3">{renderStars(review.rating)}</div>
-            <p className="text-sm text-muted-foreground italic mb-4">
+            <p className="text-sm text-muted-foreground italic mb-4" data-pdf-review-text>
               <EditableText
                 value={review.text}
                 onChange={(val) => updateReviewText(index, val)}
@@ -118,7 +128,7 @@ export function QuoteReviews({
                 className="text-sm text-muted-foreground italic"
               />
             </p>
-            <p className="text-sm font-semibold">
+            <p className="text-sm font-semibold" data-pdf-review-author>
               <EditableText
                 value={review.author}
                 onChange={(val) => updateReviewAuthor(index, val)}

@@ -47,26 +47,16 @@ export function QuoteItinerarySection({
 }: QuoteItinerarySectionProps) {
   return (
     <>
-      {!pdfMode && (
-        <section className="itinerary-section mb-12" data-pdf-section="itinerary">
-          <h2 className="text-3xl font-bold mb-8">Votre programme détaillé</h2>
-        </section>
-      )}
-      
       {steps.map((step, stepIndex) => (
-        <div key={stepIndex} className={pdfMode ? "quote-slide" : "mb-8"}>
-          {pdfMode && <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>}
+        <div key={stepIndex} className="quote-slide">
+          <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>
           
-          <div className={pdfMode ? "h-full flex flex-col" : "step-card p-6 bg-card rounded-lg border border-border"}>
-            {/* Titre de section en mode PDF */}
-            {pdfMode && stepIndex === 0 && (
-              <h2 className="text-2xl font-bold mb-6">Votre programme détaillé</h2>
-            )}
+          <div className="h-full flex flex-col">
             
             {/* Layout 2 colonnes 50/50: Image à gauche, Contenu à droite */}
-            <div className={pdfMode ? "flex gap-8 flex-1" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
+            <div className="flex gap-8 flex-1 h-full">
               {/* Colonne gauche: Image - 50% */}
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-muted/30 min-h-[500px]">
+              <div className="relative rounded-3xl overflow-hidden w-1/2 h-full">
                 <ImageUploader
                   tripId={tripId}
                   stepId={step.id}
@@ -75,27 +65,15 @@ export function QuoteItinerarySection({
                   currentImage={stepImages[stepIndex]}
                   onImageUploaded={(image) => onStepImageUploaded(stepIndex, image)}
                   onImageDeleted={() => onStepImageDeleted(stepIndex)}
-                  height="h-[500px]"
+                  height="h-full"
+                  className="h-full w-full object-cover"
                 />
-                
-                {!stepImages[stepIndex] && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="text-muted-foreground text-lg">Image de l'étape</p>
-                  </div>
-                )}
               </div>
 
               {/* Colonne droite: Contenu - 50% */}
-              <div className="flex flex-col justify-center">
-                {/* Badge jour */}
-                <div className="inline-flex items-center gap-2 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                    J{stepIndex + 1}
-                  </div>
-                </div>
-
+              <div className="flex flex-col justify-center w-1/2 py-8">
                 {/* Titre */}
-                <h3 className="text-3xl md:text-4xl font-bold mb-6">
+                <h3 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
                   <EditableText
                     value={step.title}
                     onChange={(newValue) => onStepTitleChange(stepIndex, newValue)}
@@ -105,25 +83,26 @@ export function QuoteItinerarySection({
                 </h3>
 
                 {/* Infos: Date et Hébergement */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-3 text-foreground">
+                <div className="space-y-1 mb-6">
+                  <div className="flex items-center gap-3 text-foreground/80">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <EditableDate 
                       value={step.date ? new Date(step.date) : new Date()} 
                       onChange={(newValue) => onStepDateChange(stepIndex, newValue)}
+                      className="font-medium text-base"
                     />
                   </div>
                   
                   {/* Afficher l'hébergement s'il existe */}
                   {step.segments.some(seg => seg.type === 'hotel' || seg.type === 'accommodation') && (
-                    <div className="flex items-center gap-3 text-foreground">
+                    <div className="flex items-center gap-3 text-foreground/80">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span className="font-medium">
+                      <span className="font-medium text-base">
                         Logement {step.segments.find(seg => seg.type === 'hotel' || seg.type === 'accommodation')?.title || 'Non spécifié'}
                       </span>
                     </div>
@@ -136,46 +115,29 @@ export function QuoteItinerarySection({
                     value={step.description}
                     onChange={(newValue) => onStepDescriptionChange(stepIndex, newValue)}
                     multiline
-                    className="text-foreground leading-relaxed text-base"
+                    className="text-foreground leading-relaxed text-sm text-justify"
                     placeholder="Description de la journée..."
                   />
                 </div>
 
-                {/* Expériences prévues (segments non-hébergement) */}
+                {/* Expériences prévues (segments non-hébergement) - Optionnel ou plus discret */}
                 {step.segments.filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation').length > 0 && (
-                  <div>
-                    <h4 className="font-bold text-lg mb-4">Expériences prévues</h4>
-                    <div className="space-y-3">
+                  <div className="mt-auto pt-4 border-t border-border/50">
+                    <h4 className="font-bold text-base mb-3 text-primary">Expériences prévues</h4>
+                    <div className="space-y-1.5">
                       {step.segments
                         .filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation')
                         .map((segment, segmentIndex) => (
-                          <div key={segmentIndex} className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
-                              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium text-base">
-                                <EditableText
-                                  value={segment.title}
-                                  onChange={(newValue) =>
-                                    onSegmentTitleChange(stepIndex, segmentIndex, newValue)
-                                  }
-                                  placeholder="Expérience"
-                                />
-                              </div>
-                              {segment.provider && (
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  <EditableText
-                                    value={segment.provider}
-                                    onChange={(newValue) =>
-                                      onSegmentProviderChange(stepIndex, segmentIndex, newValue)
-                                    }
-                                    placeholder="Prestataire"
-                                  />
-                                </div>
-                              )}
+                          <div key={segmentIndex} className="flex items-center gap-3 text-sm">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                            <div className="font-medium">
+                              <EditableText
+                                value={segment.title}
+                                onChange={(newValue) =>
+                                  onSegmentTitleChange(stepIndex, segmentIndex, newValue)
+                                }
+                                placeholder="Expérience"
+                              />
                             </div>
                           </div>
                         ))}

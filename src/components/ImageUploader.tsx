@@ -10,7 +10,7 @@ import {
 interface ImageUploaderProps {
   tripId: string;
   stepId?: string;
-  imageType: 'cover' | 'step' | 'quote' | 'quote-step' | 'quote-pricing';
+  imageType: 'cover' | 'step' | 'quote' | 'quote-step' | 'quote-pricing' | 'quote-summary';
   position?: number;
   currentImage?: SupabaseImage;
   onImageUploaded?: (image: SupabaseImage) => void;
@@ -142,6 +142,7 @@ export function ImageUploader({
           onDrop={handleDrop}
         >
           <img
+            data-pdf-image
             src={currentImage.public_url}
             alt="Image uploadée"
             className={`w-full object-cover ${height}`}

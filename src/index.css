@@ -5,6 +5,10 @@
 /* Travel Booklet Builder Design System - All colors MUST be HSL */
 
 @layer base {
+  html {
+    font-size: 130%; /* Augmente la taille de base de 10% */
+  }
+
   :root {
     /* Base colors - Travel theme */
     --background: 210 40% 98%;
