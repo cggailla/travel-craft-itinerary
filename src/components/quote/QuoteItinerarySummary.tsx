@@ -36,28 +36,25 @@ export function QuoteItinerarySummary({
         <div className="h-1 w-20 bg-primary/20 mx-auto mt-2 rounded-full"/>
       </div>
 
-      <div className="flex-1 flex px-12 pb-12 gap-8">
-        {/* Left Column: List of Steps (60%) */}
-        <div className="w-[60%] flex flex-col justify-center space-y-4">
+      <div className="flex-1 flex px-8 pb-8 gap-6 overflow-hidden">
+        {/* Left Column: Grid of Steps (70%) */}
+        <div className="w-[70%] grid grid-cols-2 gap-x-8 gap-y-1 content-start">
           {steps.map((step, index) => {
             const dateObj = step.date ? new Date(step.date) : null;
             
             return (
-              <div key={step.id} className="flex items-center gap-4 border-b border-primary/10 pb-2 last:border-0">
+              <div key={step.id} className="flex items-center gap-3 py-2 border-b border-dashed border-primary/10">
                 {/* Date */}
-                <div className="w-24 text-right">
-                   <span className="text-sm font-bold text-primary block">
+                <div className="w-16 text-right flex-shrink-0">
+                   <span className="text-sm font-bold text-primary block leading-tight">
                      {dateObj ? format(dateObj, "dd MMM", { locale: fr }) : ""}
                    </span>
                 </div>
 
-                {/* Dot */}
-                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                
                 {/* Content */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                    {/* Title */}
-                   <div className="text-sm font-bold text-foreground leading-tight">
+                   <div className="text-sm font-bold text-foreground leading-tight truncate">
                       <EditableText 
                         value={step.title} 
                         onChange={(v) => onStepChange?.(step.id, 'title', v)}
@@ -65,8 +62,7 @@ export function QuoteItinerarySummary({
                    </div>
                    
                    {/* Location */}
-                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3" />
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate">
                       <EditableText 
                         value={step.location} 
                         onChange={(v) => onStepChange?.(step.id, 'location', v)}
@@ -78,15 +74,15 @@ export function QuoteItinerarySummary({
           })}
         </div>
 
-        {/* Right Column: Image Uploader (40%) */}
-        <div className="w-[40%] h-full">
+        {/* Right Column: Image Uploader (30%) */}
+        <div className="w-[30%] h-full">
            <ImageUploader
               tripId={tripId}
               imageType="quote-summary"
               currentImage={summaryImage}
               onImageUploaded={onImageUploaded}
               onImageDeleted={onImageDeleted}
-              label="Photo du voyage"
+              label="Photo"
               className="h-full w-full object-cover rounded-xl overflow-hidden"
            />
         </div>
