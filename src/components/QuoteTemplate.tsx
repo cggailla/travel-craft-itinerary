@@ -16,6 +16,8 @@ import { QuoteReviews } from "./quote/QuoteReviews";
 import { QuoteFAQ } from "./quote/QuoteFAQ";
 import { QuoteLegalSection } from "./quote/QuoteLegalSection";
 
+import { QuoteSlide } from "./quote/QuoteSlide";
+
 interface QuoteTemplateProps {
   data: QuoteData;
   pdfMode?: boolean;
@@ -511,7 +513,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       )}
 
       {/* 1. PAGE DE GARDE */}
-      <div className="quote-slide !bg-[#FDFBF7]">
+      <QuoteSlide className="!bg-[#FDFBF7]">
         <div className="quote-slide-number">1</div>
         <QuoteCoverPage
           tripId={data.tripId}
@@ -527,10 +529,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           onImageUploaded={handleQuoteCoverUploaded}
           onImageDeleted={handleQuoteCoverDeleted}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 2. BLOC TARIFAIRE */}
-      <div className="quote-slide">
+      <QuoteSlide>
         <div className="quote-slide-number">2</div>
         <QuotePricingSection
           tripId={data.tripId}
@@ -552,10 +554,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           description={quoteDescription}
           onDescriptionChange={setQuoteDescription}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 3. INCLUS / NON INCLUS */}
-      <div className="quote-slide">
+      <QuoteSlide>
         <div className="quote-slide-number">3</div>
         <QuoteIncludedSection
           includedItems={includedItems}
@@ -563,10 +565,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           excludedItems={excludedItems}
           onExcludedItemsChange={setExcludedItems}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 4. SANTÉ & FORMALITÉS */}
-      <div className="quote-slide">
+      <QuoteSlide>
         <div className="quote-slide-number">4</div>
         <QuoteHealthFormalities
           entryFormalities={entryFormalities}
@@ -576,10 +578,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           cancellationPolicy={cancellationPolicy}
           onCancellationPolicyChange={setCancellationPolicy}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 5. RÉSUMÉ ITINÉRAIRE */}
-      <div className="quote-slide !bg-[#FDFBF7]">
+      <QuoteSlide className="!bg-[#FDFBF7]">
         <div className="quote-slide-number">5</div>
         <QuoteItinerarySummary
           tripId={data.tripId}
@@ -589,7 +591,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           onImageUploaded={handleSummaryImageUploaded}
           onImageDeleted={handleSummaryImageDeleted}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 6. PROGRAMME JOUR PAR JOUR - Chaque étape = 1 slide */}
       <QuoteItinerarySection
@@ -608,16 +610,16 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       />
 
       {/* 7. HÉBERGEMENTS */}
-      <div className="quote-slide">
+      <QuoteSlide>
         <div className="quote-slide-number">{6 + steps.length}</div>
         <QuoteAccommodationSection
           accommodations={accommodations}
           onAccommodationsChange={setAccommodations}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 8. POURQUOI NOUS CHOISIR */}
-      <div className="quote-slide !bg-gradient-to-br !from-primary/5 !to-primary/10">
+      <QuoteSlide className="!bg-gradient-to-br !from-primary/5 !to-primary/10">
         <div className="quote-slide-number">{7 + steps.length}</div>
         <QuoteWhyChooseUs
           title={whyChooseUsTitle}
@@ -625,10 +627,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           items={whyChooseUsItems}
           onItemsChange={setWhyChooseUsItems}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 9. AVIS CLIENTS */}
-      <div className="quote-slide !bg-gray-100">
+      <QuoteSlide className="!bg-gray-100">
         <div className="quote-slide-number">{8 + steps.length}</div>
         <QuoteReviews
           title={reviewsTitle}
@@ -640,10 +642,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           reviews={reviews}
           onReviewsChange={setReviews}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 10. FAQ */}
-      <div className="quote-slide !bg-[#FDFBF7]">
+      <QuoteSlide className="!bg-[#FDFBF7]">
         <div className="quote-slide-number">{9 + steps.length}</div>
         <QuoteFAQ
           title={faqTitle}
@@ -651,10 +653,10 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           faqItems={faqItems}
           onFaqItemsChange={setFaqItems}
         />
-      </div>
+      </QuoteSlide>
 
       {/* 11. MENTIONS LÉGALES & CONTACT */}
-      <div className="quote-slide">
+      <QuoteSlide>
         <div className="quote-slide-number">{10 + steps.length}</div>
         <QuoteLegalSection
           legalMentions={legalMentions}
@@ -666,7 +668,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
           contactPhone={contactPhone}
           onContactPhoneChange={setContactPhone}
         />
-      </div>
+      </QuoteSlide>
     </div>
   );
 }
