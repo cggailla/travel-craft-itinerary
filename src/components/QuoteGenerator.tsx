@@ -8,6 +8,7 @@ import { FileText, Loader2, Sparkles, AlertCircle, Download } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import "@/styles/quote-pdf.css";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuoteGeneratorProps {
   tripId: string;
@@ -200,27 +201,57 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
     try {
       setIsExporting(true);
       
-      const result = await generateQuotePdf(tripId);
-      
-      console.log("📊 PDF Generation Result:", result);
+      toast({
+        title: "Génération PDF",
+        description: "Le PDF est en cours de génération...",
+      });
 
-      if (result.success && result.url) {
-        // Ouvrir le PDF dans un nouvel onglet
-        window.open(result.url, '_blank');
-        
-        toast({
-          title: "PDF généré",
-          description: "Le devis a été généré avec succès",
-        });
-      } else {
-        console.error("❌ PDF Generation Failed Logic:", result);
-        throw new Error(result.error || "Erreur inconnue lors de la génération");
+      const element = document.getElementById("quote-content");
+      if (!element) throw new Error("Element #quote-content introuvable");
+
+      const html = getQuoteDOMRawExport(element);
+
+      const { data, error } = await supabase.functions.invoke("generate-quote-pdf", {
+        body: { html, tripId },
+      });
+
+      if (error) throw error;
+
+      if (!data?.pdf_url) {
+        throw new Error(data?.error || "Aucune URL PDF retournée par la fonction");
       }
-    } catch (error: any) {
-      console.error("❌ Error generating PDF (Catch):", error);
+
+      // ✅ Télécharger le PDF en binaire pour forcer le téléchargement
+      // Bypass navigateur/CDN cache: ajouter un cache-bust param et demander `no-store`
+      const fetchUrl = data.pdf_url.includes("?")
+        ? `${data.pdf_url}&ts=${Date.now()}`
+        : `${data.pdf_url}?ts=${Date.now()}`;
+      console.log("🔁 Fetching PDF (cache-bust):", fetchUrl);
+      const response = await fetch(fetchUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error("Impossible de télécharger le fichier PDF");
+      const blob = await response.blob();
+
+      // ✅ Créer une URL temporaire et déclencher un téléchargement
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `quote-${tripId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Nettoyage
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+
+      toast({
+        title: "PDF généré",
+        description: "Le fichier a été téléchargé avec succès.",
+      });
+    } catch (err: any) {
+      console.error("Erreur génération edge PDF:", err);
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de générer le PDF",
+        description: err.message || "Impossible de générer le PDF",
         variant: "destructive",
       });
     } finally {
@@ -311,7 +342,7 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
           </Alert>
         )}
 
-        <div ref={templateRef}>
+        <div ref={templateRef} id="quote-content">
           <Card className="overflow-hidden">
             <QuoteTemplate data={quoteData} pdfMode={false} />
           </Card>

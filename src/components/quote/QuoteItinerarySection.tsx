@@ -3,6 +3,8 @@ import { EditableDate } from "../EditableDate";
 import { ImageUploader } from "../ImageUploader";
 import { SupabaseImage } from "@/services/supabaseImageService";
 
+import { QuoteSlide } from "./QuoteSlide";
+
 interface QuoteStep {
   id: string;
   title: string;
@@ -48,7 +50,7 @@ export function QuoteItinerarySection({
   return (
     <>
       {steps.map((step, stepIndex) => (
-        <div key={stepIndex} className="quote-slide">
+        <QuoteSlide key={stepIndex}>
           <div className="quote-slide-number">{slideStartNumber + stepIndex}</div>
           
           <div className="h-full flex flex-col">
@@ -147,7 +149,7 @@ export function QuoteItinerarySection({
               </div>
             </div>
           </div>
-        </div>
+        </QuoteSlide>
       ))}
     </>
   );
