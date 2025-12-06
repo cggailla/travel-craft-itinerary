@@ -60,6 +60,7 @@ export interface QuoteData {
         name?: string;
         description?: string;
       };
+      activities?: string[];
       image?: string;
     }[];
   };
@@ -74,11 +75,13 @@ export interface QuoteData {
     items: {
       title: string;
       description: string;
+      icon?: string;
     }[];
   };
   reviews?: {
     title?: string;
     rating?: string;
+    totalReviews?: string;
     items: {
       author: string;
       text: string;
@@ -300,30 +303,13 @@ export function extractFromHtml(html: string): QuoteData {
       image: getAttr('img', 'src', summarySection),
     };
     
-    // We need to group by index since title and location are separate elements
-    // Finding all titles first
-    const titles: {[key: string]: string} = {};
-    summarySection.find('[data-pdf-editable^="summary-step-title-"]').each((_: any, el: any) => {
-      const attr = $(el).attr('data-pdf-editable') || '';
-      const index = attr.replace('summary-step-title-', '');
-      titles[index] = $(el).text().trim();
-    });
-
-    const locations: {[key: string]: string} = {};
-    summarySection.find('[data-pdf-editable^="summary-step-location-"]').each((_: any, el: any) => {
-      const attr = $(el).attr('data-pdf-editable') || '';
-      const index = attr.replace('summary-step-location-', '');
-      locations[index] = $(el).text().trim();
-    });
-
-    // Reconstruct steps
-    Object.keys(titles).sort().forEach(index => {
+    // Iterate over step items directly for more robust extraction
+    summarySection.find('[data-pdf-item="summary-step"]').each((_: any, el: any) => {
+      const step = $(el);
       data.summary?.steps.push({
-        title: titles[index],
-        location: locations[index],
-        // Date is not editable so it might be harder to grab unless we tag it specifically
-        // Assuming we added data-pdf-step-date in previous step if not editable
-        date: getText(`[data-pdf-step-date="${index}"]`, summarySection) // Hypothetical selector, adjust if needed
+        date: getText('[data-pdf-step-date]', step),
+        title: getText('[data-pdf-editable^="summary-step-title-"]', step),
+        location: getText('[data-pdf-editable^="summary-step-location-"]', step),
       });
     });
   }
@@ -364,10 +350,28 @@ export function extractFromHtml(html: string): QuoteData {
         image = getAttr('img', 'src', slideContainer);
     }
 
+    // Date extraction
+    let date = undefined;
+    const dateEl = slideContainer.find('[data-pdf-date]');
+    if (dateEl.length) {
+        date = dateEl.text().trim();
+    }
+
+    // Activities extraction
+    const activities: string[] = [];
+    const experiencesContainer = slideContainer.find('[data-pdf-experiences]');
+    if (experiencesContainer.length) {
+        experiencesContainer.find('[data-pdf-experience-item]').each((_: any, el: any) => {
+            activities.push($(el).text().trim());
+        });
+    }
+
     data.itinerary?.steps.push({
       title,
       description,
+      date,
       accommodation: accommodationName ? { name: accommodationName } : undefined,
+      activities,
       image
     });
   });
@@ -399,17 +403,13 @@ export function extractFromHtml(html: string): QuoteData {
       items: []
     };
 
-    const whyUsTitles: {[key: string]: string} = {};
-    whyUsSection.find('[data-pdf-editable^="why-us-title-"]').each((_: any, el: any) => {
-      const attr = $(el).attr('data-pdf-editable') || '';
-      const index = attr.replace('why-us-title-', '');
-      whyUsTitles[index] = $(el).text().trim();
-    });
-
-    Object.keys(whyUsTitles).sort().forEach(index => {
-      const title = whyUsTitles[index];
+    whyUsSection.find('[data-pdf-item="why-us-item"]').each((index: number, el: any) => {
+      const $el = $(el);
+      const icon = $el.attr('data-pdf-icon') || 'star';
+      const title = getText(`[data-pdf-editable="why-us-title-${index}"]`, whyUsSection);
       const description = getText(`[data-pdf-editable="why-us-desc-${index}"]`, whyUsSection);
-      data.whyUs?.items.push({ title, description });
+      
+      data.whyUs?.items.push({ title, description, icon });
     });
   }
 
@@ -419,7 +419,8 @@ export function extractFromHtml(html: string): QuoteData {
     data.reviews = {
       title: getText('[data-pdf-editable="reviews-title"]', reviewsSection),
       rating: getText('[data-pdf-editable="reviews-rating"]', reviewsSection),
-      items: [] // Reviews items are not editable in the current template, so they might be missing specific tags
+      totalReviews: getText('[data-pdf-editable="reviews-total"]', reviewsSection),
+      items: []
     };
     
     // Extract review items if they have tags

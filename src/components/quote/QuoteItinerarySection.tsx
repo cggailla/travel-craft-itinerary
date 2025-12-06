@@ -2,6 +2,8 @@ import { EditableText } from "../EditableText";
 import { EditableDate } from "../EditableDate";
 import { ImageUploader } from "../ImageUploader";
 import { SupabaseImage } from "@/services/supabaseImageService";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 import { QuoteSlide } from "./QuoteSlide";
 
@@ -95,6 +97,10 @@ export function QuoteItinerarySection({
                       onChange={(newValue) => onStepDateChange(stepIndex, newValue)}
                       className="font-medium text-base"
                     />
+                    {/* Hidden date for PDF extraction */}
+                    <span className="hidden" data-pdf-date>
+                      {step.date ? format(new Date(step.date), "d MMMM yyyy", { locale: fr }) : ""}
+                    </span>
                   </div>
                   
                   {/* Afficher l'hébergement s'il existe */}
@@ -124,13 +130,13 @@ export function QuoteItinerarySection({
 
                 {/* Expériences prévues (segments non-hébergement) - Optionnel ou plus discret */}
                 {step.segments.filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation').length > 0 && (
-                  <div className="mt-auto pt-4 border-t border-border/50">
+                  <div className="mt-auto pt-4 border-t border-border/50" data-pdf-experiences>
                     <h4 className="font-bold text-base mb-3 text-primary">Expériences prévues</h4>
                     <div className="space-y-1.5">
                       {step.segments
                         .filter(seg => seg.type !== 'hotel' && seg.type !== 'accommodation')
                         .map((segment, segmentIndex) => (
-                          <div key={segmentIndex} className="flex items-center gap-3 text-sm">
+                          <div key={segmentIndex} className="flex items-center gap-3 text-sm" data-pdf-experience-item>
                             <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                             <div className="font-medium">
                               <EditableText

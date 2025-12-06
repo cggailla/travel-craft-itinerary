@@ -100,18 +100,20 @@ export function QuoteReviews({
         </div>
         <p className="text-sm text-muted-foreground">
           Basé sur{" "}
-          <EditableText
-            value={totalReviews}
-            onChange={onTotalReviewsChange}
-            placeholder="150"
-            className="inline-block font-semibold"
-          />{" "}
+          <span data-pdf-editable="reviews-total">
+            <EditableText
+              value={totalReviews}
+              onChange={onTotalReviewsChange}
+              placeholder="150"
+              className="inline-block font-semibold"
+            />
+          </span>{" "}
           avis clients
         </p>
       </div>
 
       {/* Témoignages */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {reviews.map((review, index) => (
           <div
             key={index}

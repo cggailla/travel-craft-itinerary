@@ -13,6 +13,7 @@ import {
   Line,
   Rect,
   G,
+  Polygon,
 } from "npm:@react-pdf/renderer@3.4.3";
 import { QuoteData } from "./extract.ts";
 
@@ -118,6 +119,59 @@ const IconInfo = ({ size = 16, color = COLORS.primary }) => (
     <Circle cx="12" cy="12" r="10" fill="none" />
     <Line x1="12" y1="16" x2="12" y2="12" />
     <Line x1="12" y1="8" x2="12.01" y2="8" />
+  </Svg>
+);
+
+const IconHome = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <Polyline points="9 22 9 12 15 12 15 22" />
+  </Svg>
+);
+
+const IconHotel = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <Path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+    <Path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+    <Path d="M10 6h4" />
+    <Path d="M10 10h4" />
+    <Path d="M10 14h4" />
+    <Path d="M10 18h4" />
+  </Svg>
+);
+
+const IconHeadset = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+    <Path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+  </Svg>
+);
+
+const IconAward = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="8" r="7" />
+    <Polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+  </Svg>
+);
+
+const IconStar = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </Svg>
+);
+
+const IconStarFilled = ({ size = 16, color = "#fbbf24", stroke = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1} strokeLinecap="round" strokeLinejoin="round">
+    <Polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={color} />
+  </Svg>
+);
+
+const IconQuestion = ({ size = 16, color = COLORS.primary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <Line x1="12" y1="17" x2="12.01" y2="17" />
   </Svg>
 );
 
@@ -686,7 +740,7 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
         <View style={{ flexDirection: "row", gap: 20, marginBottom: 20 }}>
           {/* Formalities Card */}
           <View style={{ flex: 1, backgroundColor: "#fdf4ff", borderRadius: 12, padding: 20 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: "rgba(127, 41, 109, 0.1)" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" }}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" }}>
                 <IconPassport size={18} color="#ffffff" />
               </View>
@@ -718,7 +772,7 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
 
           {/* Health Card */}
           <View style={{ flex: 1, backgroundColor: "#fdf4ff", borderRadius: 12, padding: 20 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: "rgba(127, 41, 109, 0.1)" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" }}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" }}>
                 <IconSyringe size={18} color="#ffffff" />
               </View>
@@ -768,25 +822,41 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
 
     {/* 5. SUMMARY */}
     {data.summary && (
-      <Page size="A4" orientation="landscape" style={[styles.page, styles.pageBackgroundAlt]}>
-        <Text style={styles.h2}>Résumé de votre itinéraire</Text>
-        <View style={[styles.row, styles.mt20]}>
-          <View style={[styles.flex1, { paddingRight: 30 }]}>
+      <Page size="A4" orientation="landscape" style={styles.page}>
+        <View style={{ alignItems: "center", marginBottom: 40 }}>
+          <Text style={{ fontSize: 32, fontWeight: "bold", color: COLORS.primary }}>Votre Voyage</Text>
+          <View style={{ width: 80, height: 4, backgroundColor: "#e9d5ff", marginTop: 8 }} />
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 40, height: "80%" }}>
+          {/* Left Column: Steps Grid */}
+          <View style={{ flex: 2, flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start" }}>
             {data.summary.steps.map((step, i) => (
-              <View key={i} style={{ flexDirection: "row", marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", paddingBottom: 8 }}>
-                <Text style={{ width: 80, fontWeight: "bold", color: COLORS.primary, fontSize: 11 }}>
-                  {step.date}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "bold", fontSize: 11, marginBottom: 2 }}>{step.title}</Text>
-                  <Text style={{ fontSize: 10, color: COLORS.textLight }}>{step.location}</Text>
+              <View key={i} style={{ width: "50%", paddingRight: 20, marginBottom: 20 }}>
+                <View style={{ flexDirection: "row", gap: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#e5e7eb", borderStyle: "dashed" }}>
+                  <Text style={{ width: 50, fontSize: 11, fontWeight: "bold", color: COLORS.primary, textAlign: "right" }}>
+                    {step.date}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "bold", color: "#1a1a1a", marginBottom: 2 }}>
+                      {step.title}
+                    </Text>
+                    <Text style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1 }}>
+                      {step.location}
+                    </Text>
+                  </View>
                 </View>
               </View>
             ))}
           </View>
-          <View style={{ width: "40%" }}>
+
+          {/* Right Column: Image */}
+          <View style={{ flex: 1 }}>
             {data.summary.image && (
-              <Image src={data.summary.image} style={{ width: "100%", height: 350, borderRadius: 8, objectFit: "cover" }} />
+              <Image 
+                src={data.summary.image} 
+                style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} 
+              />
             )}
           </View>
         </View>
@@ -795,26 +865,61 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
 
     {/* 6. ITINERARY DETAILS - One page per step */}
     {data.itinerary?.steps.map((step, i) => (
-      <Page key={`step-${i}`} size="A4" orientation="landscape" style={styles.page}>
-        <Text style={styles.h2}>{step.title}</Text>
-        <View style={styles.stepContainer}>
-          <View style={styles.stepContent}>
-            <Text style={[styles.text, { marginBottom: 20, fontSize: 12 }]}>{step.description}</Text>
-            
-            {step.accommodation && (
-              <View style={{ marginTop: "auto", backgroundColor: "#f0f9ff", padding: 15, borderRadius: 6 }}>
-                <Text style={[styles.h3, { color: COLORS.primary, fontSize: 12 }]}>Hébergement</Text>
-                <Text style={[styles.text, { fontWeight: "bold" }]}>{step.accommodation.name}</Text>
-                {step.accommodation.description && (
-                  <Text style={styles.textSmall}>{step.accommodation.description}</Text>
-                )}
-              </View>
-            )}
-          </View>
-          
+      <Page key={`step-${i}`} size="A4" orientation="landscape" style={{ flexDirection: "row", backgroundColor: "#ffffff" }}>
+        {/* Left Column: Image */}
+        <View style={{ width: "50%", height: "100%", padding: 20 }}>
           {step.image && (
-            <View style={styles.stepImageContainer}>
-              <Image src={step.image} style={styles.stepImage} />
+            <View style={{ width: "100%", height: "100%", borderRadius: 20, overflow: "hidden" }}>
+              <Image src={step.image} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </View>
+          )}
+        </View>
+
+        {/* Right Column: Content */}
+        <View style={{ width: "50%", padding: 40, justifyContent: "center" }}>
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: COLORS.primary, marginBottom: 20 }}>
+            {step.title}
+          </Text>
+
+          {/* Date */}
+          {step.date && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <IconCalendar size={16} color={COLORS.textLight} />
+              <Text style={{ fontSize: 12, color: COLORS.textLight, fontWeight: "medium" }}>
+                {step.date}
+              </Text>
+            </View>
+          )}
+
+          {/* Accommodation */}
+          {step.accommodation && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <IconHome size={16} color={COLORS.textLight} />
+              <Text style={{ fontSize: 12, color: COLORS.textLight, fontWeight: "medium" }}>
+                Logement : {step.accommodation.name}
+              </Text>
+            </View>
+          )}
+
+          {/* Description */}
+          <Text style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 20, textAlign: "justify" }}>
+            {step.description}
+          </Text>
+
+          {/* Activities */}
+          {step.activities && step.activities.length > 0 && (
+            <View style={{ marginTop: 10, paddingTop: 20, borderTopWidth: 1, borderTopColor: "#e5e7eb" }}>
+              <Text style={{ fontSize: 12, fontWeight: "bold", color: COLORS.primary, marginBottom: 10 }}>
+                Expériences prévues
+              </Text>
+              <View style={{ gap: 8 }}>
+                {step.activities.map((activity, idx) => (
+                  <View key={idx} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.primary, marginTop: 6 }} />
+                    <Text style={{ fontSize: 11, color: "#4b5563", flex: 1 }}>{activity}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
         </View>
@@ -824,12 +929,39 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
     {/* 7. ACCOMMODATIONS */}
     {data.accommodations && data.accommodations.items.length > 0 && (
       <Page size="A4" orientation="landscape" style={styles.page}>
-        <Text style={styles.h2}>Vos Hébergements</Text>
-        <View style={styles.cardGrid}>
+        <Text style={styles.h2}>Hébergements</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
           {data.accommodations.items.map((acc, i) => (
-            <View key={i} style={styles.card}>
-              <Text style={styles.h3}>{acc.name}</Text>
-              <Text style={styles.text}>{acc.description}</Text>
+            <View key={i} style={{ 
+              width: "48%", 
+              backgroundColor: "#f8fafc", 
+              borderRadius: 12, 
+              borderWidth: 1, 
+              borderColor: "#e2e8f0",
+              padding: 20,
+              flexDirection: "row",
+              gap: 15,
+              alignItems: "flex-start"
+            }}>
+              <View style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                backgroundColor: "#f3e8ff", 
+                alignItems: "center", 
+                justifyContent: "center",
+                flexShrink: 0
+              }}>
+                <IconHotel size={20} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "bold", color: "#1e293b", marginBottom: 4 }}>
+                  {acc.name}
+                </Text>
+                <Text style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
+                  {acc.description}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
@@ -838,28 +970,115 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
 
     {/* 8. WHY US */}
     {data.whyUs && (
-      <Page size="A4" orientation="landscape" style={[styles.page, { backgroundColor: "#f0f9ff" }]}>
-        <Text style={styles.h2}>{data.whyUs.mainTitle || "Pourquoi nous choisir ?"}</Text>
-        <View style={styles.cardGrid}>
-          {data.whyUs.items.map((item, i) => (
-            <View key={i} style={[styles.card, { backgroundColor: "white" }]}>
-              <Text style={[styles.h3, { color: COLORS.primary }]}>{item.title}</Text>
-              <Text style={styles.text}>{item.description}</Text>
-            </View>
-          ))}
+      <Page size="A4" orientation="landscape" style={[styles.page, { backgroundColor: "#fdf4ff", justifyContent: "center" }]}>
+        <View style={{ alignItems: "center", marginBottom: 40 }}>
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: "#1a1a1a" }}>
+            {data.whyUs.mainTitle || "Pourquoi choisir Ad Gentes ?"}
+          </Text>
+          <View style={{ width: 60, height: 3, backgroundColor: COLORS.primary, marginTop: 8, borderRadius: 2 }} />
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+          {data.whyUs.items.map((item, i) => {
+            let Icon = IconStar;
+            if (item.icon === 'headphones') Icon = IconHeadset;
+            else if (item.icon === 'award') Icon = IconAward;
+            else if (item.icon === 'clock') Icon = IconClock;
+            else if (item.icon === 'shield') Icon = IconShield;
+            else if (item.icon === 'mapPin') Icon = IconMapPin;
+
+            return (
+              <View key={i} style={{ 
+                width: "48%", 
+                backgroundColor: "white", 
+                borderRadius: 10,
+                padding: 15,
+                alignItems: "center",
+                marginBottom: 8
+              }}>
+                <View style={{ 
+                  width: 40, 
+                  height: 40, 
+                  borderRadius: 20, 
+                  backgroundColor: "#f3e8ff", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  marginBottom: 10
+                }}>
+                  <Icon size={20} color={COLORS.primary} />
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4, textAlign: "center" }}>
+                  {item.title}
+                </Text>
+                <Text style={{ fontSize: 9, color: "#6b7280", textAlign: "center", lineHeight: 1.3 }}>
+                  {item.description}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       </Page>
     )}
 
     {/* 9. REVIEWS */}
     {data.reviews && (
-      <Page size="A4" orientation="landscape" style={styles.page}>
-        <Text style={styles.h2}>{data.reviews.title || "Témoignages"}</Text>
-        <View style={styles.cardGrid}>
+      <Page size="A4" orientation="landscape" style={[styles.page, { backgroundColor: "#fdf4ff", justifyContent: "center" }]}>
+        <View style={{ alignItems: "center", marginBottom: 40 }}>
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: "#1a1a1a", marginBottom: 15 }}>
+            {data.reviews.title || "Ce que nos voyageurs disent de nous"}
+          </Text>
+          
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", gap: 3 }}>
+              <IconStarFilled size={22} color="#fbbf24" stroke="#1a1a1a" />
+              <IconStarFilled size={22} color="#fbbf24" stroke="#1a1a1a" />
+              <IconStarFilled size={22} color="#fbbf24" stroke="#1a1a1a" />
+              <IconStarFilled size={22} color="#fbbf24" stroke="#1a1a1a" />
+              <IconStarFilled size={22} color="#fbbf24" stroke="#1a1a1a" />
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={{ fontSize: 22, fontWeight: "bold", color: "#1a1a1a" }}>
+                {(data.reviews.rating || "4.9").replace('/5', '')}
+              </Text>
+              <Text style={{ fontSize: 16, color: "#6b7280", marginLeft: 2 }}>/5</Text>
+            </View>
+          </View>
+          
+          <Text style={{ fontSize: 11, color: "#6b7280" }}>
+            Basé sur {data.reviews.totalReviews || "150"} avis clients
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 20, justifyContent: "center", alignItems: "stretch" }}>
           {data.reviews.items.map((review, i) => (
-            <View key={i} style={styles.card}>
-              <Text style={[styles.text, { fontStyle: "italic", marginBottom: 10 }]}>"{review.text}"</Text>
-              <Text style={{ fontWeight: "bold", fontSize: 10, textAlign: "right" }}>- {review.author}</Text>
+            <View key={i} style={{ 
+              width: "30%", 
+              backgroundColor: "white", 
+              borderRadius: 12,
+              padding: 25,
+              // No border, just clean white card
+            }}>
+              <View style={{ flexDirection: "row", gap: 2, marginBottom: 15 }}>
+                <IconStarFilled size={14} color="#fbbf24" stroke="#1a1a1a" />
+                <IconStarFilled size={14} color="#fbbf24" stroke="#1a1a1a" />
+                <IconStarFilled size={14} color="#fbbf24" stroke="#1a1a1a" />
+                <IconStarFilled size={14} color="#fbbf24" stroke="#1a1a1a" />
+                <IconStarFilled size={14} color="#fbbf24" stroke="#1a1a1a" />
+              </View>
+              
+              <Text style={{ 
+                fontSize: 11, 
+                color: "#4b5563", 
+                fontStyle: "italic", 
+                lineHeight: 1.6,
+                marginBottom: 20
+              }}>
+                {review.text}
+              </Text>
+              
+              <Text style={{ fontSize: 12, fontWeight: "bold", color: "#1a1a1a", marginTop: "auto" }}>
+                {review.author}
+              </Text>
             </View>
           ))}
         </View>
@@ -868,13 +1087,36 @@ const QuoteDocument = ({ data }: { data: QuoteData }) => (
 
     {/* 10. FAQ */}
     {data.faq && (
-      <Page size="A4" orientation="landscape" style={[styles.page, styles.pageBackgroundAlt]}>
-        <Text style={styles.h2}>{data.faq.title || "Questions Fréquentes"}</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20 }}>
+      <Page size="A4" orientation="landscape" style={[styles.page, { backgroundColor: "#fdf4ff", justifyContent: "center" }]}>
+        <View style={{ alignItems: "center", marginBottom: 50 }}>
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: "#1a1a1a" }}>
+            {data.faq.title || "Questions Fréquentes"}
+          </Text>
+          <View style={{ width: 60, height: 3, backgroundColor: COLORS.primary, marginTop: 8, borderRadius: 2 }} />
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 30, justifyContent: "center" }}>
           {data.faq.items.map((item, i) => (
-            <View key={i} style={{ width: "48%", marginBottom: 15 }}>
-              <Text style={[styles.h3, { fontSize: 12 }]}>{item.question}</Text>
-              <Text style={styles.text}>{item.answer}</Text>
+            <View key={i} style={{ width: "45%", flexDirection: "row", gap: 15, marginBottom: 10 }}>
+              <View style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                backgroundColor: "#f3e8ff", 
+                alignItems: "center", 
+                justifyContent: "center",
+                flexShrink: 0
+              }}>
+                <IconQuestion size={20} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: "bold", color: "#1a1a1a", marginBottom: 6 }}>
+                  {item.question}
+                </Text>
+                <Text style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.5, textAlign: "justify" }}>
+                  {item.answer}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
