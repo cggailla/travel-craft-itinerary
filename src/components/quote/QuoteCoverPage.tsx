@@ -70,7 +70,7 @@ export function QuoteCoverPage({
 
           {/* Title */}
           <div>
-            <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6 text-primary" data-pdf-title>
+            <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6 text-primary" data-pdf-editable="title">
               <EditableText
                 value={title}
                 onChange={onTitleChange}
@@ -80,7 +80,7 @@ export function QuoteCoverPage({
             </h1>
 
             {/* Participant Name */}
-            <div className="text-xl font-medium tracking-wide mb-4 text-foreground/80" data-pdf-client>
+            <div className="text-xl font-medium tracking-wide mb-4 text-foreground/80" data-pdf-editable="participants">
               <EditableText
                 value={participants}
                 onChange={onParticipantsChange}

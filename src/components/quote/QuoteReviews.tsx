@@ -60,7 +60,7 @@ export function QuoteReviews({
   return (
     <section className="reviews-section mb-16 p-8 bg-muted/30 rounded-lg" data-pdf-section="reviews">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-4">
+        <h2 className="text-3xl font-bold mb-4" data-pdf-editable="reviews-title">
           <EditableText
             value={title}
             onChange={onTitleChange}
@@ -88,7 +88,7 @@ export function QuoteReviews({
                </div>
             </div>
           </div>
-          <span className="text-2xl font-bold">
+          <span className="text-2xl font-bold" data-pdf-editable="reviews-rating">
             <EditableText
               value={overallRating}
               onChange={onOverallRatingChange}
