@@ -34,7 +34,7 @@ export function QuoteFAQ({
   return (
     <section className="faq-section h-full flex flex-col px-6 py-8" data-pdf-section="faq">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-3">
+        <h2 className="text-3xl font-bold mb-3" data-pdf-editable="faq-main-title">
           <EditableText
             value={title}
             onChange={onTitleChange}
@@ -59,7 +59,7 @@ export function QuoteFAQ({
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2" data-pdf-faq-question>
+                <h3 className="font-semibold text-lg mb-2" data-pdf-editable={`faq-question-${index}`}>
                   <EditableText
                     value={item.question}
                     onChange={(val) => updateQuestion(index, val)}
@@ -67,7 +67,7 @@ export function QuoteFAQ({
                     className="font-semibold text-lg"
                   />
                 </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed" data-pdf-faq-answer>
+                <p className="text-muted-foreground text-sm leading-relaxed" data-pdf-editable={`faq-answer-${index}`}>
                   <EditableText
                     value={item.answer}
                     onChange={(val) => updateAnswer(index, val)}

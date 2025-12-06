@@ -54,7 +54,7 @@ export function QuoteItinerarySummary({
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                    {/* Title */}
-                   <div className="text-sm font-bold text-foreground leading-tight truncate" data-pdf-step-title>
+                   <div className="text-sm font-bold text-foreground leading-tight truncate" data-pdf-editable={`summary-step-title-${index}`}>
                       <EditableText 
                         value={step.title} 
                         onChange={(v) => onStepChange?.(step.id, 'title', v)}
@@ -62,7 +62,7 @@ export function QuoteItinerarySummary({
                    </div>
                    
                    {/* Location */}
-                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate" data-pdf-step-location>
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5 truncate" data-pdf-editable={`summary-step-location-${index}`}>
                       <EditableText 
                         value={step.location} 
                         onChange={(v) => onStepChange?.(step.id, 'location', v)}

@@ -60,7 +60,7 @@ export function QuoteIncludedSection({
               {includedItems.map((item, index) => (
                 <li key={index} className="group flex items-start gap-3 relative pl-1">
                   <Check className="w-4 h-4 text-green-600 mt-1 flex-shrink-0" />
-                  <div className="flex-1 text-foreground/80 leading-relaxed text-sm">
+                  <div className="flex-1 text-foreground/80 leading-relaxed text-sm" data-pdf-editable={`included-item-${index}`}>
                     <EditableText
                       value={item}
                       onChange={(newValue) => {
@@ -112,7 +112,7 @@ export function QuoteIncludedSection({
               {excludedItems.map((item, index) => (
                 <li key={index} className="group flex items-start gap-3 relative pl-1">
                   <X className="w-4 h-4 text-orange-600 mt-1 flex-shrink-0" />
-                  <div className="flex-1 text-foreground/80 leading-relaxed text-sm">
+                  <div className="flex-1 text-foreground/80 leading-relaxed text-sm" data-pdf-editable={`excluded-item-${index}`}>
                     <EditableText
                       value={item}
                       onChange={(newValue) => {

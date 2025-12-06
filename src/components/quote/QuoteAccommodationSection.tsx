@@ -30,7 +30,7 @@ export function QuoteAccommodationSection({
                 <Building2 className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold mb-1">
+                <h3 className="text-base font-semibold mb-1" data-pdf-editable={`accommodation-name-${index}`}>
                   <EditableText
                     value={accommodation.name}
                     onChange={(newValue) => {
@@ -44,7 +44,7 @@ export function QuoteAccommodationSection({
                 </h3>
                 
                 {accommodation.description && (
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-xs text-muted-foreground mt-1" data-pdf-editable={`accommodation-desc-${index}`}>
                     <EditableText
                       value={accommodation.description}
                       onChange={(newValue) => {

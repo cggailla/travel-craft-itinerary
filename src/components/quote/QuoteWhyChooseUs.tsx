@@ -47,7 +47,7 @@ export function QuoteWhyChooseUs({
   return (
     <section className="why-choose-us-section h-full flex flex-col justify-center" data-pdf-section="why-choose-us">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2">
+        <h2 className="text-2xl font-bold mb-2" data-pdf-editable="why-us-main-title">
           <EditableText
             value={title}
             onChange={onTitleChange}
@@ -58,7 +58,7 @@ export function QuoteWhyChooseUs({
         <div className="w-20 h-1 bg-primary mx-auto rounded-full"></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         {items.map((item, index) => {
           const IconComponent = getIconComponent(item.icon);
           return (
@@ -66,11 +66,12 @@ export function QuoteWhyChooseUs({
               key={index}
               className="flex flex-col items-center text-center p-4 bg-background rounded-lg shadow-sm hover:shadow-md transition-shadow"
               data-pdf-item="why-us-item"
+              data-pdf-icon={item.icon}
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                 <IconComponent className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-base mb-1" data-pdf-why-us-title>
+              <h3 className="font-semibold text-base mb-1" data-pdf-editable={`why-us-title-${index}`}>
                 <EditableText
                   value={item.title}
                   onChange={(val) => updateItemTitle(index, val)}
@@ -78,7 +79,7 @@ export function QuoteWhyChooseUs({
                   className="font-semibold text-base"
                 />
               </h3>
-              <p className="text-muted-foreground text-xs leading-relaxed" data-pdf-why-us-description>
+              <p className="text-muted-foreground text-xs leading-relaxed" data-pdf-editable={`why-us-desc-${index}`}>
                 <EditableText
                   value={item.description}
                   onChange={(val) => updateItemDescription(index, val)}

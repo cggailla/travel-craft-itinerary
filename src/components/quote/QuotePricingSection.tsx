@@ -77,7 +77,7 @@ export function QuotePricingSection({
       {/* LEFT COLUMN (Main Content) - 65% */}
       <div className="w-[65%] flex flex-col h-full">
         {/* Title */}
-        <h2 className="text-4xl font-bold text-primary mb-6">
+        <h2 className="text-4xl font-bold text-primary mb-6" data-pdf-editable="pricing-title">
           <EditableText
             value={title}
             onChange={onTitleChange}
@@ -87,7 +87,7 @@ export function QuotePricingSection({
         </h2>
 
         {/* Description */}
-        <div className="mb-8 text-muted-foreground leading-relaxed" data-pdf-description>
+        <div className="mb-8 text-muted-foreground leading-relaxed" data-pdf-editable="pricing-description">
           <EditableText
             value={description}
             onChange={onDescriptionChange || (() => {})}
@@ -118,7 +118,7 @@ export function QuotePricingSection({
               <MapPin className="w-4 h-4" />
             </div>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Destination</span>
-            <div className="font-semibold text-foreground text-sm w-full">
+            <div className="font-semibold text-foreground text-sm w-full" data-pdf-pricing-destination>
               <EditableText 
                 value={destination} 
                 onChange={onDestinationChange} 
@@ -132,7 +132,7 @@ export function QuotePricingSection({
               <Calendar className="w-4 h-4" />
             </div>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Dates</span>
-            <div className="font-semibold text-foreground text-sm w-full">
+            <div className="font-semibold text-foreground text-sm w-full" data-pdf-pricing-dates>
               <EditableText 
                 value={dateText} 
                 onChange={setDateText} 
@@ -146,7 +146,7 @@ export function QuotePricingSection({
               <Clock className="w-4 h-4" />
             </div>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Durée</span>
-            <div className="font-semibold text-foreground text-sm w-full">
+            <div className="font-semibold text-foreground text-sm w-full" data-pdf-pricing-duration>
               <EditableText 
                 value={durationText} 
                 onChange={setDurationText} 
@@ -160,7 +160,7 @@ export function QuotePricingSection({
               <Users className="w-4 h-4" />
             </div>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Voyageurs</span>
-            <div className="font-semibold text-foreground text-sm w-full">
+            <div className="font-semibold text-foreground text-sm w-full" data-pdf-pricing-travelers>
               <EditableText 
                 value={numberOfTravelers} 
                 onChange={onNumberOfTravelersChange} 
@@ -176,7 +176,7 @@ export function QuotePricingSection({
         {/* Price Box */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-border flex justify-between items-center">
           <span className="text-muted-foreground font-medium">{nights} nuits</span>
-          <div className="text-2xl font-bold text-primary" data-pdf-price>
+          <div className="text-2xl font-bold text-primary" data-pdf-pricing-price>
             <EditableText
               value={totalPrice}
               onChange={onTotalPriceChange}

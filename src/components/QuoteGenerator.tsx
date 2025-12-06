@@ -17,22 +17,60 @@ interface QuoteGeneratorProps {
 
 /**
  * Extrait le HTML brut du devis pour export
+ * Transforme les inputs en texte pour que le PDF ne soit pas vide
  */
-function getQuoteDOMRawExport(element: HTMLElement): string {
-  const clone = element.cloneNode(true) as HTMLElement;
+function getQuoteDOMRawExport(sourceElement: HTMLElement): string {
+  // 1. Cloner le noeud
+  const clone = sourceElement.cloneNode(true) as HTMLElement;
   
-  // Supprimer les éléments interactifs
+  // 2. Synchroniser et transformer les inputs/textareas en texte
+  // On doit lire les valeurs depuis l'élément SOURCE (le vrai DOM) car le clone n'a pas les valeurs React à jour
+  const sourceInputs = sourceElement.querySelectorAll('input, textarea, select');
+  const cloneInputs = clone.querySelectorAll('input, textarea, select');
+
+  sourceInputs.forEach((source: any, index) => {
+    const target = cloneInputs[index] as HTMLElement;
+    
+    if (target) {
+      const span = document.createElement('span');
+      
+      // Récupérer la valeur visible
+      let value = source.value;
+      if (source.tagName === 'SELECT') {
+        value = source.options[source.selectedIndex]?.text || '';
+      }
+      
+      // Conserver les styles de police/couleur de l'input original
+      span.textContent = value;
+      span.className = target.className; 
+      // On retire les classes spécifiques aux inputs qui pourraient gêner
+      span.style.border = 'none';
+      span.style.background = 'transparent';
+      span.style.padding = '0';
+      span.style.width = 'auto';
+      span.style.height = 'auto';
+      span.style.display = 'inline';
+      
+      // Remplacer l'input par le span dans le clone
+      target.parentNode?.replaceChild(span, target);
+    }
+  });
+
+  // 3. Supprimer les éléments purement interactifs
   const selectorsToRemove = [
     'button',
-    'input',
-    'textarea',
     '.no-print',
-    '[contenteditable]',
-    '.upload-zone:not(:has(img))', // Garder les zones avec images
+    '.upload-zone:not(:has(img))', // Supprimer les zones d'upload vides
+    // On ne supprime PLUS 'input' ni 'textarea' car ils ont été transformés
   ];
   
   selectorsToRemove.forEach(selector => {
     clone.querySelectorAll(selector).forEach(el => el.remove());
+  });
+
+  // 4. Nettoyer les attributs contenteditable résiduels
+  clone.querySelectorAll('[contenteditable]').forEach(el => {
+    el.removeAttribute('contenteditable');
   });
   
   return clone.innerHTML;

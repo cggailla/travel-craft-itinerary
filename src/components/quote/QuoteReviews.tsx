@@ -60,7 +60,7 @@ export function QuoteReviews({
   return (
     <section className="reviews-section mb-16 p-8 bg-muted/30 rounded-lg" data-pdf-section="reviews">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-4">
+        <h2 className="text-3xl font-bold mb-4" data-pdf-editable="reviews-title">
           <EditableText
             value={title}
             onChange={onTitleChange}
@@ -88,7 +88,7 @@ export function QuoteReviews({
                </div>
             </div>
           </div>
-          <span className="text-2xl font-bold">
+          <span className="text-2xl font-bold" data-pdf-editable="reviews-rating">
             <EditableText
               value={overallRating}
               onChange={onOverallRatingChange}
@@ -100,18 +100,20 @@ export function QuoteReviews({
         </div>
         <p className="text-sm text-muted-foreground">
           Basé sur{" "}
-          <EditableText
-            value={totalReviews}
-            onChange={onTotalReviewsChange}
-            placeholder="150"
-            className="inline-block font-semibold"
-          />{" "}
+          <span data-pdf-editable="reviews-total">
+            <EditableText
+              value={totalReviews}
+              onChange={onTotalReviewsChange}
+              placeholder="150"
+              className="inline-block font-semibold"
+            />
+          </span>{" "}
           avis clients
         </p>
       </div>
 
       {/* Témoignages */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {reviews.map((review, index) => (
           <div
             key={index}

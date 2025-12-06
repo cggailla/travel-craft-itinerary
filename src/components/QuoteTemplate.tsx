@@ -504,7 +504,17 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   const versionNumber = `V${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
 
   return (
-    <div id="quote-content" className="quote-container max-w-5xl mx-auto bg-background p-8" data-pdf-trip-id={data.tripId}>
+    <div 
+      id="quote-content" 
+      className="quote-container max-w-5xl mx-auto bg-background p-8" 
+      data-pdf-trip-id={data.tripId}
+      data-pdf-title={mainTitle}
+      data-pdf-start-date={startDate.toISOString()}
+      data-pdf-end-date={endDate.toISOString()}
+      data-pdf-destination={destination}
+      data-pdf-participants={participants}
+      data-pdf-price={price}
+    >
       {/* VERSION NUMBER - Top Right */}
       {!pdfMode && (
         <div className="text-right text-sm text-muted-foreground mb-4 no-print">
@@ -515,20 +525,22 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
       {/* 1. PAGE DE GARDE */}
       <QuoteSlide className="!bg-[#FDFBF7]">
         <div className="quote-slide-number">1</div>
-        <QuoteCoverPage
-          tripId={data.tripId}
-          title={mainTitle}
-          onTitleChange={setMainTitle}
-          participants={participants}
-          onParticipantsChange={setParticipants}
-          startDate={startDate}
-          onStartDateChange={setStartDate}
-          endDate={endDate}
-          onEndDateChange={setEndDate}
-          coverImage={quoteCoverImage}
-          onImageUploaded={handleQuoteCoverUploaded}
-          onImageDeleted={handleQuoteCoverDeleted}
-        />
+        <div className="h-full w-full">
+          <QuoteCoverPage
+            tripId={data.tripId}
+            title={mainTitle}
+            onTitleChange={setMainTitle}
+            participants={participants}
+            onParticipantsChange={setParticipants}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
+            coverImage={quoteCoverImage}
+            onImageUploaded={handleQuoteCoverUploaded}
+            onImageDeleted={handleQuoteCoverDeleted}
+          />
+        </div>
       </QuoteSlide>
 
       {/* 2. BLOC TARIFAIRE */}
