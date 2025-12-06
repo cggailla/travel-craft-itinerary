@@ -81,7 +81,7 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
 
       const html = getBookletDOMRawExport(element);
 
-      const { data, error } = await supabase.functions.invoke("pdf-coordinator", {
+      const { data, error } = await supabase.functions.invoke("generate-booklet-pdf", {
         body: { html, tripId },
       });
 
@@ -243,7 +243,7 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Carnet de voyage</h3>
           <Button
-            onClick={startChunkedPdfGeneration}
+            onClick={handleGeneratePdfEdge}
             disabled={isGeneratingPdfEdge}
             variant="default"
             className="flex items-center"

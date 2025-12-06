@@ -6,7 +6,7 @@
 
 @layer base {
   html {
-    font-size: 130%; /* Augmente la taille de base de 10% */
+    font-size: 100%; /* Augmente la taille de base de 10% */
   }
 
   :root {
