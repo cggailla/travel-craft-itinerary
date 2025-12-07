@@ -83,6 +83,7 @@ export function QuoteItinerarySummary({
               onImageUploaded={onImageUploaded}
               onImageDeleted={onImageDeleted}
               label="Photo"
+              height="h-full"
               className="h-full w-full object-cover rounded-xl overflow-hidden"
            />
            {/* Hidden image for PDF extraction */}

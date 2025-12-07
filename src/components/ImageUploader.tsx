@@ -135,7 +135,7 @@ export function ImageUploader({
       {currentImage ? (
         // Image uploaded - show image with delete on hover
         <div 
-          className="relative group w-full cursor-pointer"
+          className="relative group w-full h-full cursor-pointer"
           onClick={handleDelete}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
