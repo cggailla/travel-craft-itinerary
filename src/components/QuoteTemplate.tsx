@@ -284,27 +284,15 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
         
         // 1. Cover Image
         const cover = images.find(img => img.file_name.startsWith('quote_cover_'));
-        if (cover) setQuoteCoverImage({
-            storage_path: cover.storage_path,
-            publicUrl: cover.public_url,
-            fileName: cover.file_name
-        } as any);
+        if (cover) setQuoteCoverImage(cover);
 
         // 2. Pricing Image
         const pricing = images.find(img => img.file_name.startsWith('quote-pricing_'));
-        if (pricing) setPricingImage({
-            storage_path: pricing.storage_path,
-            publicUrl: pricing.public_url,
-            fileName: pricing.file_name
-        } as any);
+        if (pricing) setPricingImage(pricing);
 
         // 3. Summary Image
         const summary = images.find(img => img.file_name.startsWith('quote-summary_'));
-        if (summary) setSummaryImage({
-            storage_path: summary.storage_path,
-            publicUrl: summary.public_url,
-            fileName: summary.file_name
-        } as any);
+        if (summary) setSummaryImage(summary);
 
         // 4. Step Images
         const stepImgs = images.filter(img => img.file_name.startsWith('quote_step_'));
@@ -323,11 +311,7 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
                         const stepId = parts[2];
                         const stepIndex = steps.findIndex(s => s.id === stepId);
                         if (stepIndex !== -1) {
-                            newImages[stepIndex] = {
-                                storage_path: img.storage_path,
-                                publicUrl: img.public_url,
-                                fileName: img.file_name
-                            } as any;
+                            newImages[stepIndex] = img;
                         }
                     }
                 });

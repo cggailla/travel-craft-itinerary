@@ -56,9 +56,9 @@ export function QuoteCoverPage({
             className="h-full w-full object-cover"
           />
           {/* Hidden image for PDF extraction */}
-          {coverImage?.publicUrl && (
+          {coverImage?.public_url && (
             <img 
-              src={coverImage.publicUrl} 
+              src={coverImage.public_url} 
               className="hidden" 
               data-pdf-image="true" 
               alt="cover" 

@@ -110,9 +110,9 @@ export function QuotePricingSection({
             className="h-full w-full object-cover"
           />
           {/* Hidden image for PDF extraction */}
-          {pricingImage?.publicUrl && (
+          {pricingImage?.public_url && (
             <img 
-              src={pricingImage.publicUrl} 
+              src={pricingImage.public_url} 
               className="hidden" 
               data-pdf-image="true" 
               alt="pricing" 

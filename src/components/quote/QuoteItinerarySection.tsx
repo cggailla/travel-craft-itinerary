@@ -73,9 +73,9 @@ export function QuoteItinerarySection({
                   className="h-full w-full object-cover"
                 />
                 {/* Hidden image for PDF extraction */}
-                {stepImages[stepIndex]?.publicUrl && (
+                {stepImages[stepIndex]?.public_url && (
                   <img 
-                    src={stepImages[stepIndex]?.publicUrl} 
+                    src={stepImages[stepIndex]?.public_url} 
                     className="hidden" 
                     data-pdf-image="true" 
                     alt={`step-${stepIndex}`} 

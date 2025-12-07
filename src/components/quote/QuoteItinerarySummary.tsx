@@ -86,9 +86,9 @@ export function QuoteItinerarySummary({
               className="h-full w-full object-cover rounded-xl overflow-hidden"
            />
            {/* Hidden image for PDF extraction */}
-           {summaryImage?.publicUrl && (
+           {summaryImage?.public_url && (
              <img 
-               src={summaryImage.publicUrl} 
+               src={summaryImage.public_url} 
                className="hidden" 
                data-pdf-image="true" 
                alt="summary" 
