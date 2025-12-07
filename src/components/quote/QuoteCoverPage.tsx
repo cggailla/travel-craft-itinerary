@@ -55,6 +55,15 @@ export function QuoteCoverPage({
             height="h-full"
             className="h-full w-full object-cover"
           />
+          {/* Hidden image for PDF extraction */}
+          {coverImage?.publicUrl && (
+            <img 
+              src={coverImage.publicUrl} 
+              className="hidden" 
+              data-pdf-image="true" 
+              alt="cover" 
+            />
+          )}
         </div>
 
         {/* RIGHT SIDE - Content */}

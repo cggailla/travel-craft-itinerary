@@ -75,7 +75,7 @@ export function QuoteItinerarySummary({
         </div>
 
         {/* Right Column: Image Uploader (30%) */}
-        <div className="w-[30%] h-full">
+        <div className="w-[30%] h-full relative">
            <ImageUploader
               tripId={tripId}
               imageType="quote-summary"
@@ -85,6 +85,15 @@ export function QuoteItinerarySummary({
               label="Photo"
               className="h-full w-full object-cover rounded-xl overflow-hidden"
            />
+           {/* Hidden image for PDF extraction */}
+           {summaryImage?.publicUrl && (
+             <img 
+               src={summaryImage.publicUrl} 
+               className="hidden" 
+               data-pdf-image="true" 
+               alt="summary" 
+             />
+           )}
         </div>
       </div>
     </section>
