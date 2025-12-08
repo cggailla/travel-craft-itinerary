@@ -1101,11 +1101,32 @@ export const Notes: React.FC = () => (
       <Text style={styles.paragraph}>
         Écrivez ici vos impressions, vos adresses favorites, vos rencontres…
       </Text>
-      {Array.from({ length: 55 }).map((_, ni) => (
+      {Array.from({ length: 25 }).map((_, ni) => (
         <SafeView key={`note-${ni}`} style={styles.noteLine} />
       ))}
     </SafeView>
   </SafeView>
+)
+
+export const NotesEmpty: React.FC = () => (
+  <SafeView style={styles.sectionBlock}>
+    <SafeView style={styles.contentWrap}>
+      {Array.from({ length: 32 }).map((_, ni) => (
+        <SafeView key={`note-empty-${ni}`} style={styles.noteLine} />
+      ))}
+    </SafeView>
+  </SafeView>
+)
+
+export const NotesDocument: React.FC = () => (
+  <Document>
+    <Page size="A5" style={styles.page}>
+      <Notes />
+    </Page>
+    <Page size="A5" style={styles.page}>
+      <NotesEmpty />
+    </Page>
+  </Document>
 )
 
 // ---------------- DOCUMENT ----------------
@@ -1138,31 +1159,21 @@ export const BookletDocument: React.FC<BookletDocumentProps> = ({ data }: { data
       {/* Itinerary */}
       <Page size="A5" style={styles.page}>
         <Itinerary itinerary={data.itinerary || []} brand={brand} />
-        <PageFooter />
       </Page>
 
       {/* Thank You */}
       <Page size="A5" style={styles.page}>
         <ThankYou thank={data.thank_you || {}} brand={brand} />
-        <PageFooter />
       </Page>
 
       {/* General Info */}
       <Page size="A5" style={styles.page}>
         <GeneralInfo info={data.general_info || {}} />
-        <PageFooter />
       </Page>
 
       {/* Emergency */}
       <Page size="A5" style={styles.page}>
         <Emergency contact={data.emergency_contacts || {}} />
-        <PageFooter />
-      </Page>
-
-      {/* Notes */}
-      <Page size="A5" style={styles.page}>
-        <Notes />
-        <PageFooter />
       </Page>
     </Document>
   )
