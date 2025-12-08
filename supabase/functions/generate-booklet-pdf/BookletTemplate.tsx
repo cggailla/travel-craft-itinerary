@@ -284,16 +284,17 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     marginLeft: 2,
     marginBottom: 20,
+    textAlign: 'justify',
   },
 
   segment: { padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: theme.gray200, borderRadius: 4 },
   segmentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   segmentTitle: { fontSize: 11, fontWeight: 'bold' },
   segmentBadge: { fontSize: 10, backgroundColor: theme.sand, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
-  segmentMeta: { fontSize: 10, color: theme.gray700, marginTop: 2 },
+  segmentMeta: { fontSize: 10, color: theme.gray700, marginTop: 2, textAlign: 'justify' },
 
   stepListTitle: { fontSize: 10, fontWeight: 'bold', marginTop: 4, color: theme.gray700 },
-  stepListItem: { fontSize: 10, color: theme.gray700, marginLeft: 6 },
+  stepListItem: { fontSize: 10, color: theme.gray700, marginLeft: 6, textAlign: 'justify' },
 
   endOfService: { marginTop: 30, textAlign: 'center', fontWeight: 'bold', fontSize: 12, color: theme.primary },
 
@@ -301,17 +302,17 @@ const styles = StyleSheet.create({
   infoGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   infoCard: { width: '48%', borderWidth: 1, borderColor: theme.gray300, backgroundColor: theme.gray100, borderRadius: 6, padding: 8 },
   infoTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
-  infoText: { fontSize: 10 },
+  infoText: { fontSize: 10, textAlign: 'justify' },
 
   // Thank you
   thankBlock: { gap: 6 },
-  thankLine: { fontSize: 11 },
+  thankLine: { fontSize: 11, textAlign: 'justify' },
   thankClosing: { fontSize: 11, fontWeight: 'bold', marginTop: 8 },
 
   // Emergency
   card: { borderWidth: 1, borderColor: theme.gray300, borderRadius: 6, padding: 10, marginBottom: 10, backgroundColor: '#fff' },
   cardTitle: { fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
-  paragraph: { fontSize: 10, marginBottom: 3 },
+  paragraph: { fontSize: 10, marginBottom: 3, textAlign: 'justify' },
 
   // Notes
   noteLine: { height: 1, backgroundColor: theme.gray300, marginVertical: 8 },
@@ -580,7 +581,7 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                       {description && (
                          <SafeText
                           ctx={`segment[${si}].description`}
-                          style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.3 }}
+                          style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.3, textAlign: 'justify' }}
                           value={description}
                         />
                       )}
@@ -610,7 +611,7 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                       <SafeText
                         key={`step-${step.id || i}-tip-${ti}`}
                         ctx={`itinerary[${i}].tip[${ti}]`}
-                        style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.4 }}
+                        style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.4, textAlign: 'justify' }}
                         value={t}
                       />
                     ))}
@@ -623,7 +624,7 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                   <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 4, color: '#047857' }}>🌍 Info locale</Text>
                   <SafeText
                     ctx={`itinerary[${i}].local_context`}
-                    style={{ fontSize: 10, color: theme.text, lineHeight: 1.4 }}
+                    style={{ fontSize: 10, color: theme.text, lineHeight: 1.4, textAlign: 'justify' }}
                     value={step.local_context}
                   />
                 </SafeView>
@@ -707,7 +708,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   const Row = ({ label, value, keyVal }: { label?: string; value: any; keyVal?: string }) => {
      if (!value) return null
      return (
-       <Text style={{ fontSize: 10, marginBottom: 3, lineHeight: 1.4, color: theme.text }}>
+       <Text style={{ fontSize: 10, marginBottom: 3, lineHeight: 1.4, color: theme.text, textAlign: 'justify' }}>
          {label ? <Text style={{ fontWeight: 'bold', color: 'black' }}>{label} : </Text> : null}
          <Text>{stringify(value, keyVal || 'row')}</Text>
        </Text>
@@ -717,7 +718,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   const Bullet = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `bullet[${keyVal}]` : 'bullet'}
-      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 2 }}
+      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 2, textAlign: 'justify' }}
       renderPrefix="• "
       value={text}
     />
