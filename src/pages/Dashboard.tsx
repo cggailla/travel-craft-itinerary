@@ -7,11 +7,18 @@ import { useNavigate } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { CreateTripDialog } from '@/components/CreateTripDialog';
 import { DeleteTripDialog } from '@/components/DeleteTripDialog';
-import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
+import { getUserTrips, deleteTrip, createTrip, toggleTripArchive } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardCalendarView } from '@/components/DashboardCalendarView';
-import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock, RefreshCw } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock, RefreshCw, Archive, Filter } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
 type TripPhase = 'draft' | 'processing' | 'timeline' | 'enrichment' | 'validated';
@@ -39,6 +46,7 @@ export default function Dashboard() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
   const {
     toast
@@ -321,8 +329,59 @@ export default function Dashboard() {
     }
   };
 
+  const handleArchiveToggle = async (trip: TripWithPhase, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // If currently archived (manually or by date), we try to unarchive manually
+    // If currently not archived, we archive manually
+    const isArchived = trip.is_archived || (trip.endDate ? new Date(trip.endDate) < new Date() : false);
+    const newStatus = !isArchived;
+
+    try {
+        await toggleTripArchive(trip.id, newStatus);
+        toast({
+            title: newStatus ? "Voyage archivé" : "Voyage désarchivé",
+            description: `Le voyage "${trip.title}" a été ${newStatus ? 'archivé' : 'restauré'}.`
+        });
+        loadTrips();
+    } catch (error) {
+        toast({
+            title: "Erreur",
+            description: "Impossible de modifier le statut d'archivage",
+            variant: "destructive"
+        });
+    }
+  };
+
+  // Helper to check if trip is archived
+  const isTripArchived = (trip: TripWithPhase) => {
+    if (trip.is_archived) return true;
+    if (trip.endDate) {
+      const end = new Date(trip.endDate);
+      const now = new Date();
+      // Strict comparison: if end date is in the past (yesterday or before)
+      // Actually, if end date is TODAY, it's still active.
+      // So end < now (where now includes time) might be too strict if end doesn't have time.
+      // Usually end_date is YYYY-MM-DD. new Date('2025-12-08') is 2025-12-08T00:00:00.
+      // If now is 2025-12-08T12:00:00, then end < now is true.
+      // We should compare with start of tomorrow or end of today.
+      // Let's say if end_date is strictly before today (ignoring time).
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return end < today;
+    }
+    return false;
+  };
+
   // Filtrage des voyages
   const filteredTrips = trips.filter(trip => {
+    const archived = isTripArchived(trip);
+
+    if (showArchived) {
+        if (!archived) return false;
+    } else {
+        if (archived) return false;
+    }
+
     // Filtre par phase
     if (phaseFilter !== 'all') {
       if (trip.currentPhase !== phaseFilter) return false;
@@ -339,13 +398,17 @@ export default function Dashboard() {
   });
 
   // Statistiques
+  const activeTrips = trips.filter(t => !isTripArchived(t));
+  const archivedTrips = trips.filter(t => isTripArchived(t));
+
   const stats = {
-    total: trips.length,
-    draft: trips.filter(t => t.currentPhase === 'draft').length,
-    processing: trips.filter(t => t.currentPhase === 'processing').length,
-    timeline: trips.filter(t => t.currentPhase === 'timeline').length,
-    enrichment: trips.filter(t => t.currentPhase === 'enrichment').length,
-    validated: trips.filter(t => t.currentPhase === 'validated').length
+    total: activeTrips.length,
+    archived: archivedTrips.length,
+    draft: activeTrips.filter(t => t.currentPhase === 'draft').length,
+    processing: activeTrips.filter(t => t.currentPhase === 'processing').length,
+    timeline: activeTrips.filter(t => t.currentPhase === 'timeline').length,
+    enrichment: activeTrips.filter(t => t.currentPhase === 'enrichment').length,
+    validated: activeTrips.filter(t => t.currentPhase === 'validated').length
   };
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -369,20 +432,20 @@ export default function Dashboard() {
         </header>
 
         {/* Statistiques modernes avec animations */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <Card className="group relative overflow-hidden border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-card via-card to-primary/5">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl transition-all duration-500 group-hover:scale-150" />
             <CardHeader className="pb-3 relative z-10">
               <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2 uppercase tracking-wide">
                 <TrendingUp className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-                Total de voyages
+                Voyages actifs
               </CardTitle>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-4xl font-bold font-mono bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
                 {stats.total}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Tous vos voyages</p>
+              <p className="text-xs text-muted-foreground mt-2">En cours et validés</p>
             </CardContent>
           </Card>
 
@@ -417,6 +480,22 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-2">En préparation</p>
             </CardContent>
           </Card>
+
+          <Card className="group relative overflow-hidden border-2 hover:border-gray-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-gray-500/20 hover:-translate-y-1 bg-gradient-to-br from-card via-card to-gray-500/5">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gray-500/10 rounded-full blur-3xl transition-all duration-500 group-hover:scale-150" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2 uppercase tracking-wide">
+                <Archive className="h-5 w-5 text-gray-600 dark:text-gray-400 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                Voyages archivés
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <div className="text-4xl font-bold font-mono text-gray-600 dark:text-gray-400">
+                {stats.archived}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Passés ou archivés</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Recherche et filtres modernes */}
@@ -442,40 +521,31 @@ export default function Dashboard() {
             </Button>
           </div>
           
-          <div className="flex gap-2 flex-wrap">
-            <Button variant={phaseFilter === 'all' ? 'default' : 'outline'} onClick={() => setPhaseFilter('all')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'all' ? 'shadow-lg shadow-primary/30 bg-gradient-to-r from-primary to-primary/90' : 'hover:border-primary/50 hover:bg-primary/5'}`}>
-              <span>Tous</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.total}</Badge>
-            </Button>
-            
-            <Button variant={phaseFilter === 'draft' ? 'default' : 'outline'} onClick={() => setPhaseFilter('draft')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'draft' ? 'shadow-lg shadow-gray-500/30 bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-500' : 'hover:border-gray-500/50 hover:bg-gray-500/5'}`}>
-              <FileText className="mr-1.5 h-4 w-4" />
-              <span>Brouillon</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.draft}</Badge>
-            </Button>
+          <div className="flex gap-2 items-center">
+            <Select value={phaseFilter} onValueChange={(value) => setPhaseFilter(value as TripPhase | 'all')}>
+              <SelectTrigger className="w-[220px] h-11 bg-background/50 backdrop-blur-sm border-2 focus:ring-primary/20 rounded-full">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Filtrer par statut" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="draft">Brouillon</SelectItem>
+                <SelectItem value="processing">Analyse</SelectItem>
+                <SelectItem value="timeline">Chronologie</SelectItem>
+                <SelectItem value="enrichment">Enrichissement</SelectItem>
+                <SelectItem value="validated">Finalisés</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <Button variant={phaseFilter === 'processing' ? 'default' : 'outline'} onClick={() => setPhaseFilter('processing')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'processing' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              <span>Analyse</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.processing}</Badge>
-            </Button>
-            
-            <Button variant={phaseFilter === 'timeline' ? 'default' : 'outline'} onClick={() => setPhaseFilter('timeline')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'timeline' ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' : 'hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
-              <Calendar className="mr-1.5 h-4 w-4" />
-              <span>Chronologie</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.timeline}</Badge>
-            </Button>
-
-            <Button variant={phaseFilter === 'enrichment' ? 'default' : 'outline'} onClick={() => setPhaseFilter('enrichment')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'enrichment' ? 'shadow-lg shadow-purple-500/30 bg-gradient-to-r from-purple-500 to-purple-600 text-white border-purple-500' : 'hover:border-purple-500/50 hover:bg-purple-500/5'}`}>
-              <Zap className="mr-1.5 h-4 w-4" />
-              <span>Enrichissement</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.enrichment}</Badge>
-            </Button>
-            
-            <Button variant={phaseFilter === 'validated' ? 'default' : 'outline'} onClick={() => setPhaseFilter('validated')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'validated' ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' : 'hover:border-green-500/50 hover:bg-green-500/5'}`}>
-              <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              <span>Finalisés</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.validated}</Badge>
+            <Button 
+              variant={showArchived ? 'default' : 'outline'} 
+              onClick={() => { setShowArchived(!showArchived); }} 
+              className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${showArchived ? 'shadow-lg shadow-gray-500/30 bg-gradient-to-r from-gray-700 to-gray-800 text-white border-gray-700' : 'hover:border-gray-500/50 hover:bg-gray-500/5'}`}
+            >
+              <Archive className="mr-1.5 h-4 w-4" />
+              <span>Archives</span>
             </Button>
           </div>
         </div>
@@ -712,6 +782,12 @@ export default function Dashboard() {
                           <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                         </Button>}
 
+                      {/* Bouton archiver */}
+                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300" onClick={e => handleArchiveToggle(trip, e)}>
+                        <Archive className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                        {isTripArchived(trip) ? 'Restaurer' : 'Archiver'}
+                      </Button>
+
                       {/* Bouton supprimer avec hover state amélioré */}
                       <Button variant="ghost" size="sm" className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300" onClick={e => handleDeleteClick(trip, e)}>
                         <Trash2 className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
@@ -875,6 +951,10 @@ export default function Dashboard() {
                             <FileEdit className="mr-2 h-4 w-4" />
                             Continuer
                           </Button>}
+
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={e => handleArchiveToggle(trip, e)} title={isTripArchived(trip) ? 'Restaurer' : 'Archiver'}>
+                          <Archive className="h-4 w-4" />
+                        </Button>
 
                         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={e => handleDeleteClick(trip, e)}>
                           <Trash2 className="h-4 w-4" />

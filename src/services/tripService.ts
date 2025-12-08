@@ -392,3 +392,28 @@ export async function deleteTrip(tripId: string): Promise<{ success: boolean; er
     };
   }
 }
+
+/**
+ * 🔐 NIVEAU 2 : Archiver/Désarchiver un voyage
+ */
+export async function toggleTripArchive(tripId: string, isArchived: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await requireAuth();
+    
+    const { error } = await supabase
+      .from('trips')
+      .update({ is_archived: isArchived })
+      .eq('id', tripId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling archive status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
