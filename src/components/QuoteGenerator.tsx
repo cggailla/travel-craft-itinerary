@@ -274,14 +274,14 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
       const link = document.createElement("a");
       link.href = blobUrl;
 
-      // Générer le nom de fichier : AAAA_MM-NomClient
+      // Générer le nom de fichier : AAAA_MM_DD-NomClient
       const now = new Date();
-      const yyyy_mm = now.toISOString().slice(0, 7).replace('-', '_'); // 2025_12
+      const yyyy_mm_dd = now.toISOString().slice(0, 10).replace(/-/g, '_'); // 2025_12_08
       const clientName = quoteData?.participants 
         ? quoteData.participants.trim().split(' ').pop() 
         : 'Client';
 
-      link.download = `${yyyy_mm}-${clientName}-Devis.pdf`;
+      link.download = `${yyyy_mm_dd}-${clientName}-Devis.pdf`;
       document.body.appendChild(link);
       link.click();
 

@@ -291,14 +291,14 @@ export default function Dashboard() {
       const link = document.createElement("a");
       link.href = blobUrl;
       
-      // Generate filename: YYYY_MM-ClientName-Type.pdf
+      // Generate filename: YYYY_MM_DD-ClientName-Type.pdf
       const now = new Date();
-      const yyyy_mm = now.toISOString().slice(0, 7).replace('-', '_');
+      const yyyy_mm_dd = now.toISOString().slice(0, 10).replace(/-/g, '_');
       const clientName = participants 
         ? participants.trim().split(' ').pop() 
         : 'Client';
       
-      link.download = `${yyyy_mm}-${clientName}-${type}.pdf`;
+      link.download = `${yyyy_mm_dd}-${clientName}-${type}.pdf`;
       
       document.body.appendChild(link);
       link.click();

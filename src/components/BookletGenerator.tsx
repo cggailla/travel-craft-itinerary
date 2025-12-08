@@ -106,14 +106,14 @@ export function BookletGenerator({ tripId, autoGenerate }: BookletGeneratorProps
       const link = document.createElement("a");
       link.href = blobUrl;
 
-      // Générer le nom de fichier : AAAA_MM-NomClient
+      // Générer le nom de fichier : AAAA_MM_DD-NomClient
       const now = new Date();
-      const yyyy_mm = now.toISOString().slice(0, 7).replace('-', '_'); // 2025_12
+      const yyyy_mm_dd = now.toISOString().slice(0, 10).replace(/-/g, '_'); // 2025_12_08
       const clientName = bookletData?.participants 
         ? bookletData.participants.trim().split(' ').pop() 
         : 'Client';
       
-      link.download = `${yyyy_mm}-${clientName}-Carnet.pdf`;
+      link.download = `${yyyy_mm_dd}-${clientName}-Carnet.pdf`;
       document.body.appendChild(link);
       link.click();
 
