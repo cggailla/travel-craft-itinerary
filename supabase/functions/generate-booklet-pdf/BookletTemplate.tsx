@@ -11,14 +11,67 @@ import {
   Link,
 } from 'npm:@react-pdf/renderer@3.4.3'
 
-// --- Fonts (optionnel) ------------------------------------------------------
-// Font.register({ family: 'Playfair Display', src: path.resolve(__dirname, './fonts/PlayfairDisplay-Regular.ttf') })
-// Font.register({ family: 'Lato', src: path.resolve(__dirname, './fonts/Lato-Regular.ttf') })
-// Font.register({ family: 'Lato', src: path.resolve(__dirname, './fonts/Lato-Bold.ttf'), fontWeight: 'bold' })
+// --- Fonts ------------------------------------------------------------------
+let DEFAULT_TEXT = 'Helvetica'
+let TITLE_FONT = 'Helvetica'
+let BODY_FONT = 'Helvetica'
 
-const DEFAULT_TEXT = 'Helvetica'
-const TITLE_FONT = 'Helvetica'
-const BODY_FONT = 'Helvetica'
+// Load bundled fonts
+const loadFont = async (fileName: string) => {
+  try {
+    const url = new URL(`./fonts/${fileName}`, import.meta.url)
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Status ${res.status}`)
+    return await res.arrayBuffer()
+  } catch (e) {
+    console.error(`Failed to load font ${fileName}:`, e)
+    return null
+  }
+}
+
+// Register fonts with top-level await
+try {
+  const [
+    montserratRegular,
+    montserratBold,
+    latoRegular,
+    latoBold,
+    latoItalic
+  ] = await Promise.all([
+    loadFont('Montserrat-Regular.woff'),
+    loadFont('Montserrat-Bold.woff'),
+    loadFont('Lato-Regular.woff'),
+    loadFont('Lato-Bold.woff'),
+    loadFont('Lato-Italic.woff')
+  ])
+
+  if (montserratRegular && montserratBold && latoRegular && latoBold && latoItalic) {
+    Font.register({
+      family: 'Montserrat',
+      fonts: [
+        { src: montserratBold, fontWeight: 'bold' },
+        { src: montserratRegular, fontWeight: 'normal' },
+      ]
+    })
+
+    Font.register({
+      family: 'Lato',
+      fonts: [
+        { src: latoRegular, fontWeight: 'normal' },
+        { src: latoBold, fontWeight: 'bold' },
+        { src: latoItalic, fontStyle: 'italic' },
+      ]
+    })
+
+    DEFAULT_TEXT = 'Lato'
+    TITLE_FONT = 'Montserrat'
+    BODY_FONT = 'Lato'
+  } else {
+    console.warn('Some fonts failed to load, falling back to Helvetica')
+  }
+} catch (e) {
+  console.error('Error registering fonts:', e)
+}
 
 // --- Thème ------------------------------------------------------------------
 const theme = {
@@ -171,12 +224,12 @@ const SafeText: React.FC<{ value: any; style?: any; ctx?: string; renderPrefix?:
 }
 
 /** SafeView — filtre automatiquement toute chaîne brute enfant (erreurs React-PDF) */
-const SafeView: React.FC<{ style?: any; wrap?: boolean }> = ({ style, wrap, children }) => {
+const SafeView: React.FC<any> = ({ style, wrap, children, ...props }) => {
   const safeChildren = React.Children.toArray(children).filter(
     (ch: any) => !(typeof ch === 'string' || typeof ch === 'number')
   )
   // @ts-ignore wrap est accepté par react-pdf
-  return <View style={style} wrap={wrap}>{safeChildren}</View>
+  return <View style={style} wrap={wrap} {...props}>{safeChildren}</View>
 }
 
 // --- Styles -----------------------------------------------------------------
@@ -504,31 +557,34 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
           const infosBlock = (
             <SafeView key={step.id || i} style={{ marginBottom: 22 }}>
               
-              {/* HEADER MODERNE: Date -> Date : Titre */}
-              <SafeView style={styles.stepBox}>
-                <Text style={styles.stepDate}>{startStr}</Text>
-                {endStr ? (
-                  <>
-                    <Text style={styles.stepArrow}>-</Text>
-                    <Text style={styles.stepDate}>{endStr}</Text>
-                  </>
-                ) : null}
-                <Text style={{ marginHorizontal: 10, color: theme.gray300 }}>:</Text>
-                <SafeText
-                  ctx={`itinerary[${i}].title`}
-                  style={[styles.stepTitle, { color: theme.primary }]} // Keeps purple per instruction
-                  value={stringify(title, `itinerary[${i}].title`)}
-                />
-              </SafeView>
+              {/* Keep Header and Overview together to avoid orphans */}
+              <SafeView wrap={false}>
+                {/* HEADER MODERNE: Date -> Date : Titre */}
+                <SafeView style={styles.stepBox}>
+                  <Text style={styles.stepDate}>{startStr}</Text>
+                  {endStr ? (
+                    <>
+                      <Text style={styles.stepArrow}>-</Text>
+                      <Text style={styles.stepDate}>{endStr}</Text>
+                    </>
+                  ) : null}
+                  <Text style={{ marginHorizontal: 10, color: theme.gray300 }}>:</Text>
+                  <SafeText
+                    ctx={`itinerary[${i}].title`}
+                    style={[styles.stepTitle, { color: theme.primary }]} // Keeps purple per instruction
+                    value={stringify(title, `itinerary[${i}].title`)}
+                  />
+                </SafeView>
 
-              {/* DESCRIPTION NARRATIVE */}
-              {Boolean(step.overview) && (
-                <SafeText
-                  ctx={`itinerary[${i}].overview`}
-                  style={styles.narrativeText}
-                  value={step.overview}
-                />
-              )}
+                {/* DESCRIPTION NARRATIVE */}
+                {Boolean(step.overview) && (
+                  <SafeText
+                    ctx={`itinerary[${i}].overview`}
+                    style={styles.narrativeText}
+                    value={step.overview}
+                  />
+                )}
+              </SafeView>
 
               {/* Segments */}
               {(step.segments || []).map((s: any, si: number) => {
