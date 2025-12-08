@@ -10,6 +10,7 @@ import { DeleteTripDialog } from '@/components/DeleteTripDialog';
 import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { DashboardCalendarView } from '@/components/DashboardCalendarView';
 import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock, RefreshCw } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
@@ -23,6 +24,8 @@ interface TripWithPhase extends Trip {
   pdfUrl?: string | null;
   hasQuotePdf?: boolean;
   quotePdfUrl?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 export default function Dashboard() {
   const [trips, setTrips] = useState<TripWithPhase[]>([]);
@@ -31,7 +34,7 @@ export default function Dashboard() {
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [phaseFilter, setPhaseFilter] = useState<'all' | TripPhase>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar'>('grid');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
@@ -74,6 +77,23 @@ export default function Dashboard() {
           head: true
         }).eq('trip_id', trip.id);
 
+        // Récupérer les dates du voyage (min start, max end)
+        const { data: segments } = await supabase
+          .from('travel_segments')
+          .select('start_date, end_date')
+          .eq('trip_id', trip.id);
+        
+        let startDate: string | null = null;
+        let endDate: string | null = null;
+        
+        if (segments && segments.length > 0) {
+            const startDates = segments.map(s => s.start_date).filter((d): d is string => !!d).sort();
+            const endDates = segments.map(s => s.end_date).filter((d): d is string => !!d).sort();
+            
+            if (startDates.length > 0) startDate = startDates[0];
+            if (endDates.length > 0) endDate = endDates[endDates.length - 1];
+        }
+
         // Déterminer la phase actuelle
         let currentPhase: TripPhase = 'draft';
         
@@ -100,7 +120,9 @@ export default function Dashboard() {
           hasPdf: !!trip.last_pdf_url,
           pdfUrl: trip.last_pdf_url,
           hasQuotePdf: !!trip.last_quote_pdf_url,
-          quotePdfUrl: trip.last_quote_pdf_url
+          quotePdfUrl: trip.last_quote_pdf_url,
+          startDate,
+          endDate
         };
       }));
       setTrips(enrichedTrips);
@@ -414,6 +436,10 @@ export default function Dashboard() {
               <List className="h-4 w-4 mr-2" />
               Liste
             </Button>
+            <Button variant={viewMode === 'calendar' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className={`h-10 px-4 transition-all duration-300 ${viewMode === 'calendar' ? 'shadow-sm' : 'hover:bg-background/50'}`}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Calendrier
+            </Button>
           </div>
           
           <div className="flex gap-2 flex-wrap">
@@ -695,7 +721,7 @@ export default function Dashboard() {
                   </Card>
                 </div>;
         })}
-          </div> : <div className="flex flex-col gap-4">
+          </div> : viewMode === 'list' ? <div className="flex flex-col gap-4">
             {filteredTrips.map((trip, index) => {
           const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
           const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
@@ -867,7 +893,7 @@ export default function Dashboard() {
                   </Card>
                 </div>;
         })}
-          </div>}
+          </div> : <DashboardCalendarView trips={filteredTrips} onTripClick={handleTripClick} />}
 
         {/* Dialog de création de voyage */}
         <CreateTripDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onConfirm={handleCreateNewTrip} />
