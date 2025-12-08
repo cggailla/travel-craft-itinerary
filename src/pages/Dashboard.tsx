@@ -10,10 +10,10 @@ import { DeleteTripDialog } from '@/components/DeleteTripDialog';
 import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock } from 'lucide-react';
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock, RefreshCw } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
-type TripPhase = 'upload' | 'timeline' | 'validated';
+type TripPhase = 'draft' | 'processing' | 'timeline' | 'enrichment' | 'validated';
 interface TripWithPhase extends Trip {
   currentPhase: TripPhase;
   segmentCount?: number;
@@ -30,7 +30,7 @@ export default function Dashboard() {
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [phaseFilter, setPhaseFilter] = useState<'all' | 'upload' | 'timeline' | 'validated'>('all');
+  const [phaseFilter, setPhaseFilter] = useState<'all' | TripPhase>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -75,14 +75,22 @@ export default function Dashboard() {
         }).eq('trip_id', trip.id);
 
         // Déterminer la phase actuelle
-        let currentPhase: TripPhase = 'upload';
-        if (trip.status === 'validated') {
-          currentPhase = 'validated';
-        } else if (segmentCount && segmentCount > 0) {
-          currentPhase = 'timeline';
-        } else if (documentCount && documentCount > 0) {
-          currentPhase = 'upload';
+        let currentPhase: TripPhase = 'draft';
+        
+        // Si le statut est explicitement défini dans la DB et correspond à nos phases
+        if (trip.status && ['draft', 'processing', 'timeline', 'enrichment', 'validated'].includes(trip.status)) {
+          currentPhase = trip.status as TripPhase;
+        } else {
+          // Fallback sur l'ancienne logique si le statut n'est pas à jour
+          if (trip.status === 'validated') {
+            currentPhase = 'validated';
+          } else if (segmentCount && segmentCount > 0) {
+            currentPhase = 'timeline';
+          } else if (documentCount && documentCount > 0) {
+            currentPhase = 'processing';
+          }
         }
+
         return {
           ...trip,
           currentPhase,
@@ -222,12 +230,14 @@ export default function Dashboard() {
     }
   };
   const getPhaseLabel = (phase: TripPhase): string => {
-    const labels = {
-      upload: 'Upload de documents',
-      timeline: 'Édition de la chronologie',
-      validated: 'Carnet finalisé'
+    const labels: Record<TripPhase, string> = {
+      draft: 'Brouillon',
+      processing: 'Analyse des documents',
+      timeline: 'Organisation',
+      enrichment: 'Enrichissement IA',
+      validated: 'Prêt à exporter'
     };
-    return labels[phase];
+    return labels[phase] || phase;
   };
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -309,8 +319,10 @@ export default function Dashboard() {
   // Statistiques
   const stats = {
     total: trips.length,
-    upload: trips.filter(t => t.currentPhase === 'upload').length,
+    draft: trips.filter(t => t.currentPhase === 'draft').length,
+    processing: trips.filter(t => t.currentPhase === 'processing').length,
     timeline: trips.filter(t => t.currentPhase === 'timeline').length,
+    enrichment: trips.filter(t => t.currentPhase === 'enrichment').length,
     validated: trips.filter(t => t.currentPhase === 'validated').length
   };
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -378,7 +390,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-4xl font-bold font-mono text-orange-600 dark:text-orange-400">
-                {stats.upload + stats.timeline}
+                {stats.draft + stats.processing + stats.timeline + stats.enrichment}
               </div>
               <p className="text-xs text-muted-foreground mt-2">En préparation</p>
             </CardContent>
@@ -410,16 +422,28 @@ export default function Dashboard() {
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.total}</Badge>
             </Button>
             
-            <Button variant={phaseFilter === 'upload' ? 'default' : 'outline'} onClick={() => setPhaseFilter('upload')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'upload' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
+            <Button variant={phaseFilter === 'draft' ? 'default' : 'outline'} onClick={() => setPhaseFilter('draft')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'draft' ? 'shadow-lg shadow-gray-500/30 bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-500' : 'hover:border-gray-500/50 hover:bg-gray-500/5'}`}>
               <FileText className="mr-1.5 h-4 w-4" />
-              <span>Upload</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.upload}</Badge>
+              <span>Brouillon</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.draft}</Badge>
+            </Button>
+
+            <Button variant={phaseFilter === 'processing' ? 'default' : 'outline'} onClick={() => setPhaseFilter('processing')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'processing' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              <span>Analyse</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.processing}</Badge>
             </Button>
             
             <Button variant={phaseFilter === 'timeline' ? 'default' : 'outline'} onClick={() => setPhaseFilter('timeline')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'timeline' ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' : 'hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
               <Calendar className="mr-1.5 h-4 w-4" />
               <span>Chronologie</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.timeline}</Badge>
+            </Button>
+
+            <Button variant={phaseFilter === 'enrichment' ? 'default' : 'outline'} onClick={() => setPhaseFilter('enrichment')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'enrichment' ? 'shadow-lg shadow-purple-500/30 bg-gradient-to-r from-purple-500 to-purple-600 text-white border-purple-500' : 'hover:border-purple-500/50 hover:bg-purple-500/5'}`}>
+              <Zap className="mr-1.5 h-4 w-4" />
+              <span>Enrichissement</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.enrichment}</Badge>
             </Button>
             
             <Button variant={phaseFilter === 'validated' ? 'default' : 'outline'} onClick={() => setPhaseFilter('validated')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'validated' ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' : 'hover:border-green-500/50 hover:bg-green-500/5'}`}>
@@ -491,6 +515,15 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
             },
+            enrichment: {
+              gradient: 'from-purple-500/10 via-violet-500/5 to-transparent',
+              borderColor: 'border-purple-500/20',
+              iconBg: 'bg-purple-500/10',
+              iconColor: 'text-purple-600 dark:text-purple-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(270_100%_60%/0.3)]'
+            },
             timeline: {
               gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
               borderColor: 'border-blue-500/20',
@@ -500,7 +533,7 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
             },
-            upload: {
+            processing: {
               gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
               borderColor: 'border-orange-500/20',
               iconBg: 'bg-orange-500/10',
@@ -508,10 +541,25 @@ export default function Dashboard() {
               badgeVariant: 'outline' as const,
               badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            },
+            draft: {
+              gradient: 'from-gray-500/10 via-slate-500/5 to-transparent',
+              borderColor: 'border-gray-500/20',
+              iconBg: 'bg-gray-500/10',
+              iconColor: 'text-gray-600 dark:text-gray-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_10%_55%/0.3)]'
             }
           };
           const config = statusConfig[trip.currentPhase];
-          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          const progress = {
+            draft: 10,
+            processing: 30,
+            timeline: 50,
+            enrichment: 80,
+            validated: 100
+          }[trip.currentPhase];
           return <div key={trip.id} className={`group relative animate-slide-up`} style={{
             animationDelay: `${index * 50}ms`
           }}>
@@ -661,6 +709,15 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
             },
+            enrichment: {
+              gradient: 'from-purple-500/10 via-violet-500/5 to-transparent',
+              borderColor: 'border-purple-500/20',
+              iconBg: 'bg-purple-500/10',
+              iconColor: 'text-purple-600 dark:text-purple-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(270_100%_60%/0.3)]'
+            },
             timeline: {
               gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
               borderColor: 'border-blue-500/20',
@@ -670,7 +727,7 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
             },
-            upload: {
+            processing: {
               gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
               borderColor: 'border-orange-500/20',
               iconBg: 'bg-orange-500/10',
@@ -678,10 +735,25 @@ export default function Dashboard() {
               badgeVariant: 'outline' as const,
               badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            },
+            draft: {
+              gradient: 'from-gray-500/10 via-slate-500/5 to-transparent',
+              borderColor: 'border-gray-500/20',
+              iconBg: 'bg-gray-500/10',
+              iconColor: 'text-gray-600 dark:text-gray-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_10%_55%/0.3)]'
             }
           };
           const config = statusConfig[trip.currentPhase];
-          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          const progress = {
+            draft: 10,
+            processing: 30,
+            timeline: 50,
+            enrichment: 80,
+            validated: 100
+          }[trip.currentPhase];
           return <div key={trip.id} className="group relative animate-fade-in" style={{
             animationDelay: `${index * 30}ms`
           }}>
