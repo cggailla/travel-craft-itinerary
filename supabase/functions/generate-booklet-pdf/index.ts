@@ -220,13 +220,16 @@ serve(async (req) => {
     const publicUrl = publicUrlData?.publicUrl;
     if (!publicUrl) throw new Error("Failed to get public URL from storage");
 
-    console.log("✅ PDF available at:", publicUrl);
+    // Append timestamp to force cache busting
+    const publicUrlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+
+    console.log("✅ PDF available at:", publicUrlWithTimestamp);
 
     // Update trip with PDF URL and generation timestamp
     const { error: updateError } = await supabase
       .from("trips")
       .update({
-        last_pdf_url: publicUrl,
+        last_pdf_url: publicUrlWithTimestamp,
         last_pdf_generated_at: new Date().toISOString(),
       })
       .eq("id", tripId);

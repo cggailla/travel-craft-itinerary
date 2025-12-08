@@ -21,6 +21,8 @@ interface TripWithPhase extends Trip {
   documentCount?: number;
   hasPdf?: boolean;
   pdfUrl?: string | null;
+  hasQuotePdf?: boolean;
+  quotePdfUrl?: string | null;
 }
 export default function Dashboard() {
   const [trips, setTrips] = useState<TripWithPhase[]>([]);
@@ -88,7 +90,9 @@ export default function Dashboard() {
           stepCount: stepCount || 0,
           documentCount: documentCount || 0,
           hasPdf: !!trip.last_pdf_url,
-          pdfUrl: trip.last_pdf_url
+          pdfUrl: trip.last_pdf_url,
+          hasQuotePdf: !!trip.last_quote_pdf_url,
+          quotePdfUrl: trip.last_quote_pdf_url
         };
       }));
       setTrips(enrichedTrips);
@@ -231,6 +235,58 @@ export default function Dashboard() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleDownload = async (e: React.MouseEvent, url: string, participants: string | null, type: 'Carnet' | 'Devis') => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    try {
+      toast({
+        title: "Téléchargement",
+        description: "Préparation du fichier...",
+      });
+
+      // Add cache busting
+      const fetchUrl = url.includes('?') ? `${url}&ts=${Date.now()}` : `${url}?ts=${Date.now()}`;
+      
+      const response = await fetch(fetchUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error("Impossible de télécharger le fichier");
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      
+      // Generate filename: YYYY_MM-ClientName-Type.pdf
+      const now = new Date();
+      const yyyy_mm = now.toISOString().slice(0, 7).replace('-', '_');
+      const clientName = participants 
+        ? participants.trim().split(' ').pop() 
+        : 'Client';
+      
+      link.download = `${yyyy_mm}-${clientName}-${type}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      
+      toast({
+        title: "Succès",
+        description: "Fichier téléchargé",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le fichier",
+        variant: "destructive"
+      });
+    }
   };
 
   // Filtrage des voyages
@@ -561,13 +617,17 @@ export default function Dashboard() {
                             Choisir le format
                             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                           </Button>
-                          {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" asChild>
-                              <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                          {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" onClick={(e) => handleDownload(e, trip.pdfUrl!, trip.participants, 'Carnet')}>
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
                                 <FileText className="mr-2 h-4 w-4" />
-                                Télécharger le PDF
+                                Télécharger le Carnet
                                 {trip.hasPdf && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />}
-                              </a>
+                            </Button>}
+                          {trip.hasQuotePdf && trip.quotePdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" onClick={(e) => handleDownload(e, trip.quotePdfUrl!, trip.participants, 'Devis')}>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
+                                <FileText className="mr-2 h-4 w-4" />
+                                Télécharger le Devis
+                                {trip.hasQuotePdf && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse-glow" />}
                             </Button>}
                         </> : <Button variant="default" className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300" size="sm" onClick={e => {
                   e.stopPropagation();
@@ -704,10 +764,11 @@ export default function Dashboard() {
                               <FileText className="mr-2 h-4 w-4" />
                               Choisir le format
                             </Button>
-                            {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" asChild>
-                                <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                            {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" title="Télécharger le Carnet" onClick={(e) => handleDownload(e, trip.pdfUrl!, trip.participants, 'Carnet')}>
                                   <FileText className="h-4 w-4" />
-                                </a>
+                              </Button>}
+                            {trip.hasQuotePdf && trip.quotePdfUrl && <Button variant="outline" size="sm" title="Télécharger le Devis" onClick={(e) => handleDownload(e, trip.quotePdfUrl!, trip.participants, 'Devis')}>
+                                  <FileText className="h-4 w-4 text-blue-500" />
                               </Button>}
                           </> : <Button variant="default" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg" size="sm" onClick={e => {
                     e.stopPropagation();
