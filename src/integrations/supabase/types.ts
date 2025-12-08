@@ -599,6 +599,7 @@ export type Database = {
           destination_zone: string | null
           enrichment_status: string | null
           id: string
+          is_archived: boolean | null
           last_enriched_at: string | null
           last_pdf_generated_at: string | null
           last_pdf_url: string | null
@@ -619,6 +620,7 @@ export type Database = {
           destination_zone?: string | null
           enrichment_status?: string | null
           id?: string
+          is_archived?: boolean | null
           last_enriched_at?: string | null
           last_pdf_generated_at?: string | null
           last_pdf_url?: string | null
@@ -639,6 +641,7 @@ export type Database = {
           destination_zone?: string | null
           enrichment_status?: string | null
           id?: string
+          is_archived?: boolean | null
           last_enriched_at?: string | null
           last_pdf_generated_at?: string | null
           last_pdf_url?: string | null
