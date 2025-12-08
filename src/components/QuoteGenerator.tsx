@@ -273,7 +273,15 @@ export function QuoteGenerator({ tripId, autoGenerate }: QuoteGeneratorProps) {
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `quote-${tripId}.pdf`;
+
+      // Générer le nom de fichier : AAAA_MM_DD-NomClient
+      const now = new Date();
+      const yyyy_mm_dd = now.toISOString().slice(0, 10).replace(/-/g, '_'); // 2025_12_08
+      const clientName = quoteData?.participants 
+        ? quoteData.participants.trim().split(' ').pop() 
+        : 'Client';
+
+      link.download = `${yyyy_mm_dd}-${clientName}-Devis.pdf`;
       document.body.appendChild(link);
       link.click();
 

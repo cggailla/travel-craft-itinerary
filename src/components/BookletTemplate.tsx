@@ -295,7 +295,7 @@ export function BookletTemplate({
         {/* Informations du voyage - simplifié */}
         <div className="p-4 bg-gray-50 text-center text-sm text-gray-700">
           {data.startDate && (
-            <p className="mb-1">
+            <p className="mb-1" data-pdf-cover-date-range>
               <span data-pdf-cover-start-date>
                 {format(data.startDate, "dd/MM/yyyy", { locale: fr })}
               </span>
@@ -309,7 +309,7 @@ export function BookletTemplate({
               )}
             </p>
           )}
-          <p>{data.totalDays} jour{data.totalDays > 1 ? "s" : ""}</p>
+          <p data-pdf-cover-duration>{data.totalDays} jour{data.totalDays > 1 ? "s" : ""}</p>
         </div>
 
       </div>

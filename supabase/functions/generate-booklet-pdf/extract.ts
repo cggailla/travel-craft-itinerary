@@ -18,6 +18,8 @@ export function extractFromHtml(html: string) {
   // =====================================================
   const cover: any = {};
   cover.destination = getText("[data-pdf-cover-destination]");
+  cover.dateRange = getText("[data-pdf-cover-date-range]");
+  cover.duration = getText("[data-pdf-cover-duration]");
   console.log("🔍 [extractFromHtml] Checking for cover dates...");
 
   const startEl = root.find("[data-pdf-cover-start-date]").first();

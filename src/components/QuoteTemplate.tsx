@@ -273,6 +273,57 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   // État pour l'image du résumé
   const [summaryImage, setSummaryImage] = useState<SupabaseImage | undefined>(undefined);
 
+  // Charger les images existantes au chargement
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!data.tripId) return;
+      
+      const result = await listSessionImages(data.tripId);
+      if (result.success && result.data) {
+        const images = result.data;
+        
+        // 1. Cover Image
+        const cover = images.find(img => img.file_name.startsWith('quote_cover_'));
+        if (cover) setQuoteCoverImage(cover);
+
+        // 2. Pricing Image
+        const pricing = images.find(img => img.file_name.startsWith('quote-pricing_'));
+        if (pricing) setPricingImage(pricing);
+
+        // 3. Summary Image
+        const summary = images.find(img => img.file_name.startsWith('quote-summary_'));
+        if (summary) setSummaryImage(summary);
+
+        // 4. Step Images
+        const stepImgs = images.filter(img => img.file_name.startsWith('quote_step_'));
+        if (stepImgs.length > 0) {
+            setStepImages(prev => {
+                const newImages = [...prev];
+                // Initialiser avec la taille des steps si nécessaire
+                if (newImages.length < steps.length) {
+                    for(let i=newImages.length; i<steps.length; i++) newImages.push(undefined);
+                }
+
+                stepImgs.forEach(img => {
+                    // Format: quote_step_{stepId}_{position}.ext
+                    const parts = img.file_name.split('_');
+                    if (parts.length >= 4) {
+                        const stepId = parts[2];
+                        const stepIndex = steps.findIndex(s => s.id === stepId);
+                        if (stepIndex !== -1) {
+                            newImages[stepIndex] = img;
+                        }
+                    }
+                });
+                return newImages;
+            });
+        }
+      }
+    };
+    
+    loadImages();
+  }, [data.tripId, steps]);
+
   const handleSummaryImageUploaded = (image: SupabaseImage) => {
     setSummaryImage(image);
   };
@@ -415,30 +466,6 @@ export function QuoteTemplate({ data, pdfMode = false }: QuoteTemplateProps) {
   const [quoteCoverImage, setQuoteCoverImage] = useState<SupabaseImage | undefined>();
   const [pricingImage, setPricingImage] = useState<SupabaseImage | undefined>();
   const [stepImages, setStepImages] = useState<(SupabaseImage | undefined)[]>([]);
-
-  useEffect(() => {
-    const loadImages = async () => {
-      const result = await listSessionImages(data.tripId);
-      if (result.success && result.data) {
-        const quoteCover = result.data.find(img => img.file_name.startsWith('quote_cover'));
-        if (quoteCover) setQuoteCoverImage(quoteCover);
-
-        const pricingImg = result.data.find(img => img.file_name.startsWith('quote-pricing'));
-        if (pricingImg) setPricingImage(pricingImg);
-
-        const summaryImg = result.data.find(img => img.file_name.startsWith('quote-summary'));
-        if (summaryImg) setSummaryImage(summaryImg);
-
-        const images: (SupabaseImage | undefined)[] = [];
-        for (let i = 0; i < steps.length; i++) {
-          const stepImage = result.data.find(img => img.file_name.startsWith(`quote_step_${i}`));
-          images.push(stepImage);
-        }
-        setStepImages(images);
-      }
-    };
-    loadImages();
-  }, [data.tripId, steps.length]);
 
   const handleQuoteCoverUploaded = (image: SupabaseImage) => {
     setQuoteCoverImage(image);

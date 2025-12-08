@@ -71,7 +71,7 @@ export function QuoteLegalSection({
         {/* Logo Ad Gentes */}
         <div className="mt-8">
           <img 
-            src="/src/assets/logo-adgentes.png" 
+            src="https://jjlhsikgczigvtdzfroa.supabase.co/storage/v1/object/public/trip-images/logo/logo-adgentes.png" 
             alt="Ad Gentes" 
             className="h-12 mx-auto opacity-70"
           />

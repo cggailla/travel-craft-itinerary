@@ -10,10 +10,11 @@ import { DeleteTripDialog } from '@/components/DeleteTripDialog';
 import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List } from 'lucide-react';
+import { DashboardCalendarView } from '@/components/DashboardCalendarView';
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock, RefreshCw } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
-type TripPhase = 'upload' | 'timeline' | 'validated';
+type TripPhase = 'draft' | 'processing' | 'timeline' | 'enrichment' | 'validated';
 interface TripWithPhase extends Trip {
   currentPhase: TripPhase;
   segmentCount?: number;
@@ -21,6 +22,10 @@ interface TripWithPhase extends Trip {
   documentCount?: number;
   hasPdf?: boolean;
   pdfUrl?: string | null;
+  hasQuotePdf?: boolean;
+  quotePdfUrl?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 export default function Dashboard() {
   const [trips, setTrips] = useState<TripWithPhase[]>([]);
@@ -28,8 +33,8 @@ export default function Dashboard() {
   const [isCreatingTrip, setIsCreatingTrip] = useState(false);
   const [isLoadingDevMode, setIsLoadingDevMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [phaseFilter, setPhaseFilter] = useState<'all' | 'upload' | 'timeline' | 'validated'>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [phaseFilter, setPhaseFilter] = useState<'all' | TripPhase>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar'>('grid');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<TripWithPhase | null>(null);
@@ -72,15 +77,40 @@ export default function Dashboard() {
           head: true
         }).eq('trip_id', trip.id);
 
-        // Déterminer la phase actuelle
-        let currentPhase: TripPhase = 'upload';
-        if (trip.status === 'validated') {
-          currentPhase = 'validated';
-        } else if (segmentCount && segmentCount > 0) {
-          currentPhase = 'timeline';
-        } else if (documentCount && documentCount > 0) {
-          currentPhase = 'upload';
+        // Récupérer les dates du voyage (min start, max end)
+        const { data: segments } = await supabase
+          .from('travel_segments')
+          .select('start_date, end_date')
+          .eq('trip_id', trip.id);
+        
+        let startDate: string | null = null;
+        let endDate: string | null = null;
+        
+        if (segments && segments.length > 0) {
+            const startDates = segments.map(s => s.start_date).filter((d): d is string => !!d).sort();
+            const endDates = segments.map(s => s.end_date).filter((d): d is string => !!d).sort();
+            
+            if (startDates.length > 0) startDate = startDates[0];
+            if (endDates.length > 0) endDate = endDates[endDates.length - 1];
         }
+
+        // Déterminer la phase actuelle
+        let currentPhase: TripPhase = 'draft';
+        
+        // Si le statut est explicitement défini dans la DB et correspond à nos phases
+        if (trip.status && ['draft', 'processing', 'timeline', 'enrichment', 'validated'].includes(trip.status)) {
+          currentPhase = trip.status as TripPhase;
+        } else {
+          // Fallback sur l'ancienne logique si le statut n'est pas à jour
+          if (trip.status === 'validated') {
+            currentPhase = 'validated';
+          } else if (segmentCount && segmentCount > 0) {
+            currentPhase = 'timeline';
+          } else if (documentCount && documentCount > 0) {
+            currentPhase = 'processing';
+          }
+        }
+
         return {
           ...trip,
           currentPhase,
@@ -88,7 +118,11 @@ export default function Dashboard() {
           stepCount: stepCount || 0,
           documentCount: documentCount || 0,
           hasPdf: !!trip.last_pdf_url,
-          pdfUrl: trip.last_pdf_url
+          pdfUrl: trip.last_pdf_url,
+          hasQuotePdf: !!trip.last_quote_pdf_url,
+          quotePdfUrl: trip.last_quote_pdf_url,
+          startDate,
+          endDate
         };
       }));
       setTrips(enrichedTrips);
@@ -218,12 +252,14 @@ export default function Dashboard() {
     }
   };
   const getPhaseLabel = (phase: TripPhase): string => {
-    const labels = {
-      upload: 'Upload de documents',
-      timeline: 'Édition de la chronologie',
-      validated: 'Carnet finalisé'
+    const labels: Record<TripPhase, string> = {
+      draft: 'Brouillon',
+      processing: 'Analyse des documents',
+      timeline: 'Organisation',
+      enrichment: 'Enrichissement IA',
+      validated: 'Prêt à exporter'
     };
-    return labels[phase];
+    return labels[phase] || phase;
   };
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -231,6 +267,58 @@ export default function Dashboard() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleDownload = async (e: React.MouseEvent, url: string, participants: string | null, type: 'Carnet' | 'Devis') => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    try {
+      toast({
+        title: "Téléchargement",
+        description: "Préparation du fichier...",
+      });
+
+      // Add cache busting
+      const fetchUrl = url.includes('?') ? `${url}&ts=${Date.now()}` : `${url}?ts=${Date.now()}`;
+      
+      const response = await fetch(fetchUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error("Impossible de télécharger le fichier");
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      
+      // Generate filename: YYYY_MM_DD-ClientName-Type.pdf
+      const now = new Date();
+      const yyyy_mm_dd = now.toISOString().slice(0, 10).replace(/-/g, '_');
+      const clientName = participants 
+        ? participants.trim().split(' ').pop() 
+        : 'Client';
+      
+      link.download = `${yyyy_mm_dd}-${clientName}-${type}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      
+      toast({
+        title: "Succès",
+        description: "Fichier téléchargé",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le fichier",
+        variant: "destructive"
+      });
+    }
   };
 
   // Filtrage des voyages
@@ -253,8 +341,10 @@ export default function Dashboard() {
   // Statistiques
   const stats = {
     total: trips.length,
-    upload: trips.filter(t => t.currentPhase === 'upload').length,
+    draft: trips.filter(t => t.currentPhase === 'draft').length,
+    processing: trips.filter(t => t.currentPhase === 'processing').length,
     timeline: trips.filter(t => t.currentPhase === 'timeline').length,
+    enrichment: trips.filter(t => t.currentPhase === 'enrichment').length,
     validated: trips.filter(t => t.currentPhase === 'validated').length
   };
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -322,7 +412,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-4xl font-bold font-mono text-orange-600 dark:text-orange-400">
-                {stats.upload + stats.timeline}
+                {stats.draft + stats.processing + stats.timeline + stats.enrichment}
               </div>
               <p className="text-xs text-muted-foreground mt-2">En préparation</p>
             </CardContent>
@@ -346,6 +436,10 @@ export default function Dashboard() {
               <List className="h-4 w-4 mr-2" />
               Liste
             </Button>
+            <Button variant={viewMode === 'calendar' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className={`h-10 px-4 transition-all duration-300 ${viewMode === 'calendar' ? 'shadow-sm' : 'hover:bg-background/50'}`}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Calendrier
+            </Button>
           </div>
           
           <div className="flex gap-2 flex-wrap">
@@ -354,16 +448,28 @@ export default function Dashboard() {
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.total}</Badge>
             </Button>
             
-            <Button variant={phaseFilter === 'upload' ? 'default' : 'outline'} onClick={() => setPhaseFilter('upload')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'upload' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
+            <Button variant={phaseFilter === 'draft' ? 'default' : 'outline'} onClick={() => setPhaseFilter('draft')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'draft' ? 'shadow-lg shadow-gray-500/30 bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-500' : 'hover:border-gray-500/50 hover:bg-gray-500/5'}`}>
               <FileText className="mr-1.5 h-4 w-4" />
-              <span>Upload</span>
-              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.upload}</Badge>
+              <span>Brouillon</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.draft}</Badge>
+            </Button>
+
+            <Button variant={phaseFilter === 'processing' ? 'default' : 'outline'} onClick={() => setPhaseFilter('processing')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'processing' ? 'shadow-lg shadow-orange-500/30 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500' : 'hover:border-orange-500/50 hover:bg-orange-500/5'}`}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              <span>Analyse</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.processing}</Badge>
             </Button>
             
             <Button variant={phaseFilter === 'timeline' ? 'default' : 'outline'} onClick={() => setPhaseFilter('timeline')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'timeline' ? 'shadow-lg shadow-blue-500/30 bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500' : 'hover:border-blue-500/50 hover:bg-blue-500/5'}`}>
               <Calendar className="mr-1.5 h-4 w-4" />
               <span>Chronologie</span>
               <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.timeline}</Badge>
+            </Button>
+
+            <Button variant={phaseFilter === 'enrichment' ? 'default' : 'outline'} onClick={() => setPhaseFilter('enrichment')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'enrichment' ? 'shadow-lg shadow-purple-500/30 bg-gradient-to-r from-purple-500 to-purple-600 text-white border-purple-500' : 'hover:border-purple-500/50 hover:bg-purple-500/5'}`}>
+              <Zap className="mr-1.5 h-4 w-4" />
+              <span>Enrichissement</span>
+              <Badge variant="secondary" className="ml-2 font-mono bg-background/80">{stats.enrichment}</Badge>
             </Button>
             
             <Button variant={phaseFilter === 'validated' ? 'default' : 'outline'} onClick={() => setPhaseFilter('validated')} className={`h-11 px-5 font-medium transition-all duration-300 rounded-full ${phaseFilter === 'validated' ? 'shadow-lg shadow-green-500/30 bg-gradient-to-r from-green-500 to-green-600 text-white border-green-500' : 'hover:border-green-500/50 hover:bg-green-500/5'}`}>
@@ -435,6 +541,15 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
             },
+            enrichment: {
+              gradient: 'from-purple-500/10 via-violet-500/5 to-transparent',
+              borderColor: 'border-purple-500/20',
+              iconBg: 'bg-purple-500/10',
+              iconColor: 'text-purple-600 dark:text-purple-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(270_100%_60%/0.3)]'
+            },
             timeline: {
               gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
               borderColor: 'border-blue-500/20',
@@ -444,7 +559,7 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
             },
-            upload: {
+            processing: {
               gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
               borderColor: 'border-orange-500/20',
               iconBg: 'bg-orange-500/10',
@@ -452,10 +567,25 @@ export default function Dashboard() {
               badgeVariant: 'outline' as const,
               badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            },
+            draft: {
+              gradient: 'from-gray-500/10 via-slate-500/5 to-transparent',
+              borderColor: 'border-gray-500/20',
+              iconBg: 'bg-gray-500/10',
+              iconColor: 'text-gray-600 dark:text-gray-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_10%_55%/0.3)]'
             }
           };
           const config = statusConfig[trip.currentPhase];
-          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          const progress = {
+            draft: 10,
+            processing: 30,
+            timeline: 50,
+            enrichment: 80,
+            validated: 100
+          }[trip.currentPhase];
           return <div key={trip.id} className={`group relative animate-slide-up`} style={{
             animationDelay: `${index * 50}ms`
           }}>
@@ -546,8 +676,8 @@ export default function Dashboard() {
 
                       {/* Date avec icône */}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>Créé le {formatDate(trip.created_at)}</span>
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Mis à jour le {formatDate(trip.updated_at)}</span>
                       </div>
                     </CardContent>
 
@@ -561,13 +691,17 @@ export default function Dashboard() {
                             Choisir le format
                             <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                           </Button>
-                          {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" asChild>
-                              <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                          {trip.hasPdf && trip.pdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" onClick={(e) => handleDownload(e, trip.pdfUrl!, trip.participants, 'Carnet')}>
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
                                 <FileText className="mr-2 h-4 w-4" />
-                                Télécharger le PDF
+                                Télécharger le Carnet
                                 {trip.hasPdf && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />}
-                              </a>
+                            </Button>}
+                          {trip.hasQuotePdf && trip.quotePdfUrl && <Button variant="outline" className="w-full relative overflow-hidden group/pdf" size="sm" onClick={(e) => handleDownload(e, trip.quotePdfUrl!, trip.participants, 'Devis')}>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pdf:translate-x-full transition-transform duration-1000" />
+                                <FileText className="mr-2 h-4 w-4" />
+                                Télécharger le Devis
+                                {trip.hasQuotePdf && <span className="ml-2 inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse-glow" />}
                             </Button>}
                         </> : <Button variant="default" className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg transition-all duration-300" size="sm" onClick={e => {
                   e.stopPropagation();
@@ -587,7 +721,7 @@ export default function Dashboard() {
                   </Card>
                 </div>;
         })}
-          </div> : <div className="flex flex-col gap-4">
+          </div> : viewMode === 'list' ? <div className="flex flex-col gap-4">
             {filteredTrips.map((trip, index) => {
           const isNew = new Date().getTime() - new Date(trip.created_at).getTime() < 24 * 60 * 60 * 1000;
           const isRecent = new Date().getTime() - new Date(trip.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
@@ -601,6 +735,15 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(142_76%_45%/0.3)]'
             },
+            enrichment: {
+              gradient: 'from-purple-500/10 via-violet-500/5 to-transparent',
+              borderColor: 'border-purple-500/20',
+              iconBg: 'bg-purple-500/10',
+              iconColor: 'text-purple-600 dark:text-purple-400',
+              badgeVariant: 'secondary' as const,
+              badgeClass: 'bg-gradient-to-r from-purple-500 to-violet-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(270_100%_60%/0.3)]'
+            },
             timeline: {
               gradient: 'from-blue-500/10 via-sky-500/5 to-transparent',
               borderColor: 'border-blue-500/20',
@@ -610,7 +753,7 @@ export default function Dashboard() {
               badgeClass: 'bg-gradient-to-r from-blue-500 to-sky-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_100%_55%/0.3)]'
             },
-            upload: {
+            processing: {
               gradient: 'from-orange-500/10 via-amber-500/5 to-transparent',
               borderColor: 'border-orange-500/20',
               iconBg: 'bg-orange-500/10',
@@ -618,10 +761,25 @@ export default function Dashboard() {
               badgeVariant: 'outline' as const,
               badgeClass: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white',
               shadowHover: 'hover:shadow-[0_8px_30px_hsl(30_90%_55%/0.3)]'
+            },
+            draft: {
+              gradient: 'from-gray-500/10 via-slate-500/5 to-transparent',
+              borderColor: 'border-gray-500/20',
+              iconBg: 'bg-gray-500/10',
+              iconColor: 'text-gray-600 dark:text-gray-400',
+              badgeVariant: 'outline' as const,
+              badgeClass: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white',
+              shadowHover: 'hover:shadow-[0_8px_30px_hsl(210_10%_55%/0.3)]'
             }
           };
           const config = statusConfig[trip.currentPhase];
-          const progress = trip.currentPhase === 'upload' ? 33 : trip.currentPhase === 'timeline' ? 66 : 100;
+          const progress = {
+            draft: 10,
+            processing: 30,
+            timeline: 50,
+            enrichment: 80,
+            validated: 100
+          }[trip.currentPhase];
           return <div key={trip.id} className="group relative animate-fade-in" style={{
             animationDelay: `${index * 30}ms`
           }}>
@@ -688,9 +846,9 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border border-border/50 min-w-[100px]">
-                          <Calendar className="h-4 w-4 text-muted-foreground mb-1" />
-                          <span className="text-xs text-muted-foreground">Créé le</span>
-                          <span className="text-xs font-semibold">{formatDate(trip.created_at)}</span>
+                          <Clock className="h-4 w-4 text-muted-foreground mb-1" />
+                          <span className="text-xs text-muted-foreground">Mis à jour le</span>
+                          <span className="text-xs font-semibold">{formatDate(trip.updated_at)}</span>
                         </div>
                       </div>
 
@@ -704,10 +862,11 @@ export default function Dashboard() {
                               <FileText className="mr-2 h-4 w-4" />
                               Choisir le format
                             </Button>
-                            {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" asChild>
-                                <a href={trip.pdfUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                            {trip.hasPdf && trip.pdfUrl && <Button variant="outline" size="sm" title="Télécharger le Carnet" onClick={(e) => handleDownload(e, trip.pdfUrl!, trip.participants, 'Carnet')}>
                                   <FileText className="h-4 w-4" />
-                                </a>
+                              </Button>}
+                            {trip.hasQuotePdf && trip.quotePdfUrl && <Button variant="outline" size="sm" title="Télécharger le Devis" onClick={(e) => handleDownload(e, trip.quotePdfUrl!, trip.participants, 'Devis')}>
+                                  <FileText className="h-4 w-4 text-blue-500" />
                               </Button>}
                           </> : <Button variant="default" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/90 shadow-lg" size="sm" onClick={e => {
                     e.stopPropagation();
@@ -734,7 +893,7 @@ export default function Dashboard() {
                   </Card>
                 </div>;
         })}
-          </div>}
+          </div> : <DashboardCalendarView trips={filteredTrips} onTripClick={handleTripClick} />}
 
         {/* Dialog de création de voyage */}
         <CreateTripDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onConfirm={handleCreateNewTrip} />

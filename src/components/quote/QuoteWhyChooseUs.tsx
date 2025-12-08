@@ -69,7 +69,7 @@ export function QuoteWhyChooseUs({
               data-pdf-icon={item.icon}
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                <IconComponent className="h-6 w-6 text-primary" />
+                <IconComponent className="h-6 w-6 text-primary fill-none" />
               </div>
               <h3 className="font-semibold text-base mb-1" data-pdf-editable={`why-us-title-${index}`}>
                 <EditableText

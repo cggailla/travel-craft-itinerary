@@ -107,6 +107,22 @@ serve(async (req) => {
 
     console.log("✅ PDF URL:", publicUrl);
 
+    // Update trip with Quote PDF URL and generation timestamp
+    const { error: updateError } = await supabase
+      .from("trips")
+      .update({
+        last_quote_pdf_url: publicUrl,
+        last_quote_generated_at: new Date().toISOString(),
+      })
+      .eq("id", tripId);
+
+    if (updateError) {
+      console.error("⚠️ Failed to update trip with Quote PDF info:", updateError);
+      // Non-blocking error, continue anyway
+    } else {
+      console.log("✅ Trip updated with Quote PDF info");
+    }
+
     // 6. Return Success
     return new Response(
       JSON.stringify({ success: true, pdf_url: publicUrl }),

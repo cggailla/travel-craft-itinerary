@@ -55,6 +55,15 @@ export function QuoteCoverPage({
             height="h-full"
             className="h-full w-full object-cover"
           />
+          {/* Hidden image for PDF extraction */}
+          {coverImage?.public_url && (
+            <img 
+              src={coverImage.public_url} 
+              className="hidden" 
+              data-pdf-image="true" 
+              alt="cover" 
+            />
+          )}
         </div>
 
         {/* RIGHT SIDE - Content */}
@@ -62,7 +71,7 @@ export function QuoteCoverPage({
           {/* Logo */}
           <div className="flex justify-start mb-8">
             <img 
-              src="/src/assets/logo-adgentes.png" 
+              src="https://jjlhsikgczigvtdzfroa.supabase.co/storage/v1/object/public/trip-images/logo/logo-adgentes.png" 
               alt="Ad Gentes" 
               className="h-20 opacity-90"
             />

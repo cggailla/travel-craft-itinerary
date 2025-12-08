@@ -72,6 +72,15 @@ export function QuoteItinerarySection({
                   height="h-full"
                   className="h-full w-full object-cover"
                 />
+                {/* Hidden image for PDF extraction */}
+                {stepImages[stepIndex]?.public_url && (
+                  <img 
+                    src={stepImages[stepIndex]?.public_url} 
+                    className="hidden" 
+                    data-pdf-image="true" 
+                    alt={`step-${stepIndex}`} 
+                  />
+                )}
               </div>
 
               {/* Colonne droite: Contenu - 50% */}

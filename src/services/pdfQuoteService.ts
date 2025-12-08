@@ -22,6 +22,29 @@ export async function generateQuotePdf(tripId: string): Promise<{ success: boole
     
     const htmlContent = element.outerHTML;
 
+    // --- DEBUG: Download HTML ---
+    console.log("DEBUG: HTML Content Length:", htmlContent.length);
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `debug_quote_${tripId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    // ----------------------------
+
+    // --- DEBUG: Check for images ---
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, "text/html");
+    const images = doc.querySelectorAll('img[data-pdf-image="true"]');
+    console.log("DEBUG: Found hidden PDF images:", images.length);
+    images.forEach((img, i) => {
+        console.log(`DEBUG: Image ${i}:`, img.getAttribute('src'));
+    });
+    // -------------------------------
+
     // 3. Call Edge Function
     const { data, error } = await supabase.functions.invoke('generate-quote-pdf', {
       body: {

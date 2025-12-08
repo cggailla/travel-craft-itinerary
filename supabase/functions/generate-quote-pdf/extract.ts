@@ -123,6 +123,10 @@ export function extractFromHtml(html: string): QuoteData {
     return (el.attr(attr) || "").trim();
   };
 
+  // Helper to validate Supabase images
+  const isSupabaseImage = (src: string) =>
+    src && src.startsWith("https://jjlhsikgczigvtdzfroa.supabase.co/");
+
   const data: QuoteData = {};
 
   // 0. Metadata (Root)
@@ -143,15 +147,15 @@ export function extractFromHtml(html: string): QuoteData {
   console.log("🔍 [extractFromHtml] Cover section found:", coverSection.length);
   
   if (coverSection.length) {
-    // --- Nouvelle logique de récupération d’images de couverture (inspirée de booklet) ---
-    const isSupabaseImage = (src: string) =>
-      src && src.startsWith("https://jjlhsikgczigvtdzfroa.supabase.co/");
-
     let coverImage = "";
 
     // 1️⃣ Images avec attribut data-pdf-image
-    coverSection.find("img[data-pdf-image]").each((_i: number, el: any) => {
+    const markedImages = coverSection.find("img[data-pdf-image]");
+    console.log(`🔍 [extractFromHtml] Cover: Found ${markedImages.length} marked images`);
+    
+    markedImages.each((_i: number, el: any) => {
       const src = $(el).attr("src") || "";
+      console.log(`🔍 [extractFromHtml] Cover Image Candidate: ${src}`);
       if (isSupabaseImage(src)) {
         coverImage = src;
         return false; // break
@@ -193,13 +197,15 @@ export function extractFromHtml(html: string): QuoteData {
   // 2. Pricing
   const pricingSection = root.find('[data-pdf-section="pricing"]');
   if (pricingSection.length) {
-    // Image extraction (robust)
-    const isSupabaseImage = (src: string) => src && src.startsWith("https://jjlhsikgczigvtdzfroa.supabase.co/");
     let pricingImage = "";
     
     // 1. Try marked image
-    pricingSection.find("img[data-pdf-image]").each((_i: number, el: any) => {
+    const markedImages = pricingSection.find("img[data-pdf-image]");
+    console.log(`🔍 [extractFromHtml] Pricing: Found ${markedImages.length} marked images`);
+
+    markedImages.each((_i: number, el: any) => {
       const src = $(el).attr("src") || "";
+      console.log(`🔍 [extractFromHtml] Pricing Image Candidate: ${src}`);
       if (isSupabaseImage(src)) {
         pricingImage = src;
         return false;
@@ -208,6 +214,7 @@ export function extractFromHtml(html: string): QuoteData {
 
     // 2. Fallback to any Supabase image in section
     if (!pricingImage) {
+      console.log("⚠️ [extractFromHtml] No marked pricing image, looking for fallback...");
       pricingSection.find('img').each((_i: number, el: any) => {
         const src = $(el).attr('src') || "";
         if (isSupabaseImage(src)) {
@@ -216,6 +223,7 @@ export function extractFromHtml(html: string): QuoteData {
         }
       });
     }
+    console.log("🔍 [extractFromHtml] Final Pricing Image:", pricingImage);
 
     // Highlights
     const highlights: string[] = [];
@@ -298,9 +306,31 @@ export function extractFromHtml(html: string): QuoteData {
   // 5. Itinerary Summary
   const summarySection = root.find('[data-pdf-section="itinerary-summary"]');
   if (summarySection.length) {
+    let summaryImage = "";
+    
+    // 1. Try marked image
+    const markedImages = summarySection.find("img[data-pdf-image]");
+    console.log(`🔍 [extractFromHtml] Summary: Found ${markedImages.length} marked images`);
+
+    markedImages.each((_i: number, el: any) => {
+      const src = $(el).attr("src") || "";
+      console.log(`🔍 [extractFromHtml] Summary Image Candidate: ${src}`);
+      if (isSupabaseImage(src)) {
+        summaryImage = src;
+        return false;
+      }
+    });
+
+    // 2. Fallback
+    if (!summaryImage) {
+      console.log("⚠️ [extractFromHtml] No marked summary image, looking for fallback...");
+      summaryImage = getAttr('img', 'src', summarySection);
+    }
+    console.log("🔍 [extractFromHtml] Final Summary Image:", summaryImage);
+
     data.summary = {
       steps: [],
-      image: getAttr('img', 'src', summarySection),
+      image: summaryImage,
     };
     
     // Iterate over step items directly for more robust extraction
@@ -337,17 +367,24 @@ export function extractFromHtml(html: string): QuoteData {
     }
 
     // Try to find image for this step
-    // Assuming images are rendered near the step content or we can find them by some convention
-    // For now, let's look for an image in the same container if possible, or use a global selector strategy if needed.
-    // Since the structure is flat in the HTML export (slides), we might need to look at the slide container.
-    // But here we are selecting by ID pattern.
-    
-    // Let's try to find the slide container for this step to scope the image search
     const stepTitleEl = root.find(`[data-pdf-editable="step-title-${index}"]`);
     const slideContainer = stepTitleEl.closest('.quote-slide'); // Assuming class name
     let image = undefined;
+    
     if (slideContainer.length) {
-        image = getAttr('img', 'src', slideContainer);
+        // 1. Try marked image in the slide
+        slideContainer.find("img[data-pdf-image]").each((_i: number, el: any) => {
+            const src = $(el).attr("src") || "";
+            if (isSupabaseImage(src)) {
+                image = src;
+                return false;
+            }
+        });
+
+        // 2. Fallback to any image in slide
+        if (!image) {
+            image = getAttr('img', 'src', slideContainer);
+        }
     }
 
     // Date extraction

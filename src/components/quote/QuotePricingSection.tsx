@@ -109,6 +109,15 @@ export function QuotePricingSection({
             height="h-full"
             className="h-full w-full object-cover"
           />
+          {/* Hidden image for PDF extraction */}
+          {pricingImage?.public_url && (
+            <img 
+              src={pricingImage.public_url} 
+              className="hidden" 
+              data-pdf-image="true" 
+              alt="pricing" 
+            />
+          )}
         </div>
 
         {/* Summary Bar - Redesigned */}

@@ -11,11 +11,8 @@ import {
   Link,
 } from 'npm:@react-pdf/renderer@3.4.3'
 
-// --- Fonts (optionnel) ------------------------------------------------------
-// Font.register({ family: 'Playfair Display', src: path.resolve(__dirname, './fonts/PlayfairDisplay-Regular.ttf') })
-// Font.register({ family: 'Lato', src: path.resolve(__dirname, './fonts/Lato-Regular.ttf') })
-// Font.register({ family: 'Lato', src: path.resolve(__dirname, './fonts/Lato-Bold.ttf'), fontWeight: 'bold' })
-
+// --- Fonts ------------------------------------------------------------------
+// Revert to standard fonts for stability in Edge Function
 const DEFAULT_TEXT = 'Helvetica'
 const TITLE_FONT = 'Helvetica'
 const BODY_FONT = 'Helvetica'
@@ -171,12 +168,12 @@ const SafeText: React.FC<{ value: any; style?: any; ctx?: string; renderPrefix?:
 }
 
 /** SafeView — filtre automatiquement toute chaîne brute enfant (erreurs React-PDF) */
-const SafeView: React.FC<{ style?: any; wrap?: boolean }> = ({ style, wrap, children }) => {
+const SafeView: React.FC<any> = ({ style, wrap, children, ...props }) => {
   const safeChildren = React.Children.toArray(children).filter(
     (ch: any) => !(typeof ch === 'string' || typeof ch === 'number')
   )
   // @ts-ignore wrap est accepté par react-pdf
-  return <View style={style} wrap={wrap}>{safeChildren}</View>
+  return <View style={style} wrap={wrap} {...props}>{safeChildren}</View>
 }
 
 // --- Styles -----------------------------------------------------------------
@@ -228,42 +225,73 @@ const styles = StyleSheet.create({
 
   sectionBlock: { marginTop: 18 },
   sectionHeader: {
-    backgroundColor: theme.primary,
-    color: 'white',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    backgroundColor: '#Fdf4f9',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginBottom: 15,
     borderRadius: 4,
-    fontFamily: TITLE_FONT || DEFAULT_TEXT,
     fontSize: 14,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+    color: theme.primary,
   },
   contentWrap: { marginTop: 10 },
 
   // Itinerary
-  stepCard: { marginBottom: 14, borderWidth: 1, borderColor: theme.gray300, borderRadius: 6, overflow: 'hidden' },
-  stepHeader: {
+  stepBox: {
     backgroundColor: theme.gray100,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.gray300,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginBottom: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  stepHeaderTitle: { fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
-  stepHeaderDate: { fontSize: 10, color: theme.gray700 },
-  stepBody: { padding: 10, gap: 6 },
-  stepOverview: { fontSize: 11 },
+  stepDateGroup: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  stepDate: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  stepArrow: {
+    fontSize: 10,
+    marginHorizontal: 8,
+    color: theme.gray700,
+  },
+  stepTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    color: theme.text,
+  },
+  stepSeparator: {
+    marginHorizontal: 10,
+    color: theme.gray300,
+  },
+  narrativeText: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    color: theme.gray700,
+    lineHeight: 1.5,
+    borderLeftWidth: 2,
+    borderLeftColor: theme.gray300,
+    paddingLeft: 12,
+    marginLeft: 2,
+    marginBottom: 20,
+    textAlign: 'justify',
+  },
 
   segment: { padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: theme.gray200, borderRadius: 4 },
   segmentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   segmentTitle: { fontSize: 11, fontWeight: 'bold' },
   segmentBadge: { fontSize: 10, backgroundColor: theme.sand, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 },
-  segmentMeta: { fontSize: 10, color: theme.gray700, marginTop: 2 },
+  segmentMeta: { fontSize: 10, color: theme.gray700, marginTop: 2, textAlign: 'justify' },
 
   stepListTitle: { fontSize: 10, fontWeight: 'bold', marginTop: 4, color: theme.gray700 },
-  stepListItem: { fontSize: 10, color: theme.gray700, marginLeft: 6 },
+  stepListItem: { fontSize: 10, color: theme.gray700, marginLeft: 6, textAlign: 'justify' },
 
   endOfService: { marginTop: 30, textAlign: 'center', fontWeight: 'bold', fontSize: 12, color: theme.primary },
 
@@ -271,20 +299,50 @@ const styles = StyleSheet.create({
   infoGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   infoCard: { width: '48%', borderWidth: 1, borderColor: theme.gray300, backgroundColor: theme.gray100, borderRadius: 6, padding: 8 },
   infoTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
-  infoText: { fontSize: 10 },
+  infoText: { fontSize: 10, textAlign: 'justify' },
 
   // Thank you
   thankBlock: { gap: 6 },
-  thankLine: { fontSize: 11 },
+  thankLine: { fontSize: 11, textAlign: 'justify' },
   thankClosing: { fontSize: 11, fontWeight: 'bold', marginTop: 8 },
 
   // Emergency
   card: { borderWidth: 1, borderColor: theme.gray300, borderRadius: 6, padding: 10, marginBottom: 10, backgroundColor: '#fff' },
   cardTitle: { fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
-  paragraph: { fontSize: 10, marginBottom: 3 },
+  paragraph: { fontSize: 10, marginBottom: 3, textAlign: 'justify' },
 
   // Notes
   noteLine: { height: 1, backgroundColor: theme.gray300, marginVertical: 8 },
+
+  // Modern Cover
+  modernHeader: {
+    height: 40,
+    backgroundColor: theme.primary,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modernTitle: { fontSize: 12, color: 'white', fontWeight: 'bold', textTransform: 'uppercase' },
+  modernFooter: {
+    height: 40,
+    backgroundColor: theme.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modernFooterDate: { fontSize: 9, color: theme.primary, fontWeight: 'bold', marginBottom: 2 },
+  modernFooterDuration: { fontSize: 9, color: theme.primary },
+
+  // Page number
+  pageNumber: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 9,
+    color: theme.gray700,
+  },
 })
 
 // --- Footer -----------------------------------------------------------------
@@ -310,112 +368,105 @@ export const Cover: React.FC<CoverProps> = (props: any) => {
   const destination = pick(cover.title, cover.destination)
   const start = cover.startDate || cover.start || cover.start_date
   const end = cover.endDate || cover.end || cover.end_date
-  const images: string[] = Array.isArray(cover.images) ? cover.images.slice(0, 2) : []
-  const days = start && end ? daysBetween(start, end) : ''
-  const travelers = pick(cover.travelers, brand.travelers)
-  const agency = pick(cover.agency, brand.agencyName)
-  const reference = pick(cover.reference, brand.reference)
-  const headerRight = [agency, reference].filter(Boolean).join(' • ')
+  const images: string[] = Array.isArray(cover.images) ? cover.images : []
+  const image1 = images[0]
+  const image2 = images[1]
+  const description = pick(cover.description, cover.overview) || 'Votre carnet de voyage'
 
-  // Prépare la ligne de dates de manière sûre
-  const dateLine = (() => {
-    const startStr = formatDateFull(start)
-    const endStr = end ? formatDateFull(end) : ''
-    const daysStr =
-      start && end ? `  ·  ${days} jour${Number(days) > 1 ? 's' : ''}` : ''
-    const finalStr = `${startStr}${endStr ? ` - ${endStr}` : ''}${daysStr}`
-    return finalStr.trim() === '' ? ' ' : finalStr
-  })()
+  // Helper for duration
+  const days = start && end ? daysBetween(start, end) : ''
+  const nights = days ? Number(days) - 1 : 0
+  const durationLabel = cover.duration || (nights > 0 ? `${nights} nuits` : (days ? `${days} jours` : ''))
+
+  // Helper for dates
+  const formatDateShort = (dStr: string) => {
+    if (!dStr) return ''
+    const d = new Date(dStr)
+    if (isNaN(d.getTime())) return ''
+    // Basic fallback formatting if locale fails: DD/MM
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  }
+  const startStr = formatDateShort(start)
+  const endStr = formatDateShort(end)
+  const dateRange = cover.dateRange || (startStr && endStr ? `${startStr} au ${endStr}` : (startStr || ''))
+
+  const travelers = pick(cover.travelers, brand.travelers)
 
   return (
-    <SafeView
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        padding: 0,
-        margin: 0,
-      }}
-    >
-      {/* Bandeau supérieur */}
-      <SafeView
-        style={{
-          backgroundColor: theme.primary,
-          paddingVertical: 8,
-          paddingHorizontal: 12,
-          width: '100%',
-          position: 'relative',
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        {/* Left: logo */}
-        <SafeView style={{ width: 80, height: 40, justifyContent: 'center' }}>
+    <View style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: 'white' }}>
+      {/* HEADER - Fixed Top */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 60,
+        backgroundColor: theme.primary,
+        paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        zIndex: 10
+      }}>
+        <Image
+          src={brand.logoUrl || 'https://www.ad-gentes.ch/build/assets/images/logo-adgentes.33ba4059.png'}
+          style={{ width: 80, height: 24, objectFit: 'contain' }}
+        />
+        <SafeText ctx="cover.destination" style={{ fontSize: 12, color: 'white', fontWeight: 'bold', textTransform: 'uppercase' }} value={destination} />
+      </View>
+
+      {/* MAIN IMAGE AREA - Absolute Middle */}
+      <View style={{
+        position: 'absolute',
+        top: 60,
+        bottom: 40,
+        left: 0,
+        right: 0,
+        backgroundColor: 'white'
+      }}>
+        {image1 && image2 ? (
+          <View style={{ width: '100%', height: '100%', flexDirection: 'column' }}>
+            <View style={{ height: '50%', width: '100%' }}>
+              <Image
+                src={image1}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </View>
+            <View style={{ height: '50%', width: '100%' }}>
+              <Image
+                src={image2}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </View>
+          </View>
+        ) : image1 ? (
           <Image
-            src={brand.logoUrl || 'https://www.ad-gentes.ch/build/assets/images/logo-adgentes.33ba4059.png'}
-            style={{ width: 80, height: 40, objectFit: 'contain' }}
+            src={image1}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
-        </SafeView>
-
-        {/* Center: title */}
-        <SafeView
-          style={{
-            position: 'absolute',
-            left: 92,
-            right: 152,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <SafeText
-            ctx="cover.destination"
-            style={{ fontSize: 20, color: 'white', fontWeight: 'bold', textTransform: 'uppercase' }}
-            value={destination || 'Carnet de voyage'}
-          />
-        </SafeView>
-
-        {/* Right: header info */}
-        <SafeView style={{ width: 140, alignItems: 'flex-end', justifyContent: 'center' }}>
-          {Boolean(headerRight) ? (
-            <SafeText ctx="cover.headerRight" style={{ fontSize: 10, color: 'white' }} value={headerRight} />
-          ) : (
-            <SafeView />
-          )}
-        </SafeView>
-      </SafeView>
-
-      {/* Zone centrale : 2 images demi-page */}
-      <SafeView style={{ flex: 1, width: '100%', height: '100%' }}>
-        {images
-          .filter(Boolean)
-          .map((src, i) => (
-            <Image
-              key={`cover-img-${i}`}
-              src={src}
-              style={{ width: '100%', height: '50%', objectFit: 'cover', objectPosition: 'center', margin: 0, padding: 0 }}
-            />
-          ))}
-      </SafeView>
-
-      {/* Bandeau inférieur : dates + voyageurs */}
-      <SafeView
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: '100%',
-          backgroundColor: theme.primary,
-          color: 'white',
-          textAlign: 'center',
-          paddingVertical: 10,
-        }}
-      >
-        <SafeText ctx="cover.dateLine" style={{ fontSize: 11, fontWeight: 'bold', color: 'white' }} value={dateLine} />
-        {Boolean(travelers) && (
-          <SafeText ctx="cover.travelers" style={{ fontSize: 10, color: 'white', marginTop: 2 }} value={travelers} />
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.gray100 }}>
+             <Text style={{ fontSize: 10, color: theme.gray300 }}>Aucune image de couverture</Text>
+          </View>
         )}
-      </SafeView>
-    </SafeView>
+      </View>
+
+      {/* FOOTER - Fixed Bottom */}
+      <View style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        backgroundColor: theme.gray100,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10
+      }}>
+        <SafeText ctx="cover.date" style={{ fontSize: 9, color: theme.primary, fontWeight: 'bold', marginBottom: 2 }} value={dateRange} />
+        <SafeText ctx="cover.duration" style={{ fontSize: 9, color: theme.primary }} value={durationLabel} />
+      </View>
+    </View>
   )
 }
 
@@ -428,6 +479,14 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
   const STEP_SPACER_PT = Math.round(A5_HEIGHT_PT * 0.1)
   const MIN_IMAGE_HEIGHT_PT = Math.round(A5_HEIGHT_PT * 0.35)
 
+  // Helper date DD/MM
+  const formatDDMM = (dStr?: string) => {
+    if (!dStr) return ''
+    const d = new Date(dStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+  }
+
   return (
     <SafeView style={styles.sectionBlock}>
       <Text style={styles.sectionHeader}>Programme détaillé</Text>
@@ -435,37 +494,51 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
       <SafeView style={styles.contentWrap}>
         {itinerary.map((step: any, i: number) => {
           const title = step.title || `Étape ${i + 1}`
-          const dateRange = `${formatDate(step.start_date)}${
-            step.end_date && step.end_date !== step.start_date ? ` – ${formatDate(step.end_date)}` : ''
-          }`
+          const startStr = formatDDMM(step.start_date)
+          const endStr = step.end_date && step.end_date !== step.start_date ? formatDDMM(step.end_date) : ''
 
           // --- Étape principale
           const infosBlock = (
             <SafeView key={step.id || i} style={{ marginBottom: 22 }}>
-              {/* Bandeau d’étape */}
-              <SafeView style={{ marginBottom: 6 }}>
-                <SafeText
-                  ctx={`itinerary[${i}].header`}
-                  style={{ fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', color: theme.primary }}
-                  value={`${dateRange}  •  ${stringify(title, `itinerary[${i}].title`)}`}
-                />
-              </SafeView>
+              
+              {/* Keep Header and Overview together to avoid orphans */}
+              <SafeView wrap={false}>
+                {/* HEADER MODERNE: Date -> Date : Titre */}
+                <SafeView style={styles.stepBox}>
+                  <Text style={styles.stepDate}>{startStr}</Text>
+                  {endStr ? (
+                    <>
+                      <Text style={styles.stepArrow}>-</Text>
+                      <Text style={styles.stepDate}>{endStr}</Text>
+                    </>
+                  ) : null}
+                  <Text style={{ marginHorizontal: 10, color: theme.gray300 }}>:</Text>
+                  <SafeText
+                    ctx={`itinerary[${i}].title`}
+                    style={[styles.stepTitle, { color: theme.primary }]} // Keeps purple per instruction
+                    value={stringify(title, `itinerary[${i}].title`)}
+                  />
+                </SafeView>
 
-              {/* Aperçu */}
-              {Boolean(step.overview) && (
-                <SafeText
-                  ctx={`itinerary[${i}].overview`}
-                  style={{ fontSize: 11, marginBottom: 6 }}
-                  value={step.overview}
-                />
-              )}
+                {/* DESCRIPTION NARRATIVE */}
+                {Boolean(step.overview) && (
+                  <SafeText
+                    ctx={`itinerary[${i}].overview`}
+                    style={styles.narrativeText}
+                    value={step.overview}
+                  />
+                )}
+              </SafeView>
 
               {/* Segments */}
               {(step.segments || []).map((s: any, si: number) => {
                 const roleLabel = labelFor(s.role)
 
+                // 1. Description (Normal text)
+                const description = s.description
+
+                // 2. Practical Infos (Bullet points, Italic, Smaller)
                 const infosRaw: string[] = []
-                if (s.description) infosRaw.push(s.description)
                 if (s.duration) infosRaw.push(s.duration)
                 if (s.start_time || s.end_time) {
                   let t = ''
@@ -484,44 +557,61 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
                     key={s.id || si}
                     wrap={false}
                     style={{
-                      marginBottom: 8,
-                      paddingLeft: 8,
-                      borderLeftWidth: 2,
-                      borderLeftColor: theme.primary,
-                      borderLeftStyle: 'solid',
+                      marginBottom: 12,
+                      flexDirection: 'row',
                     }}
                   >
-                    <SafeText
-                      ctx={`segment[${si}].title`}
-                      style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
-                      value={`${roleLabel} — ${stringify(s.title, `segment[${si}].title`)}`}
-                    />
+                    {/* Colonne gauche : Type de segment */}
+                    <View style={{ width: 60, paddingRight: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: 'bold', color: theme.primary }}>
+                        {roleLabel}
+                      </Text>
+                    </View>
 
-                    {infos.map((line, li) => (
+                    {/* Colonne droite : Contenu */}
+                    <View style={{ flex: 1 }}>
+                      {/* Titre (Gras) */}
                       <SafeText
-                        key={`seg-${s.id || si}-info-${li}`}
-                        ctx={`segment[${si}].info[${li}]`}
-                        style={{ fontSize: 10, color: theme.text, lineHeight: 1.4 }}
-                        renderPrefix="• "
-                        value={line}
+                        ctx={`segment[${si}].title`}
+                        style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2, color: theme.text }}
+                        value={stringify(s.title, `segment[${si}].title`)}
                       />
-                    ))}
+
+                      {/* Description (Normal) */}
+                      {description && (
+                         <SafeText
+                          ctx={`segment[${si}].description`}
+                          style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.3, textAlign: 'justify' }}
+                          value={description}
+                        />
+                      )}
+
+                      {/* Infos Pratiques (Italique, Petit, Bullet points) */}
+                      {infos.map((line, li) => (
+                        <SafeText
+                          key={`seg-${s.id || si}-info-${li}`}
+                          ctx={`segment[${si}].info[${li}]`}
+                          style={{ fontSize: 9, color: theme.gray700, lineHeight: 1.3, fontStyle: 'italic', marginBottom: 1 }}
+                          renderPrefix="• "
+                          value={line}
+                        />
+                      ))}
+                    </View>
                   </SafeView>
                 )
               })}
 
               {/* Notes */}
               {Array.isArray(step.tips) && step.tips.filter(t => t && String(t).trim() !== '').length > 0 && (
-                <SafeView style={{ marginTop: 8 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>NOTE</Text>
+                <SafeView wrap={false} style={{ marginTop: 10, marginBottom: 8, paddingLeft: 10, borderLeftWidth: 3, borderLeftColor: '#FCD34D', borderLeftStyle: 'solid' }}>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 4, color: '#B45309' }}>NOTE</Text>
                   {step.tips
                     .filter((t: any) => t && String(t).trim() !== '')
                     .map((t: string, ti: number) => (
                       <SafeText
                         key={`step-${step.id || i}-tip-${ti}`}
                         ctx={`itinerary[${i}].tip[${ti}]`}
-                        style={{ fontSize: 10, color: theme.text, marginLeft: 6, lineHeight: 1.4 }}
-                        renderPrefix="• "
+                        style={{ fontSize: 10, color: theme.text, marginBottom: 4, lineHeight: 1.4, textAlign: 'justify' }}
                         value={t}
                       />
                     ))}
@@ -530,11 +620,11 @@ export const Itinerary: React.FC<ItineraryProps> = (props: any) => {
 
               {/* Info locale */}
               {Boolean(step.local_context) && (
-                <SafeView style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}>INFO LOCALE</Text>
+                <SafeView wrap={false} style={{ marginTop: 10, marginBottom: 8, paddingLeft: 10, borderLeftWidth: 3, borderLeftColor: '#34d399', borderLeftStyle: 'solid' }}>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 4, color: '#047857' }}>🌍 Info locale</Text>
                   <SafeText
                     ctx={`itinerary[${i}].local_context`}
-                    style={{ fontSize: 10, color: theme.text, lineHeight: 1.4 }}
+                    style={{ fontSize: 10, color: theme.text, lineHeight: 1.4, textAlign: 'justify' }}
                     value={step.local_context}
                   />
                 </SafeView>
@@ -612,21 +702,23 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   const info: any = props.info || {}
 
   const Title = ({ text }: { text: string }) => (
-    <SafeText ctx="general.title" style={{ fontSize: 10, fontWeight: 'bold', color: theme.primary, marginTop: 7, marginBottom: 2, textTransform: 'uppercase' }} value={text} />
+    <SafeText ctx="general.title" style={{ fontSize: 12, fontWeight: 'bold', color: theme.primary, marginTop: 7, marginBottom: 2 }} value={text} />
   )
 
-  const Paragraph = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
-    <SafeText
-      ctx={keyVal ? `paragraph[${keyVal}]` : 'paragraph'}
-      style={{ fontSize: 10.5, color: theme.text, marginBottom: 3, lineHeight: 1.4 }}
-      value={text}
-    />
-  )
+  const Row = ({ label, value, keyVal }: { label?: string; value: any; keyVal?: string }) => {
+     if (!value) return null
+     return (
+       <Text style={{ fontSize: 10, marginBottom: 1, lineHeight: 1.3, color: theme.text, textAlign: 'justify' }}>
+         {label ? <Text style={{ fontWeight: 'bold', color: 'black' }}>{label} : </Text> : null}
+         <Text>{stringify(value, keyVal || 'row')}</Text>
+       </Text>
+     )
+  }
 
   const Bullet = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `bullet[${keyVal}]` : 'bullet'}
-      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 2 }}
+      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 1, textAlign: 'justify', lineHeight: 1.3 }}
       renderPrefix="• "
       value={text}
     />
@@ -638,10 +730,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.capital || info.population || info.surface_area) {
     blocks.push(
       <SafeView key="base" wrap={false}>
-        <Title text="APERÇU" />
-        {info.capital && <Paragraph text={`Capitale : ${info.capital}`} />}
-        {info.population && <Paragraph text={`Population : ${info.population}`} />}
-        {info.surface_area && <Paragraph text={`Superficie : ${info.surface_area}`} />}
+        <Title text="Aperçu" />
+        <Row label="Capitale" value={info.capital} />
+        <Row label="Population" value={info.population} />
+        <Row label="Superficie" value={info.surface_area} />
       </SafeView>
     )
   }
@@ -650,9 +742,9 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.timezone) {
     blocks.push(
       <SafeView key="tz" wrap={false}>
-        <Title text="FUSEAU HORAIRE" />
-        {info.timezone.main && <Paragraph text={`Fuseau principal : ${info.timezone.main}`} />}
-        {info.timezone.offset && <Paragraph text={info.timezone.offset} />}
+        <Title text="Fuseau horaire" />
+        <Row label="Fuseau principal" value={info.timezone.main} />
+        <Row value={info.timezone.offset} />
       </SafeView>
     )
   }
@@ -661,10 +753,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.entry) {
     blocks.push(
       <SafeView key="entry" wrap={false}>
-        <Title text="FORMALITÉS D’ENTRÉE" />
-        {info.entry.passport && <Paragraph text={`Passeport : ${info.entry.passport}`} />}
-        {info.entry.visa && <Paragraph text={`Visa : ${info.entry.visa}`} />}
-        {info.entry.validity && <Paragraph text={`Validité du séjour : ${info.entry.validity}`} />}
+        <Title text="Formalités d'entrée" />
+        <Row label="Passeport" value={info.entry.passport} />
+        <Row label="Visa" value={info.entry.visa} />
+        <Row label="Validité du séjour" value={info.entry.validity} />
       </SafeView>
     )
   }
@@ -673,10 +765,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.health) {
     blocks.push(
       <SafeView key="health" wrap={false}>
-        <Title text="SANTÉ" />
-        {info.health.vaccines && <Paragraph text={`Vaccins : ${info.health.vaccines}`} />}
-        {info.health.insurance && <Paragraph text={`Assurance : ${info.health.insurance}`} />}
-        {info.health.water && <Paragraph text={`Eau potable : ${info.health.water}`} />}
+        <Title text="Santé" />
+        <Row label="Vaccins" value={info.health.vaccines} />
+        <Row label="Assurance" value={info.health.insurance} />
+        <Row label="Eau potable" value={info.health.water} />
       </SafeView>
     )
   }
@@ -685,12 +777,12 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.climate) {
     blocks.push(
       <SafeView key="climate" wrap={false}>
-        <Title text="CLIMAT" />
-        {info.climate.current && <Paragraph text={`Actuellement : ${info.climate.current}`} />}
-        {info.climate.summer && <Paragraph text={`Été : ${info.climate.summer}`} />}
-        {info.climate.winter && <Paragraph text={`Hiver : ${info.climate.winter}`} />}
-        {info.climate.autumn && <Paragraph text={`Automne : ${info.climate.autumn}`} />}
-        {info.climate.spring && <Paragraph text={`Printemps : ${info.climate.spring}`} />}
+        <Title text="Climat" />
+        <Row label="Actuellement" value={info.climate.current} />
+        <Row label="Été" value={info.climate.summer} />
+        <Row label="Hiver" value={info.climate.winter} />
+        <Row label="Automne" value={info.climate.autumn} />
+        <Row label="Printemps" value={info.climate.spring} />
       </SafeView>
     )
   }
@@ -699,9 +791,9 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.clothing) {
     blocks.push(
       <SafeView key="clothing" wrap={false}>
-        <Title text="VÊTEMENTS RECOMMANDÉS" />
-        {info.clothing.season && <Paragraph text={`Saison conseillée : ${info.clothing.season}`} />}
-        {info.clothing.temperature && <Paragraph text={`Températures moyennes : ${info.clothing.temperature}`} />}
+        <Title text="Vêtements recommandés" />
+        <Row label="Saison conseillée" value={info.clothing.season} />
+        <Row label="Températures moyennes" value={info.clothing.temperature} />
         {Array.isArray(info.clothing.items) &&
           info.clothing.items
             .filter((x: any) => x && String(x).trim() !== '')
@@ -714,11 +806,11 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.food?.specialties?.length) {
     blocks.push(
       <SafeView key="food" wrap={false}>
-        <Title text="SPÉCIALITÉS CULINAIRES" />
+        <Title text="Spécialités culinaires" />
         {info.food.specialties
           .filter((s: any) => s && (s.region || s.specialty))
           .map((s: any, fi: number) => (
-            <Paragraph key={`food-${fi}`} keyVal={`food-${fi}`} text={`${s.region} : ${s.specialty}`} />
+            <Row key={`food-${fi}`} label={s.region} value={s.specialty} />
           ))}
       </SafeView>
     )
@@ -728,15 +820,15 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.currency || info.budget) {
     blocks.push(
       <SafeView key="money" wrap={false}>
-        <Title text="ARGENT ET BUDGET" />
-        {info.currency?.name && <Paragraph text={`Monnaie : ${info.currency.name}`} />}
+        <Title text="Argent et budget" />
+        <Row label="Monnaie" value={info.currency?.name} />
         {Array.isArray(info.currency?.exchange) &&
           info.currency.exchange
             .filter((ex: any) => ex && String(ex).trim() !== '')
             .map((ex: any, ei: number) => <Bullet key={`ex-${ei}`} keyVal={`ex-${ei}`} text={ex} />)}
-        {info.budget?.coffee && <Paragraph text={`Café : ${info.budget.coffee}`} />}
-        {info.budget?.meal && <Paragraph text={`Repas : ${info.budget.meal}`} />}
-        {info.budget?.restaurant && <Paragraph text={`Restaurant : ${info.budget.restaurant}`} />}
+        <Row label="Café" value={info.budget?.coffee} />
+        <Row label="Repas" value={info.budget?.meal} />
+        <Row label="Restaurant" value={info.budget?.restaurant} />
       </SafeView>
     )
   }
@@ -745,12 +837,12 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.tipping) {
     blocks.push(
       <SafeView key="tips" wrap={false}>
-        <Title text="POURBOIRES" />
-        {info.tipping.required && <Paragraph text={`Usage : ${info.tipping.required}`} />}
-        {info.tipping.restaurants && <Paragraph text={`Restaurants : ${info.tipping.restaurants}`} />}
-        {info.tipping.taxis && <Paragraph text={`Taxis : ${info.tipping.taxis}`} />}
-        {info.tipping.guides && <Paragraph text={`Guides : ${info.tipping.guides}`} />}
-        {info.tipping.porters && <Paragraph text={`Portiers : ${info.tipping.porters}`} />}
+        <Title text="Pourboires" />
+        <Row label="Usage" value={info.tipping.required} />
+        <Row label="Restaurants" value={info.tipping.restaurants} />
+        <Row label="Taxis" value={info.tipping.taxis} />
+        <Row label="Guides" value={info.tipping.guides} />
+        <Row label="Portiers" value={info.tipping.porters} />
       </SafeView>
     )
   }
@@ -759,10 +851,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.electricity) {
     blocks.push(
       <SafeView key="elec" wrap={false}>
-        <Title text="ÉLECTRICITÉ" />
-        {info.electricity.voltage && <Paragraph text={`Tension : ${info.electricity.voltage}`} />}
-        {info.electricity.plugs && <Paragraph text={`Prises : ${info.electricity.plugs}`} />}
-        {info.electricity.adapter && <Paragraph text={`Adaptateur : ${info.electricity.adapter}`} />}
+        <Title text="Électricité" />
+        <Row label="Tension" value={info.electricity.voltage} />
+        <Row label="Prises" value={info.electricity.plugs} />
+        <Row label="Adaptateur" value={info.electricity.adapter} />
       </SafeView>
     )
   }
@@ -771,10 +863,10 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.languages) {
     blocks.push(
       <SafeView key="lang" wrap={false}>
-        <Title text="LANGUES" />
-        {info.languages.official && <Paragraph text={`Officielles : ${info.languages.official}`} />}
-        {info.languages.french && <Paragraph text={`Français parlé : ${info.languages.french}`} />}
-        {info.languages.notes && <Paragraph text={info.languages.notes} />}
+        <Title text="Langues" />
+        <Row label="Officielles" value={info.languages.official} />
+        <Row label="Français parlé" value={info.languages.french} />
+        <Row value={info.languages.notes} />
       </SafeView>
     )
   }
@@ -783,8 +875,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.religion) {
     blocks.push(
       <SafeView key="religion" wrap={false}>
-        <Title text="RELIGION" />
-        <Paragraph text={info.religion} />
+        <Title text="Religion" />
+        <Row value={info.religion} />
       </SafeView>
     )
   }
@@ -793,8 +885,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.safety) {
     blocks.push(
       <SafeView key="safety" wrap={false}>
-        <Title text="SÉCURITÉ" />
-        <Paragraph text={info.safety} />
+        <Title text="Sécurité" />
+        <Row value={info.safety} />
       </SafeView>
     )
   }
@@ -803,11 +895,11 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (Array.isArray(info.cultural_sites) && info.cultural_sites.length) {
     blocks.push(
       <SafeView key="culture" wrap={false}>
-        <Title text="SITES CULTURELS" />
+        <Title text="Sites culturels" />
         {info.cultural_sites
           .filter((c: any) => c && (c.name || c.description))
           .map((c: any, ci: number) => (
-            <Paragraph key={`culture-${ci}`} keyVal={`culture-${ci}`} text={`• ${c.name} — ${c.description}`} />
+            <Row key={`culture-${ci}`} value={`• ${c.name} — ${c.description}`} />
           ))}
       </SafeView>
     )
@@ -817,8 +909,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.natural_attractions) {
     blocks.push(
       <SafeView key="nature" wrap={false}>
-        <Title text="ATTRACTIONS NATURELLES" />
-        <Paragraph text={info.natural_attractions} />
+        <Title text="Attractions naturelles" />
+        <Row value={info.natural_attractions} />
       </SafeView>
     )
   }
@@ -827,8 +919,8 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.shopping) {
     blocks.push(
       <SafeView key="shop" wrap={false}>
-        <Title text="ACHATS & ARTISANAT" />
-        <Paragraph text={info.shopping} />
+        <Title text="Achats & artisanat" />
+        <Row value={info.shopping} />
       </SafeView>
     )
   }
@@ -847,6 +939,38 @@ interface EmergencyProps { contact?: any }
 export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const contact: any = props.contact || {}
 
+  // Default texts matching the frontend
+  const defaults = {
+    before_departure: {
+      text: "Avant votre départ, votre voyagiste reste le contact à privilégier en cas de changement à réaliser ou d'annulations à effectuer."
+    },
+    departure_day: {
+      flights: {
+        text: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      }
+    },
+    after_departure: {
+      intro: "Afin de pouvoir répondre au mieux et le plus rapidement à vos besoins, veuillez contacter dans l'ordre suivant :",
+      flights: {
+        text: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      },
+      local: {
+        items: [
+          "Pour signaler un retard important à votre arrivée",
+          "Pour toute demande de modification de programme/circuit (sous réserve)",
+          "Pour des renseignements complémentaires au sujet des prestations",
+          "Pour tout manquement ou mécontentement relatif au programme",
+          "Pour un problème d'hébergement, après avoir vérifié auprès de la réception de votre hôtel si une solution peut être trouvée sur place."
+        ],
+        note: "Si le cas n'a pas pu être résolu après prise de contact avec notre correspondant local, alors contactez :"
+      }
+    },
+    emergency: {
+      text1: "*Sont considérées comme extrême urgence (maladie, accident, décès...), veuillez contacter votre assurance voyage.",
+      text2: "Si notre correspondant local ou votre assurance ne peut résoudre votre problème, vous pouvez nous contacter sur notre numéro d'urgence au 0041 76 296 25 40."
+    }
+  }
+
   const SectionTitle = ({ text }: { text: string }) => (
     <SafeView
       style={{ backgroundColor: theme.gray200, paddingVertical: 4, paddingHorizontal: 6, marginTop: 8, marginBottom: 4 }}
@@ -858,7 +982,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const SubTitle = ({ text }: { text: string }) => (
     <SafeText
       ctx="emergency.subtitle"
-      style={{ fontSize: 10.5, fontWeight: 'bold', marginTop: 4, marginBottom: 2, color: theme.text }}
+      style={{ fontSize: 10.5, fontWeight: 'bold', marginTop: 4, marginBottom: 2, color: theme.text, marginLeft: 10 }}
       value={text}
     />
   )
@@ -866,7 +990,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const Paragraph = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `paragraph[${keyVal}]` : 'paragraph'}
-      style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}
+      style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4, marginLeft: 15 }}
       value={text}
     />
   )
@@ -874,8 +998,8 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const Bullet = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `bullet[${keyVal}]` : 'bullet'}
-      style={{ fontSize: 10, color: theme.text, marginLeft: 10, marginBottom: 2, textAlign: 'justify' }}
-      renderPrefix="※ "
+      style={{ fontSize: 10, color: theme.text, marginLeft: 25, marginBottom: 2, textAlign: 'justify' }}
+      renderPrefix="• "
       value={text}
     />
   )
@@ -890,90 +1014,79 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
 
   return (
     <SafeView style={styles.sectionBlock}>
-      <Text style={[styles.sectionHeader, { marginBottom: 6 }]}>
-        Qui contacter pendant votre voyage en cas de nécessité ?
-      </Text>
+      <Text style={styles.sectionHeader}>Contacts d'urgence</Text>
 
       <SafeView style={styles.contentWrap}>
         {/* 1. Avant le départ */}
         <SafeView wrap={false}>
           <SectionTitle text="1. Avant votre départ" />
-          {Boolean(contact.before_departure?.text) && <Paragraph text={contact.before_departure.text} />}
+          <Paragraph text={contact.before_departure?.text || defaults.before_departure.text} />
         </SafeView>
 
         {/* 2. Le jour du départ */}
         <SafeView wrap={false}>
           <SectionTitle text="2. Le jour de votre départ" />
-          {Boolean(contact.departure_day?.flights?.text) && (
-            <SafeView>
-              <SubTitle text="a. Les vols" />
-              <Paragraph text={contact.departure_day.flights.text} />
-            </SafeView>
-          )}
-          {Boolean(contact.departure_day?.agency?.text) && (
-            <SafeView>
-              <SubTitle text="b. Votre voyagiste" />
-              <Paragraph text={contact.departure_day.agency.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="a. Les vols" />
+            <Paragraph text={contact.departure_day?.flights?.text || defaults.departure_day.flights.text} />
+          </SafeView>
+          
+          <SafeView>
+            <SubTitle text="b. Votre voyagiste" />
+            {Boolean(contact.departure_day?.agency?.text) && <Paragraph text={contact.departure_day.agency.text} />}
+          </SafeView>
         </SafeView>
 
         {/* 3. Après le départ */}
         <SafeView wrap={false}>
           <SectionTitle text="3. Après votre départ" />
-          {Boolean(contact.after_departure?.intro) && <Paragraph text={contact.after_departure.intro} />}
+          <Paragraph text={contact.after_departure?.intro || defaults.after_departure.intro} />
 
-          {Boolean(contact.after_departure?.flights?.text) && (
-            <SafeView>
-              <SubTitle text="a. Les vols" />
-              <Paragraph text={contact.after_departure.flights.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="a. Les vols" />
+            <Paragraph text={contact.after_departure?.flights?.text || defaults.after_departure.flights.text} />
+          </SafeView>
 
-          {Boolean(contact.after_departure?.local) && (
-            <SafeView>
-              <SubTitle text="b. Nos correspondants locaux :" />
-              {Boolean(contact.after_departure.local.name) && (
-                <Paragraph keyVal="local-name" text={contact.after_departure.local.name} />
-              )}
-              {Boolean(contact.after_departure.local.phone) && (
-                <Paragraph keyVal="local-phone" text={contact.after_departure.local.phone} />
-              )}
-              {Array.isArray(contact.after_departure.local.items) &&
-                contact.after_departure.local.items
-                  .filter((it: any) => it && String(it).trim() !== '')
-                  .map((it: any, li: number) => <Bullet key={`local-${li}`} keyVal={`local-${li}`} text={it} />)}
-              {Boolean(contact.after_departure.local.note) && <Paragraph text={contact.after_departure.local.note} />}
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="b. Nos correspondants locaux :" />
+            {Boolean(contact.after_departure?.local?.name) && (
+              <Paragraph keyVal="local-name" text={contact.after_departure.local.name} />
+            )}
+            {Boolean(contact.after_departure?.local?.phone) && (
+              <Paragraph keyVal="local-phone" text={contact.after_departure.local.phone} />
+            )}
+            
+            {/* Default items if none provided */}
+            {(contact.after_departure?.local?.items || defaults.after_departure.local.items)
+              .filter((it: any) => it && String(it).trim() !== '')
+              .map((it: any, li: number) => <Bullet key={`local-${li}`} keyVal={`local-${li}`} text={it} />)}
+              
+            <Paragraph text={contact.after_departure?.local?.note || defaults.after_departure.local.note} />
+          </SafeView>
 
-          {Boolean(contact.after_departure?.agency?.text) && (
-            <SafeView>
-              <SubTitle text="c. Votre voyagiste" />
-              <Paragraph text={contact.after_departure.agency.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="c. Votre voyagiste" />
+            {Boolean(contact.after_departure?.agency?.text) && <Paragraph text={contact.after_departure.agency.text} />}
+          </SafeView>
         </SafeView>
 
         {/* 4. Cas d’urgence */}
         <SafeView wrap={false}>
           <SectionTitle text="4. Pour les cas d’extrême urgence" />
-          {Boolean(contact.emergency?.text1) && <Paragraph text={contact.emergency.text1} />}
+          <Paragraph text={contact.emergency?.text1 || defaults.emergency.text1} />
 
-          {Boolean(contact.emergency?.text2) && (
-            <SafeView>
-              <Paragraph text={contact.emergency.text2} />
+          <SafeView>
+            <Paragraph text={contact.emergency?.text2 || defaults.emergency.text2} />
 
-              {Boolean(contact.emergency.phone) && (
-                <Text style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}>
-                  Numéro d'urgence :
-                  <Text style={{ backgroundColor: theme.sand, color: theme.primaryDark, fontWeight: 'bold' }}>
-                    {' '}{stringify(contact.emergency.phone, 'emergency-phone')}
-                  </Text>
+            {Boolean(contact.emergency?.phone) && (
+              <Text style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}>
+                Numéro d'urgence :
+                <Text style={{ backgroundColor: theme.sand, color: theme.primaryDark, fontWeight: 'bold' }}>
+                  {' '}{stringify(contact.emergency.phone, 'emergency-phone')}
                 </Text>
-              )}
-            </SafeView>
-          )}
+              </Text>
+            )}
+          </SafeView>
         </SafeView>
       </SafeView>
     </SafeView>
@@ -988,11 +1101,32 @@ export const Notes: React.FC = () => (
       <Text style={styles.paragraph}>
         Écrivez ici vos impressions, vos adresses favorites, vos rencontres…
       </Text>
-      {Array.from({ length: 55 }).map((_, ni) => (
+      {Array.from({ length: 25 }).map((_, ni) => (
         <SafeView key={`note-${ni}`} style={styles.noteLine} />
       ))}
     </SafeView>
   </SafeView>
+)
+
+export const NotesEmpty: React.FC = () => (
+  <SafeView style={styles.sectionBlock}>
+    <SafeView style={styles.contentWrap}>
+      {Array.from({ length: 32 }).map((_, ni) => (
+        <SafeView key={`note-empty-${ni}`} style={styles.noteLine} />
+      ))}
+    </SafeView>
+  </SafeView>
+)
+
+export const NotesDocument: React.FC = () => (
+  <Document>
+    <Page size="A5" style={styles.page}>
+      <Notes />
+    </Page>
+    <Page size="A5" style={styles.page}>
+      <NotesEmpty />
+    </Page>
+  </Document>
 )
 
 // ---------------- DOCUMENT ----------------
@@ -1025,31 +1159,21 @@ export const BookletDocument: React.FC<BookletDocumentProps> = ({ data }: { data
       {/* Itinerary */}
       <Page size="A5" style={styles.page}>
         <Itinerary itinerary={data.itinerary || []} brand={brand} />
-        <PageFooter />
       </Page>
 
       {/* Thank You */}
       <Page size="A5" style={styles.page}>
         <ThankYou thank={data.thank_you || {}} brand={brand} />
-        <PageFooter />
       </Page>
 
       {/* General Info */}
       <Page size="A5" style={styles.page}>
         <GeneralInfo info={data.general_info || {}} />
-        <PageFooter />
       </Page>
 
       {/* Emergency */}
       <Page size="A5" style={styles.page}>
         <Emergency contact={data.emergency_contacts || {}} />
-        <PageFooter />
-      </Page>
-
-      {/* Notes */}
-      <Page size="A5" style={styles.page}>
-        <Notes />
-        <PageFooter />
       </Page>
     </Document>
   )

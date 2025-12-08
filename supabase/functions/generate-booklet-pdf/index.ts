@@ -4,11 +4,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import * as React from "npm:react@18.2.0";
 import ReactPDF from "npm:@react-pdf/renderer@3.4.3";
+import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
 
 // Ensure these paths are correct relative to your index.ts file
 // (e.g., if in '_common', use '../_common/extract.ts')
 import { extractFromHtml } from "./extract.ts";
-import BookletDocument from "./BookletTemplate.tsx";
+import BookletDocument, { NotesDocument } from "./BookletTemplate.tsx";
 
 // ===============================================
 // ⚙️ Supabase Configuration
@@ -123,23 +124,79 @@ serve(async (req) => {
     // === PDF Rendering ===
     console.log("🖨️ Rendering PDF with ReactPDF (using direct URLs)...");
 
+    // 1. Render Main Document
     const doc = React.createElement(BookletDocument, { data });
     const tmpFile = `/tmp/booklet-${crypto.randomUUID()}.pdf`;
-
-    // This is the heaviest step: rendering and fetching images via network
     await ReactPDF.renderToFile(doc, tmpFile);
-    const pdfBytes = await Deno.readFile(tmpFile);
-    await Deno.remove(tmpFile); // Cleanup temp file
+    const mainPdfBytes = await Deno.readFile(tmpFile);
+    await Deno.remove(tmpFile);
+
+    // 2. Render Notes Document (Single Page)
+    const notesDocReact = React.createElement(NotesDocument, {});
+    const tmpNotesFile = `/tmp/notes-${crypto.randomUUID()}.pdf`;
+    await ReactPDF.renderToFile(notesDocReact, tmpNotesFile);
+    const notesPdfBytes = await Deno.readFile(tmpNotesFile);
+    await Deno.remove(tmpNotesFile);
+
+    // 3. Merge and Add Pages (pdf-lib)
+    const mainDoc = await PDFDocument.load(mainPdfBytes);
+    const notesDoc = await PDFDocument.load(notesPdfBytes);
+    
+    // Step 1: Add the first notes page (Title Page) - Index 0
+    const [notesPageTitle] = await mainDoc.copyPages(notesDoc, [0]);
+    mainDoc.addPage(notesPageTitle);
+
+    // Step 2: Add the second notes page (Empty Page) - Index 1
+    // This ensures minimum 2 pages of notes
+    const [notesPageEmpty] = await mainDoc.copyPages(notesDoc, [1]);
+    mainDoc.addPage(notesPageEmpty);
+
+    // Step 3: Add extra empty pages to reach multiple of 4
+    const pageCount = mainDoc.getPageCount();
+    const remainder = pageCount % 4;
+    const extraNeeded = remainder === 0 ? 0 : (4 - remainder);
+
+    console.log(`📄 Page Count: ${pageCount}. Adding ${extraNeeded} extra empty notes pages to reach multiple of 4.`);
+
+    for (let i = 0; i < extraNeeded; i++) {
+      // Always copy a fresh page from the source (Index 1 = Empty Page)
+      const [extraPage] = await mainDoc.copyPages(notesDoc, [1]);
+      mainDoc.addPage(extraPage);
+    }
+
+    // 4. Add Page Numbers
+    const helveticaFont = await mainDoc.embedFont(StandardFonts.Helvetica);
+    const pages = mainDoc.getPages();
+    const totalPages = pages.length;
+
+    pages.forEach((page, idx) => {
+      // Skip Cover Page (index 0)
+      if (idx === 0) return;
+
+      const { width } = page.getSize();
+      const text = `Page ${idx + 1} / ${totalPages}`;
+      const textWidth = helveticaFont.widthOfTextAtSize(text, 9);
+      
+      page.drawText(text, {
+        x: (width - textWidth) / 2,
+        y: 20,
+        size: 9,
+        font: helveticaFont,
+        color: rgb(0.22, 0.25, 0.32), // #374151 (gray-700)
+      });
+    });
+
+    const finalPdfBytes = await mainDoc.save();
 
     // 3. Metric after render (most critical)
-    const fileSizeMB = (pdfBytes.length / 1024 / 1024).toFixed(2);
+    const fileSizeMB = (finalPdfBytes.length / 1024 / 1024).toFixed(2);
     console.log(`[Metrics] Final PDF Size: ${fileSizeMB} MB`);
     logMetrics("After PDF Render", startTime);
 
     // === Supabase Upload ===
     console.log("📦 Uploading to Supabase Storage...");
     const fileName = `booklets/${tripId}.pdf`;
-    const fileBlob = new Blob([pdfBytes], { type: "application/pdf" });
+    const fileBlob = new Blob([finalPdfBytes], { type: "application/pdf" });
 
     const { error: uploadError } = await supabase.storage
       .from("travel-booklets")
@@ -163,13 +220,16 @@ serve(async (req) => {
     const publicUrl = publicUrlData?.publicUrl;
     if (!publicUrl) throw new Error("Failed to get public URL from storage");
 
-    console.log("✅ PDF available at:", publicUrl);
+    // Append timestamp to force cache busting
+    const publicUrlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
+
+    console.log("✅ PDF available at:", publicUrlWithTimestamp);
 
     // Update trip with PDF URL and generation timestamp
     const { error: updateError } = await supabase
       .from("trips")
       .update({
-        last_pdf_url: publicUrl,
+        last_pdf_url: publicUrlWithTimestamp,
         last_pdf_generated_at: new Date().toISOString(),
       })
       .eq("id", tripId);
