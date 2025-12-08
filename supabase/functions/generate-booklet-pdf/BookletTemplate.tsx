@@ -702,13 +702,13 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   const info: any = props.info || {}
 
   const Title = ({ text }: { text: string }) => (
-    <SafeText ctx="general.title" style={{ fontSize: 10, fontWeight: 'bold', color: theme.primary, marginTop: 7, marginBottom: 2, textTransform: 'uppercase' }} value={text} />
+    <SafeText ctx="general.title" style={{ fontSize: 12, fontWeight: 'bold', color: theme.primary, marginTop: 7, marginBottom: 2 }} value={text} />
   )
 
   const Row = ({ label, value, keyVal }: { label?: string; value: any; keyVal?: string }) => {
      if (!value) return null
      return (
-       <Text style={{ fontSize: 10, marginBottom: 3, lineHeight: 1.4, color: theme.text, textAlign: 'justify' }}>
+       <Text style={{ fontSize: 10, marginBottom: 1, lineHeight: 1.3, color: theme.text, textAlign: 'justify' }}>
          {label ? <Text style={{ fontWeight: 'bold', color: 'black' }}>{label} : </Text> : null}
          <Text>{stringify(value, keyVal || 'row')}</Text>
        </Text>
@@ -718,7 +718,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   const Bullet = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `bullet[${keyVal}]` : 'bullet'}
-      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 2, textAlign: 'justify' }}
+      style={{ fontSize: 10, color: theme.text, marginLeft: 8, marginBottom: 1, textAlign: 'justify', lineHeight: 1.3 }}
       renderPrefix="• "
       value={text}
     />
@@ -730,7 +730,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.capital || info.population || info.surface_area) {
     blocks.push(
       <SafeView key="base" wrap={false}>
-        <Title text="APERÇU" />
+        <Title text="Aperçu" />
         <Row label="Capitale" value={info.capital} />
         <Row label="Population" value={info.population} />
         <Row label="Superficie" value={info.surface_area} />
@@ -742,7 +742,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.timezone) {
     blocks.push(
       <SafeView key="tz" wrap={false}>
-        <Title text="FUSEAU HORAIRE" />
+        <Title text="Fuseau horaire" />
         <Row label="Fuseau principal" value={info.timezone.main} />
         <Row value={info.timezone.offset} />
       </SafeView>
@@ -753,7 +753,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.entry) {
     blocks.push(
       <SafeView key="entry" wrap={false}>
-        <Title text="FORMALITÉS D’ENTRÉE" />
+        <Title text="Formalités d'entrée" />
         <Row label="Passeport" value={info.entry.passport} />
         <Row label="Visa" value={info.entry.visa} />
         <Row label="Validité du séjour" value={info.entry.validity} />
@@ -765,7 +765,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.health) {
     blocks.push(
       <SafeView key="health" wrap={false}>
-        <Title text="SANTÉ" />
+        <Title text="Santé" />
         <Row label="Vaccins" value={info.health.vaccines} />
         <Row label="Assurance" value={info.health.insurance} />
         <Row label="Eau potable" value={info.health.water} />
@@ -777,7 +777,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.climate) {
     blocks.push(
       <SafeView key="climate" wrap={false}>
-        <Title text="CLIMAT" />
+        <Title text="Climat" />
         <Row label="Actuellement" value={info.climate.current} />
         <Row label="Été" value={info.climate.summer} />
         <Row label="Hiver" value={info.climate.winter} />
@@ -791,7 +791,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.clothing) {
     blocks.push(
       <SafeView key="clothing" wrap={false}>
-        <Title text="VÊTEMENTS RECOMMANDÉS" />
+        <Title text="Vêtements recommandés" />
         <Row label="Saison conseillée" value={info.clothing.season} />
         <Row label="Températures moyennes" value={info.clothing.temperature} />
         {Array.isArray(info.clothing.items) &&
@@ -806,7 +806,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.food?.specialties?.length) {
     blocks.push(
       <SafeView key="food" wrap={false}>
-        <Title text="SPÉCIALITÉS CULINAIRES" />
+        <Title text="Spécialités culinaires" />
         {info.food.specialties
           .filter((s: any) => s && (s.region || s.specialty))
           .map((s: any, fi: number) => (
@@ -820,7 +820,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.currency || info.budget) {
     blocks.push(
       <SafeView key="money" wrap={false}>
-        <Title text="ARGENT ET BUDGET" />
+        <Title text="Argent et budget" />
         <Row label="Monnaie" value={info.currency?.name} />
         {Array.isArray(info.currency?.exchange) &&
           info.currency.exchange
@@ -837,7 +837,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.tipping) {
     blocks.push(
       <SafeView key="tips" wrap={false}>
-        <Title text="POURBOIRES" />
+        <Title text="Pourboires" />
         <Row label="Usage" value={info.tipping.required} />
         <Row label="Restaurants" value={info.tipping.restaurants} />
         <Row label="Taxis" value={info.tipping.taxis} />
@@ -851,7 +851,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.electricity) {
     blocks.push(
       <SafeView key="elec" wrap={false}>
-        <Title text="ÉLECTRICITÉ" />
+        <Title text="Électricité" />
         <Row label="Tension" value={info.electricity.voltage} />
         <Row label="Prises" value={info.electricity.plugs} />
         <Row label="Adaptateur" value={info.electricity.adapter} />
@@ -863,7 +863,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.languages) {
     blocks.push(
       <SafeView key="lang" wrap={false}>
-        <Title text="LANGUES" />
+        <Title text="Langues" />
         <Row label="Officielles" value={info.languages.official} />
         <Row label="Français parlé" value={info.languages.french} />
         <Row value={info.languages.notes} />
@@ -875,7 +875,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.religion) {
     blocks.push(
       <SafeView key="religion" wrap={false}>
-        <Title text="RELIGION" />
+        <Title text="Religion" />
         <Row value={info.religion} />
       </SafeView>
     )
@@ -885,7 +885,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.safety) {
     blocks.push(
       <SafeView key="safety" wrap={false}>
-        <Title text="SÉCURITÉ" />
+        <Title text="Sécurité" />
         <Row value={info.safety} />
       </SafeView>
     )
@@ -895,7 +895,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (Array.isArray(info.cultural_sites) && info.cultural_sites.length) {
     blocks.push(
       <SafeView key="culture" wrap={false}>
-        <Title text="SITES CULTURELS" />
+        <Title text="Sites culturels" />
         {info.cultural_sites
           .filter((c: any) => c && (c.name || c.description))
           .map((c: any, ci: number) => (
@@ -909,7 +909,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.natural_attractions) {
     blocks.push(
       <SafeView key="nature" wrap={false}>
-        <Title text="ATTRACTIONS NATURELLES" />
+        <Title text="Attractions naturelles" />
         <Row value={info.natural_attractions} />
       </SafeView>
     )
@@ -919,7 +919,7 @@ export const GeneralInfo: React.FC<GeneralInfoProps> = (props: any) => {
   if (info.shopping) {
     blocks.push(
       <SafeView key="shop" wrap={false}>
-        <Title text="ACHATS & ARTISANAT" />
+        <Title text="Achats & artisanat" />
         <Row value={info.shopping} />
       </SafeView>
     )
