@@ -124,40 +124,40 @@ const IconInfo = ({ size = 16, color = COLORS.primary }) => (
 
 const IconHome = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    <Polyline points="9 22 9 12 15 12 15 22" />
+    <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" />
+    <Polyline points="9 22 9 12 15 12 15 22" fill="none" />
   </Svg>
 );
 
 const IconHotel = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-    <Path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-    <Path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-    <Path d="M10 6h4" />
-    <Path d="M10 10h4" />
-    <Path d="M10 14h4" />
-    <Path d="M10 18h4" />
+    <Path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" fill="none" />
+    <Path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" fill="none" />
+    <Path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" fill="none" />
+    <Path d="M10 6h4" fill="none" />
+    <Path d="M10 10h4" fill="none" />
+    <Path d="M10 14h4" fill="none" />
+    <Path d="M10 18h4" fill="none" />
   </Svg>
 );
 
 const IconHeadset = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-    <Path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+    <Path d="M3 18v-6a9 9 0 0 1 18 0v6" fill="none" />
+    <Path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" fill="none" />
   </Svg>
 );
 
 const IconAward = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="12" cy="8" r="7" />
-    <Polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+    <Circle cx="12" cy="8" r="7" fill="none" />
+    <Polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" fill="none" />
   </Svg>
 );
 
 const IconStar = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    <Polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="none" />
   </Svg>
 );
 
@@ -169,8 +169,8 @@ const IconStarFilled = ({ size = 16, color = "#fbbf24", stroke = COLORS.primary 
 
 const IconQuestion = ({ size = 16, color = COLORS.primary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="12" cy="12" r="10" />
-    <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <Circle cx="12" cy="12" r="10" fill="none" />
+    <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" fill="none" />
     <Line x1="12" y1="17" x2="12.01" y2="17" />
   </Svg>
 );
