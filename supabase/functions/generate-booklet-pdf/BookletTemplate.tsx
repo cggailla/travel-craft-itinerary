@@ -939,6 +939,38 @@ interface EmergencyProps { contact?: any }
 export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const contact: any = props.contact || {}
 
+  // Default texts matching the frontend
+  const defaults = {
+    before_departure: {
+      text: "Avant votre départ, votre voyagiste reste le contact à privilégier en cas de changement à réaliser ou d'annulations à effectuer."
+    },
+    departure_day: {
+      flights: {
+        text: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      }
+    },
+    after_departure: {
+      intro: "Afin de pouvoir répondre au mieux et le plus rapidement à vos besoins, veuillez contacter dans l'ordre suivant :",
+      flights: {
+        text: "En cas de retard ou de problèmes concernant les vols, la compagnie aérienne est le contact à privilégier pour tout renseignement. C'est cette dernière qui vous proposera la meilleure solution possible afin de vous acheminer dans les meilleurs délais."
+      },
+      local: {
+        items: [
+          "Pour signaler un retard important à votre arrivée",
+          "Pour toute demande de modification de programme/circuit (sous réserve)",
+          "Pour des renseignements complémentaires au sujet des prestations",
+          "Pour tout manquement ou mécontentement relatif au programme",
+          "Pour un problème d'hébergement, après avoir vérifié auprès de la réception de votre hôtel si une solution peut être trouvée sur place."
+        ],
+        note: "Si le cas n'a pas pu être résolu après prise de contact avec notre correspondant local, alors contactez :"
+      }
+    },
+    emergency: {
+      text1: "*Sont considérées comme extrême urgence (maladie, accident, décès...), veuillez contacter votre assurance voyage.",
+      text2: "Si notre correspondant local ou votre assurance ne peut résoudre votre problème, vous pouvez nous contacter sur notre numéro d'urgence au 0041 76 296 25 40."
+    }
+  }
+
   const SectionTitle = ({ text }: { text: string }) => (
     <SafeView
       style={{ backgroundColor: theme.gray200, paddingVertical: 4, paddingHorizontal: 6, marginTop: 8, marginBottom: 4 }}
@@ -950,7 +982,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const SubTitle = ({ text }: { text: string }) => (
     <SafeText
       ctx="emergency.subtitle"
-      style={{ fontSize: 10.5, fontWeight: 'bold', marginTop: 4, marginBottom: 2, color: theme.text }}
+      style={{ fontSize: 10.5, fontWeight: 'bold', marginTop: 4, marginBottom: 2, color: theme.text, marginLeft: 10 }}
       value={text}
     />
   )
@@ -958,7 +990,7 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const Paragraph = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `paragraph[${keyVal}]` : 'paragraph'}
-      style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}
+      style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4, marginLeft: 15 }}
       value={text}
     />
   )
@@ -966,8 +998,8 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
   const Bullet = ({ text, keyVal }: { text: any; keyVal?: string | number }) => (
     <SafeText
       ctx={keyVal ? `bullet[${keyVal}]` : 'bullet'}
-      style={{ fontSize: 10, color: theme.text, marginLeft: 10, marginBottom: 2, textAlign: 'justify' }}
-      renderPrefix="※ "
+      style={{ fontSize: 10, color: theme.text, marginLeft: 25, marginBottom: 2, textAlign: 'justify' }}
+      renderPrefix="• "
       value={text}
     />
   )
@@ -982,88 +1014,79 @@ export const Emergency: React.FC<EmergencyProps> = (props: any) => {
 
   return (
     <SafeView style={styles.sectionBlock}>
-      <Text style={styles.sectionHeader}>Qui contacter pendant votre voyage en cas de nécessité ?</Text>
+      <Text style={styles.sectionHeader}>Contacts d'urgence</Text>
 
       <SafeView style={styles.contentWrap}>
         {/* 1. Avant le départ */}
         <SafeView wrap={false}>
           <SectionTitle text="1. Avant votre départ" />
-          {Boolean(contact.before_departure?.text) && <Paragraph text={contact.before_departure.text} />}
+          <Paragraph text={contact.before_departure?.text || defaults.before_departure.text} />
         </SafeView>
 
         {/* 2. Le jour du départ */}
         <SafeView wrap={false}>
           <SectionTitle text="2. Le jour de votre départ" />
-          {Boolean(contact.departure_day?.flights?.text) && (
-            <SafeView>
-              <SubTitle text="a. Les vols" />
-              <Paragraph text={contact.departure_day.flights.text} />
-            </SafeView>
-          )}
-          {Boolean(contact.departure_day?.agency?.text) && (
-            <SafeView>
-              <SubTitle text="b. Votre voyagiste" />
-              <Paragraph text={contact.departure_day.agency.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="a. Les vols" />
+            <Paragraph text={contact.departure_day?.flights?.text || defaults.departure_day.flights.text} />
+          </SafeView>
+          
+          <SafeView>
+            <SubTitle text="b. Votre voyagiste" />
+            {Boolean(contact.departure_day?.agency?.text) && <Paragraph text={contact.departure_day.agency.text} />}
+          </SafeView>
         </SafeView>
 
         {/* 3. Après le départ */}
         <SafeView wrap={false}>
           <SectionTitle text="3. Après votre départ" />
-          {Boolean(contact.after_departure?.intro) && <Paragraph text={contact.after_departure.intro} />}
+          <Paragraph text={contact.after_departure?.intro || defaults.after_departure.intro} />
 
-          {Boolean(contact.after_departure?.flights?.text) && (
-            <SafeView>
-              <SubTitle text="a. Les vols" />
-              <Paragraph text={contact.after_departure.flights.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="a. Les vols" />
+            <Paragraph text={contact.after_departure?.flights?.text || defaults.after_departure.flights.text} />
+          </SafeView>
 
-          {Boolean(contact.after_departure?.local) && (
-            <SafeView>
-              <SubTitle text="b. Nos correspondants locaux :" />
-              {Boolean(contact.after_departure.local.name) && (
-                <Paragraph keyVal="local-name" text={contact.after_departure.local.name} />
-              )}
-              {Boolean(contact.after_departure.local.phone) && (
-                <Paragraph keyVal="local-phone" text={contact.after_departure.local.phone} />
-              )}
-              {Array.isArray(contact.after_departure.local.items) &&
-                contact.after_departure.local.items
-                  .filter((it: any) => it && String(it).trim() !== '')
-                  .map((it: any, li: number) => <Bullet key={`local-${li}`} keyVal={`local-${li}`} text={it} />)}
-              {Boolean(contact.after_departure.local.note) && <Paragraph text={contact.after_departure.local.note} />}
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="b. Nos correspondants locaux :" />
+            {Boolean(contact.after_departure?.local?.name) && (
+              <Paragraph keyVal="local-name" text={contact.after_departure.local.name} />
+            )}
+            {Boolean(contact.after_departure?.local?.phone) && (
+              <Paragraph keyVal="local-phone" text={contact.after_departure.local.phone} />
+            )}
+            
+            {/* Default items if none provided */}
+            {(contact.after_departure?.local?.items || defaults.after_departure.local.items)
+              .filter((it: any) => it && String(it).trim() !== '')
+              .map((it: any, li: number) => <Bullet key={`local-${li}`} keyVal={`local-${li}`} text={it} />)}
+              
+            <Paragraph text={contact.after_departure?.local?.note || defaults.after_departure.local.note} />
+          </SafeView>
 
-          {Boolean(contact.after_departure?.agency?.text) && (
-            <SafeView>
-              <SubTitle text="c. Votre voyagiste" />
-              <Paragraph text={contact.after_departure.agency.text} />
-            </SafeView>
-          )}
+          <SafeView>
+            <SubTitle text="c. Votre voyagiste" />
+            {Boolean(contact.after_departure?.agency?.text) && <Paragraph text={contact.after_departure.agency.text} />}
+          </SafeView>
         </SafeView>
 
         {/* 4. Cas d’urgence */}
         <SafeView wrap={false}>
           <SectionTitle text="4. Pour les cas d’extrême urgence" />
-          {Boolean(contact.emergency?.text1) && <Paragraph text={contact.emergency.text1} />}
+          <Paragraph text={contact.emergency?.text1 || defaults.emergency.text1} />
 
-          {Boolean(contact.emergency?.text2) && (
-            <SafeView>
-              <Paragraph text={contact.emergency.text2} />
+          <SafeView>
+            <Paragraph text={contact.emergency?.text2 || defaults.emergency.text2} />
 
-              {Boolean(contact.emergency.phone) && (
-                <Text style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}>
-                  Numéro d'urgence :
-                  <Text style={{ backgroundColor: theme.sand, color: theme.primaryDark, fontWeight: 'bold' }}>
-                    {' '}{stringify(contact.emergency.phone, 'emergency-phone')}
-                  </Text>
+            {Boolean(contact.emergency?.phone) && (
+              <Text style={{ fontSize: 10, color: theme.text, marginBottom: 4, textAlign: 'justify', lineHeight: 1.4 }}>
+                Numéro d'urgence :
+                <Text style={{ backgroundColor: theme.sand, color: theme.primaryDark, fontWeight: 'bold' }}>
+                  {' '}{stringify(contact.emergency.phone, 'emergency-phone')}
                 </Text>
-              )}
-            </SafeView>
-          )}
+              </Text>
+            )}
+          </SafeView>
         </SafeView>
       </SafeView>
     </SafeView>
