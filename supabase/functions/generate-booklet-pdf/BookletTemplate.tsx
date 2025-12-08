@@ -12,66 +12,10 @@ import {
 } from 'npm:@react-pdf/renderer@3.4.3'
 
 // --- Fonts ------------------------------------------------------------------
-let DEFAULT_TEXT = 'Helvetica'
-let TITLE_FONT = 'Helvetica'
-let BODY_FONT = 'Helvetica'
-
-// Load bundled fonts
-const loadFont = async (fileName: string) => {
-  try {
-    const url = new URL(`./fonts/${fileName}`, import.meta.url)
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`Status ${res.status}`)
-    return await res.arrayBuffer()
-  } catch (e) {
-    console.error(`Failed to load font ${fileName}:`, e)
-    return null
-  }
-}
-
-// Register fonts with top-level await
-try {
-  const [
-    montserratRegular,
-    montserratBold,
-    latoRegular,
-    latoBold,
-    latoItalic
-  ] = await Promise.all([
-    loadFont('Montserrat-Regular.woff'),
-    loadFont('Montserrat-Bold.woff'),
-    loadFont('Lato-Regular.woff'),
-    loadFont('Lato-Bold.woff'),
-    loadFont('Lato-Italic.woff')
-  ])
-
-  if (montserratRegular && montserratBold && latoRegular && latoBold && latoItalic) {
-    Font.register({
-      family: 'Montserrat',
-      fonts: [
-        { src: montserratBold, fontWeight: 'bold' },
-        { src: montserratRegular, fontWeight: 'normal' },
-      ]
-    })
-
-    Font.register({
-      family: 'Lato',
-      fonts: [
-        { src: latoRegular, fontWeight: 'normal' },
-        { src: latoBold, fontWeight: 'bold' },
-        { src: latoItalic, fontStyle: 'italic' },
-      ]
-    })
-
-    DEFAULT_TEXT = 'Lato'
-    TITLE_FONT = 'Montserrat'
-    BODY_FONT = 'Lato'
-  } else {
-    console.warn('Some fonts failed to load, falling back to Helvetica')
-  }
-} catch (e) {
-  console.error('Error registering fonts:', e)
-}
+// Revert to standard fonts for stability in Edge Function
+const DEFAULT_TEXT = 'Helvetica'
+const TITLE_FONT = 'Helvetica'
+const BODY_FONT = 'Helvetica'
 
 // --- Thème ------------------------------------------------------------------
 const theme = {
