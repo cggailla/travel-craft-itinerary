@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 
 export interface BookletData {
   tripTitle: string;
+  participants?: string;
   startDate?: Date;
   endDate?: Date;
   totalDays: number;
@@ -58,7 +59,7 @@ export async function getBookletData(tripId: string): Promise<BookletData> {
     // Récupérer les infos du voyage
     const { data: trip } = await supabase
       .from('trips')
-      .select('title, created_at')
+      .select('title, created_at, participants')
       .eq('id', tripId)
       .single();
 
@@ -117,7 +118,8 @@ export async function getBookletData(tripId: string): Promise<BookletData> {
     )];
 
     return {
-      tripTitle: trip?.title || 'Mon Voyage',
+      tripTitle: trip?.title || 'Voyage',
+      participants: trip?.participants,
       startDate,
       endDate,
       totalDays,
