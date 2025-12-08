@@ -10,7 +10,7 @@ import { DeleteTripDialog } from '@/components/DeleteTripDialog';
 import { getUserTrips, deleteTrip, createTrip } from '@/services/tripService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List } from 'lucide-react';
+import { Plus, Plane, Calendar, MapPin, Loader2, FileText, ArrowRight, Zap, Search, CheckCircle2, FileEdit, TrendingUp, Trash2, MoreVertical, Grid3x3, List, Clock } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 type Trip = Tables<'trips'>;
 type TripPhase = 'upload' | 'timeline' | 'validated';
@@ -602,8 +602,8 @@ export default function Dashboard() {
 
                       {/* Date avec icône */}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>Créé le {formatDate(trip.created_at)}</span>
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Mis à jour le {formatDate(trip.updated_at)}</span>
                       </div>
                     </CardContent>
 
@@ -748,9 +748,9 @@ export default function Dashboard() {
                         </div>
 
                         <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border border-border/50 min-w-[100px]">
-                          <Calendar className="h-4 w-4 text-muted-foreground mb-1" />
-                          <span className="text-xs text-muted-foreground">Créé le</span>
-                          <span className="text-xs font-semibold">{formatDate(trip.created_at)}</span>
+                          <Clock className="h-4 w-4 text-muted-foreground mb-1" />
+                          <span className="text-xs text-muted-foreground">Mis à jour le</span>
+                          <span className="text-xs font-semibold">{formatDate(trip.updated_at)}</span>
                         </div>
                       </div>
 

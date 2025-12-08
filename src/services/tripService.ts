@@ -88,7 +88,7 @@ export async function getUserTrips(): Promise<Trip[]> {
       .from('trips')
       .select('*')
       .eq('user_id', userId) // ✅ NIVEAU 2 : Filtre explicite
-      .order('created_at', { ascending: false });
+      .order('updated_at', { ascending: false });
     // ✅ NIVEAU 3 : RLS filtre automatiquement aussi
 
     if (error) {
