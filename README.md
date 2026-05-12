@@ -4,70 +4,63 @@
 
 **URL**: https://lovable.dev/projects/65b54b40-7dda-4144-9622-4bf933991323
 
-## How can I edit this code?
+# ✈️ Travel Craft Itinerary
 
-There are several ways of editing your application.
+> AI-powered travel booklet generator — turns booking emails and PDFs into branded, ready-to-share itineraries.
 
-**Use Lovable**
+![Stack](https://img.shields.io/badge/stack-Next.js%20·%20TypeScript%20·%20Supabase-blue)
+![Status](https://img.shields.io/badge/status-active-success)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/65b54b40-7dda-4144-9622-4bf933991323) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## What it does
 
-**Use your preferred IDE**
+Travel agencies and concierges spend hours copy-pasting flight, hotel, and activity details from PDFs and confirmation emails into client documents. This tool automates that.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Drop** booking emails / PDFs into the app
+2. **AI parses** them (flights, hotels, transfers, activities, restaurants)
+3. **Generates** a clean, branded PDF itinerary the client receives
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- **Frontend** — Next.js + TypeScript + Tailwind
+- **Backend** — Supabase (auth, DB, storage)
+- **AI** — LLM-based extraction + structured output parsing
+- **PDF gen** — [à compléter : ex. react-pdf / Puppeteer]
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## How it was built
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Prototyped on **Lovable** to validate the UX, then ported to a real codebase (VSCode + Claude) once the flow was solid. Built end-to-end as part of **EstuIA**, the GenAI studio I cofounded to ship AI products for small businesses.
+
+---
+
+## Run it locally
+
+```bash
+git clone https://github.com/cggailla/travel-craft-itinerary
+cd travel-craft-itinerary
+npm install
+cp .env.example .env.local   # fill in your Supabase + LLM keys
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open http://localhost:3000.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Roadmap
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- [ ] Multi-language support (FR / EN / ES)
+- [ ] Direct Gmail integration (auto-pull bookings)
+- [ ] Agency white-label mode
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Author
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/65b54b40-7dda-4144-9622-4bf933991323) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Côme Gaillard** — LLM Engineer @ Artefact · cofounder @ EstuIA
+[LinkedIn](https://www.linkedin.com/in/comegaillard) · comegaillard@gmail.com
